@@ -1,15 +1,24 @@
 name: HomeKeeper
+
 options:
   bundleIdPrefix: org.scriptingforschools
+
 settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: '17.0'
+
 targets:
   HomeKeeper:
     type: application
     platform: iOS
+
     sources:
-      - path: HomeKeeper
+      - path: Models
+      - path: Services
+      - path: Utilities
+      - path: Views
+      - path: HomeKeeperApp.swift
+
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.scriptingforschools.HomeKeeper
@@ -19,8 +28,9 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: HomeKeeper
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: HomeKeeper lets you attach photos to home records and project ideas.
         INFOPLIST_KEY_NSCameraUsageDescription: HomeKeeper lets you photograph equipment labels, paint cans, receipts, and project ideas.
+
     info:
-      path: HomeKeeper/Info.plist
+      path: Info.plist
       properties:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
