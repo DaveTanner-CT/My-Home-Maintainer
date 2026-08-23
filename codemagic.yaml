@@ -1,11 +1,14 @@
 workflows:
-  homekeeper-ios-simulator:
-    name: HomeKeeper iOS Simulator Build
+  home-maintainer-adhoc:
+    name: Home Maintainer Ad Hoc iPhone Build
     max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
       xcode: latest
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: org.scriptingforschools.HomeMaintainer
       vars:
         XCODE_PROJECT: "HomeKeeper.xcodeproj"
         XCODE_SCHEME: "HomeKeeper"
@@ -20,25 +23,18 @@ workflows:
           cd "$CM_BUILD_DIR"
           xcodegen generate --spec project.yml
 
-      - name: Verify Xcode project
+      - name: Set up code signing
         script: |
           cd "$CM_BUILD_DIR"
-          xcodebuild -list -project "$XCODE_PROJECT"
+          xcode-project use-profiles --project "$XCODE_PROJECT"
 
-      - name: Build HomeKeeper for iOS Simulator
+      - name: Build signed IPA
         script: |
           cd "$CM_BUILD_DIR"
-          xcodebuild build \
-            -project "$XCODE_PROJECT" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+          xcode-project build-ipa             --project "$XCODE_PROJECT"             --scheme "$XCODE_SCHEME"
 
     artifacts:
+      - build/**/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
