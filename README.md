@@ -18,3 +18,6 @@ This build continues the connected-home foundation from v0.3.
 
 Use the existing Codemagic **Home Maintainer Ad Hoc iPhone Build** workflow.
 Bundle identifier remains `org.scriptingforschools.HomeMaintainer`.
+
+## v0.4.1 build-entry fix
+The SwiftUI app entry point now lives in `App/HomeKeeperApp.swift`, and XcodeGen explicitly includes the `App` folder. Codemagic also verifies the `@main` entry point before generating the Xcode project. This addresses an archive linker failure where `_main` was missing.

@@ -3,10 +3,17 @@ import SwiftData
 
 struct MyHomeView: View {
     @Query private var records: [MaintenanceRecord]
+    @Query private var homes: [Home]
     @State private var showAddMaintenance = false
 
     var body: some View {
         List {
+            Section("Home") {
+                NavigationLink { HomeProfileView() } label: {
+                    Label(homes.first?.name ?? "Home Profile", systemImage: "house")
+                }
+                NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
+            }
             Section("Home Records") {
                 NavigationLink { RoomsListView() } label: { Label("Rooms & Areas", systemImage: "door.left.hand.open") }
                 NavigationLink { SystemsListView() } label: { Label("Home Systems", systemImage: "wrench.and.screwdriver") }
@@ -105,6 +112,12 @@ struct SystemDetailView: View {
                 if !system.model.isEmpty { LabeledContent("Model", value: system.model) }
                 if !system.serialNumber.isEmpty { LabeledContent("Serial", value: system.serialNumber) }
                 if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
+            }
+            if system.warrantyExpiration != nil || (system.installationDate != nil && system.expectedServiceLifeYears != nil) {
+                Section("Health & Planning") {
+                    WarrantyStatusView(expiration: system.warrantyExpiration)
+                    ServiceLifeStatusView(installed: system.installationDate, expectedYears: system.expectedServiceLifeYears)
+                }
             }
             Section("Ownership") {
                 if let date = system.installationDate { LabeledContent("Installed", value: date.formatted(date: .abbreviated, time: .omitted)) }

@@ -103,8 +103,11 @@ struct HomeDashboardView: View {
         }
         .background(Color(.systemGroupedBackground))
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                NavigationLink { AppSettingsView() } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel("Settings")
                 Button { showAddTask = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add Task")
             }
         }
         .sheet(isPresented: $showSearch) { NavigationStack { GlobalSearchView() } }

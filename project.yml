@@ -17,7 +17,7 @@ targets:
       - path: Services
       - path: Utilities
       - path: Views
-      - path: HomeKeeperApp.swift
+      - path: App
 
     settings:
       base:
