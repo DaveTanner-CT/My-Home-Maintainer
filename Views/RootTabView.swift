@@ -13,9 +13,9 @@ struct RootTabView: View {
             .tabItem { Label("Home", systemImage: "house.fill") }
 
             NavigationStack {
-                MaintenanceCalendarView()
+                TasksHubView()
             }
-            .tabItem { Label("Calendar", systemImage: "calendar") }
+            .tabItem { Label("Tasks", systemImage: "checklist") }
 
             NavigationStack {
                 MyHomeView()

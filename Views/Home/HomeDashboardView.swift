@@ -70,7 +70,7 @@ struct HomeDashboardView: View {
                 HStack {
                     sectionTitle("Coming Soon")
                     Spacer()
-                    NavigationLink("View All Tasks") { AllTasksView() }
+                    NavigationLink("View All Tasks") { TasksHubView(initialSection: .all) }
                         .font(.caption.weight(.semibold))
                 }
                 VStack(spacing: 0) {

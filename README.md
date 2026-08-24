@@ -36,3 +36,11 @@ Use the existing Codemagic workflow: **Home Maintainer Ad Hoc iPhone Build**.
 
 ## v0.2.3 navigation fix
 Edit actions on detail screens now push dedicated edit forms in the existing NavigationStack instead of relying on nested modal sheets. My Home and Project list rows have full-width tap targets, and vendor contact actions are isolated to their individual contact rows.
+
+## v0.2.4 Navigation update
+
+- Replaced the Calendar bottom-navigation tab with a primary **Tasks** tab.
+- Tasks now includes four views: **Attention**, **Upcoming**, **All**, and **Calendar**.
+- Calendar remains available as an optional secondary view instead of occupying a primary tab.
+- The All Tasks view includes task search plus status and category filtering.
+- The Home dashboard's **View All Tasks** link now opens the Tasks area directly in All mode.
