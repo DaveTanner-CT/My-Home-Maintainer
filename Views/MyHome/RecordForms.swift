@@ -71,7 +71,7 @@ struct SystemFormView: View {
         _notes = State(initialValue: existing?.notes ?? ""); _website = State(initialValue: existing?.website ?? "")
         _hasInstallDate = State(initialValue: existing?.installationDate != nil); _installDate = State(initialValue: existing?.installationDate ?? .now)
         _hasWarrantyDate = State(initialValue: existing?.warrantyExpiration != nil); _warrantyDate = State(initialValue: existing?.warrantyExpiration ?? .now)
-        _purchaseCost = State(initialValue: existing?.purchaseCost.map(String.init) ?? "")
+        _purchaseCost = State(initialValue: existing?.purchaseCost.map { String($0) } ?? "")
         _serviceLife = State(initialValue: existing?.expectedServiceLifeYears ?? 0)
         _selectedVendor = State(initialValue: existing?.vendor)
     }
@@ -125,7 +125,7 @@ struct ApplianceFormView: View {
         self.existing = existing
         _name = State(initialValue: existing?.name ?? ""); _category = State(initialValue: existing?.category ?? ""); _manufacturer = State(initialValue: existing?.manufacturer ?? "")
         _model = State(initialValue: existing?.model ?? ""); _serial = State(initialValue: existing?.serialNumber ?? ""); _purchasedFrom = State(initialValue: existing?.purchasedFrom ?? "")
-        _price = State(initialValue: existing?.purchasePrice.map(String.init) ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
+        _price = State(initialValue: existing?.purchasePrice.map { String($0) } ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
         _hasWarrantyDate = State(initialValue: existing?.warrantyExpiration != nil); _warrantyDate = State(initialValue: existing?.warrantyExpiration ?? .now)
         _manufacturerWebsite = State(initialValue: existing?.manufacturerWebsite ?? ""); _registrationLink = State(initialValue: existing?.productRegistrationLink ?? "")
         _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room)
@@ -171,8 +171,8 @@ struct PaintFormView: View {
     init(existing: PaintFinish? = nil) {
         self.existing = existing; _roomName = State(initialValue: existing?.roomName ?? ""); _surface = State(initialValue: existing?.surface ?? "Walls"); _brand = State(initialValue: existing?.brand ?? "")
         _productLine = State(initialValue: existing?.productLine ?? ""); _colorName = State(initialValue: existing?.colorName ?? ""); _colorCode = State(initialValue: existing?.colorCode ?? "")
-        _sheen = State(initialValue: existing?.sheen ?? ""); _store = State(initialValue: existing?.store ?? ""); _cost = State(initialValue: existing?.cost.map(String.init) ?? "")
-        _quantity = State(initialValue: existing?.quantity.map(String.init) ?? ""); _containerSize = State(initialValue: existing?.containerSize ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil)
+        _sheen = State(initialValue: existing?.sheen ?? ""); _store = State(initialValue: existing?.store ?? ""); _cost = State(initialValue: existing?.cost.map { String($0) } ?? "")
+        _quantity = State(initialValue: existing?.quantity.map { String($0) } ?? ""); _containerSize = State(initialValue: existing?.containerSize ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil)
         _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now); _productLink = State(initialValue: existing?.productLink ?? ""); _notes = State(initialValue: existing?.notes ?? "")
     }
     var body: some View {
@@ -261,7 +261,7 @@ struct MaintenanceRecordFormView: View {
     @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
     let existing: MaintenanceRecord?
     @State private var date: Date; @State private var title: String; @State private var cost: String; @State private var vendorName: String; @State private var taskTitle: String; @State private var relatedItemName: String; @State private var notes: String; @State private var showDelete = false
-    init(existing: MaintenanceRecord? = nil) { self.existing = existing; _date = State(initialValue: existing?.date ?? .now); _title = State(initialValue: existing?.title ?? ""); _cost = State(initialValue: existing?.cost.map(String.init) ?? ""); _vendorName = State(initialValue: existing?.vendorName ?? ""); _taskTitle = State(initialValue: existing?.taskTitle ?? ""); _relatedItemName = State(initialValue: existing?.relatedItemName ?? ""); _notes = State(initialValue: existing?.notes ?? "") }
+    init(existing: MaintenanceRecord? = nil) { self.existing = existing; _date = State(initialValue: existing?.date ?? .now); _title = State(initialValue: existing?.title ?? ""); _cost = State(initialValue: existing?.cost.map { String($0) } ?? ""); _vendorName = State(initialValue: existing?.vendorName ?? ""); _taskTitle = State(initialValue: existing?.taskTitle ?? ""); _relatedItemName = State(initialValue: existing?.relatedItemName ?? ""); _notes = State(initialValue: existing?.notes ?? "") }
     var body: some View {
         Form {
             Section("Maintenance Record") { TextField("Title", text: $title); DatePicker("Date", selection: $date, displayedComponents: .date); TextField("Cost", text: $cost).keyboardType(.decimalPad) }

@@ -9,7 +9,7 @@ struct ProjectFormView: View {
 
     init(existing: Project? = nil) {
         self.existing = existing; _title = State(initialValue: existing?.title ?? ""); _description = State(initialValue: existing?.projectDescription ?? ""); _stage = State(initialValue: existing?.stage ?? .idea); _roomName = State(initialValue: existing?.roomName ?? "")
-        _budgetText = State(initialValue: existing?.budget.map(String.init) ?? ""); _hasTargetDate = State(initialValue: existing?.targetDate != nil); _targetDate = State(initialValue: existing?.targetDate ?? .now); _notes = State(initialValue: existing?.notes ?? "")
+        _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? ""); _hasTargetDate = State(initialValue: existing?.targetDate != nil); _targetDate = State(initialValue: existing?.targetDate ?? .now); _notes = State(initialValue: existing?.notes ?? "")
     }
     var body: some View {
         Form {
