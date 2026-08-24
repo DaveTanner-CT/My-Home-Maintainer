@@ -36,16 +36,18 @@ struct ProjectShoppingView: View {
                 ForEach(groupedStores, id: \.self) { store in
                     Section(store) {
                         ForEach(items.filter { displayStore(for: $0) == store }) { item in
-                            HStack(alignment: .top, spacing: 12) {
-                                Image(systemName: item.status == .purchased ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(item.status == .purchased ? .green : .secondary)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.title).font(.headline)
-                                    Text("Qty \(item.quantity.formatted()) · \(item.estimatedTotal.formatted(AppFormatting.currency))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    if !item.finishColor.isEmpty { Text(item.finishColor).font(.caption) }
-                                    if !item.sku.isEmpty { Text("SKU: \(item.sku)").font(.caption2).foregroundStyle(.secondary) }
+                            NavigationLink { ProjectItemDetailView(project: project, item: item) } label: {
+                                HStack(alignment: .top, spacing: 12) {
+                                    Image(systemName: item.status == .purchased ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(item.status == .purchased ? .green : .secondary)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(item.title).font(.headline)
+                                        Text("Qty \(item.quantity.formatted()) · \(item.estimatedTotal.formatted(AppFormatting.currency))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        if !item.finishColor.isEmpty { Text(item.finishColor).font(.caption) }
+                                        if !item.sku.isEmpty { Text("SKU: \(item.sku)").font(.caption2).foregroundStyle(.secondary) }
+                                    }
                                 }
                             }
                         }

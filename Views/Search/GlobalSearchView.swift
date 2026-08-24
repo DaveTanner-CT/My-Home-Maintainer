@@ -12,6 +12,7 @@ struct GlobalSearchView: View {
     @Query private var detectors: [Detector]
     @Query private var consumables: [Consumable]
     @Query private var projects: [Project]
+    @Query private var projectItems: [ProjectItem]
     @Query private var records: [MaintenanceRecord]
 
     @State private var query = ""
@@ -73,7 +74,9 @@ struct GlobalSearchView: View {
         if !matchingRooms.isEmpty {
             Section("Rooms") {
                 ForEach(matchingRooms) { room in
-                    SearchResultRow(icon: "door.left.hand.open", title: room.name, subtitle: "Room / Area")
+                    NavigationLink { RoomDetailView(room: room) } label: {
+                        SearchResultRow(icon: "door.left.hand.open", title: room.name, subtitle: "Room / Area")
+                    }
                 }
             }
         }
@@ -82,7 +85,9 @@ struct GlobalSearchView: View {
         if !matchingPaints.isEmpty {
             Section("Paint & Finishes") {
                 ForEach(matchingPaints) { paint in
-                    SearchResultRow(icon: "paintbrush", title: [paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " "), subtitle: "\(paint.roomName) · \(paint.surface)")
+                    NavigationLink { PaintDetailView(paint: paint) } label: {
+                        SearchResultRow(icon: "paintbrush", title: [paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " "), subtitle: "\(paint.roomName) · \(paint.surface)")
+                    }
                 }
             }
         }
@@ -92,7 +97,9 @@ struct GlobalSearchView: View {
         if !matchingDetectors.isEmpty {
             Section("Smoke & CO Detectors") {
                 ForEach(matchingDetectors) { detector in
-                    SearchResultRow(icon: "sensor.tag.radiowaves.forward", title: detector.location, subtitle: detector.type)
+                    NavigationLink { DetectorDetailView(detector: detector) } label: {
+                        SearchResultRow(icon: "sensor.tag.radiowaves.forward", title: detector.location, subtitle: detector.type)
+                    }
                 }
             }
         }
@@ -101,7 +108,9 @@ struct GlobalSearchView: View {
         if !matchingConsumables.isEmpty {
             Section("Filters & Consumables") {
                 ForEach(matchingConsumables) { item in
-                    SearchResultRow(icon: "shippingbox", title: item.name, subtitle: [item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "))
+                    NavigationLink { ConsumableDetailView(item: item) } label: {
+                        SearchResultRow(icon: "shippingbox", title: item.name, subtitle: [item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "))
+                    }
                 }
             }
         }
@@ -110,7 +119,7 @@ struct GlobalSearchView: View {
         if !matchingVendors.isEmpty {
             Section("Vendors") {
                 ForEach(matchingVendors) { vendor in
-                    VendorRow(vendor: vendor)
+                    NavigationLink { VendorDetailView(vendor: vendor) } label: { VendorRow(vendor: vendor) }
                 }
             }
         }
@@ -126,11 +135,26 @@ struct GlobalSearchView: View {
             }
         }
 
+        let matchingProjectItems = projectItems.filter { contains(q, [$0.title, $0.category, $0.manufacturer, $0.model, $0.sku, $0.finishColor, $0.store, $0.notes]) }
+        if !matchingProjectItems.isEmpty {
+            Section("Project Items") {
+                ForEach(matchingProjectItems) { item in
+                    if let project = item.project {
+                        NavigationLink { ProjectItemDetailView(project: project, item: item) } label: {
+                            SearchResultRow(icon: "cart", title: item.title, subtitle: [project.title, item.store].filter { !$0.isEmpty }.joined(separator: " · "))
+                        }
+                    }
+                }
+            }
+        }
+
         let matchingRecords = records.filter { contains(q, [$0.title, $0.vendorName, $0.taskTitle, $0.relatedItemName, $0.notes]) }
         if !matchingRecords.isEmpty {
             Section("Maintenance History") {
                 ForEach(matchingRecords) { record in
-                    SearchResultRow(icon: "clock.arrow.circlepath", title: record.title, subtitle: record.date.formatted(date: .abbreviated, time: .omitted))
+                    NavigationLink { MaintenanceRecordDetailView(record: record) } label: {
+                        SearchResultRow(icon: "clock.arrow.circlepath", title: record.title, subtitle: record.date.formatted(date: .abbreviated, time: .omitted))
+                    }
                 }
             }
         }

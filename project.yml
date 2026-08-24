@@ -25,9 +25,9 @@ targets:
         PRODUCT_NAME: HomeKeeper
         SWIFT_VERSION: '5.0'
         TARGETED_DEVICE_FAMILY: '1'
-        INFOPLIST_KEY_CFBundleDisplayName: HomeKeeper
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: HomeKeeper lets you attach photos to home records and project ideas.
-        INFOPLIST_KEY_NSCameraUsageDescription: HomeKeeper lets you photograph equipment labels, paint cans, receipts, and project ideas.
+        INFOPLIST_KEY_CFBundleDisplayName: Home Maintainer
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Home Maintainer lets you attach photos to home records and project ideas.
+        INFOPLIST_KEY_NSCameraUsageDescription: Home Maintainer lets you photograph equipment labels, paint cans, receipts, and project ideas.
 
     info:
       path: Info.plist

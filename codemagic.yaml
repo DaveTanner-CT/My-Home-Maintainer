@@ -31,7 +31,9 @@ workflows:
       - name: Build signed IPA
         script: |
           cd "$CM_BUILD_DIR"
-          xcode-project build-ipa             --project "$XCODE_PROJECT"             --scheme "$XCODE_SCHEME"
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
 
     artifacts:
       - build/**/*.ipa
