@@ -4,6 +4,11 @@ struct TaskRowView: View {
     let task: MaintenanceTask
     let onComplete: () -> Void
 
+    init(task: MaintenanceTask, onComplete: @escaping () -> Void = {}) {
+        self.task = task
+        self.onComplete = onComplete
+    }
+
     private var status: TaskDisplayStatus { TaskEngine.status(for: task) }
 
     var body: some View {
