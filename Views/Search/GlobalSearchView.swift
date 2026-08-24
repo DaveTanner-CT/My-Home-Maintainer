@@ -14,6 +14,7 @@ struct GlobalSearchView: View {
     @Query private var projects: [Project]
     @Query private var projectItems: [ProjectItem]
     @Query private var records: [MaintenanceRecord]
+    @Query private var attachments: [HomeAttachment]
 
     @State private var query = ""
 
@@ -143,6 +144,18 @@ struct GlobalSearchView: View {
                         NavigationLink { ProjectItemDetailView(project: project, item: item) } label: {
                             SearchResultRow(icon: "cart", title: item.title, subtitle: [project.title, item.store].filter { !$0.isEmpty }.joined(separator: " · "))
                         }
+                    }
+                }
+            }
+        }
+
+
+        let matchingAttachments = attachments.filter { contains(q, [$0.name, $0.caption, $0.category, $0.fileName]) }
+        if !matchingAttachments.isEmpty {
+            Section("Photos & Documents") {
+                ForEach(matchingAttachments) { attachment in
+                    NavigationLink { AttachmentDetailView(attachment: attachment) } label: {
+                        SearchResultRow(icon: attachment.isImage ? "photo" : "doc", title: attachment.name, subtitle: attachment.caption.isEmpty ? attachment.fileName : attachment.caption)
                     }
                 }
             }

@@ -17,7 +17,8 @@ struct HomeKeeperApp: App {
             MaintenanceRecord.self,
             Project.self,
             ProjectItem.self,
-            ProjectMeasurement.self
+            ProjectMeasurement.self,
+            HomeAttachment.self
         ])
 
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

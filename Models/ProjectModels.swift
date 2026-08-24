@@ -44,12 +44,13 @@ final class ProjectItem {
     var unitCost: Double?
     var quantity: Double
     var actualPurchaseCost: Double?
+    var purchaseDate: Date?
     var notes: String
     var statusRaw: String
     var photoData: Data?
     var isIdeaOnly: Bool
 
-    init(project: Project? = nil, title: String, category: String = "Inspiration", manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
+    init(project: Project? = nil, title: String, category: String = "Inspiration", manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
         self.project = project
         self.title = title
         self.category = category
@@ -63,6 +64,7 @@ final class ProjectItem {
         self.unitCost = unitCost
         self.quantity = quantity
         self.actualPurchaseCost = actualPurchaseCost
+        self.purchaseDate = purchaseDate
         self.notes = notes
         self.statusRaw = status.rawValue
         self.photoData = photoData

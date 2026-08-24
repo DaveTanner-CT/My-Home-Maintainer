@@ -37,6 +37,7 @@ struct TaskDetailView: View {
                 if let project = task.project { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Project", value: project.title) } }
                 if task.system == nil && task.appliance == nil && task.room == nil && task.project == nil { Text("No related records").foregroundStyle(.secondary) }
             }
+            AttachmentSection(owner: .task(task))
             if !task.isCompleted { Section { Button { showComplete = true } label: { Label("Complete Task", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) } } }
             Section { Button("Delete Task", role: .destructive) { showDelete = true } }
         }
