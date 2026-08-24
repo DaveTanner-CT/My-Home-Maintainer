@@ -22,12 +22,12 @@ struct ProjectFormView: View {
     @State private var showDelete = false
     @State private var didResolveLegacyRoom = false
 
-    init(existing: Project? = nil) {
+    init(existing: Project? = nil, initialRoom: Room? = nil) {
         self.existing = existing
         _title = State(initialValue: existing?.title ?? "")
         _description = State(initialValue: existing?.projectDescription ?? "")
         _stage = State(initialValue: existing?.stage ?? .idea)
-        _selectedRoom = State(initialValue: existing?.room)
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
         _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? "")
         _hasTargetDate = State(initialValue: existing?.targetDate != nil)
         _targetDate = State(initialValue: existing?.targetDate ?? .now)

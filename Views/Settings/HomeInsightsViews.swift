@@ -41,7 +41,7 @@ struct HomeInsightsView: View {
             if !expiringSystems.isEmpty || !expiringAppliances.isEmpty {
                 Section("Warranty Watch") {
                     ForEach(expiringSystems) { system in
-                        NavigationLink { HomeSystemDetailView(system: system) } label: {
+                        NavigationLink { SystemDetailView(system: system) } label: {
                             warningRow(name: system.name, date: system.warrantyExpiration, subtitle: "Home System")
                         }
                     }
@@ -117,7 +117,7 @@ struct WarrantyCenterView: View {
     private var entries: [WarrantyEntry] {
         let systemEntries = systems.compactMap { item -> WarrantyEntry? in
             guard let date = item.warrantyExpiration else { return nil }
-            return .init(name: item.name, kind: "Home System", date: date, destination: AnyView(HomeSystemDetailView(system: item)))
+            return .init(name: item.name, kind: "Home System", date: date, destination: AnyView(SystemDetailView(system: item)))
         }
         let applianceEntries = appliances.compactMap { item -> WarrantyEntry? in
             guard let date = item.warrantyExpiration else { return nil }

@@ -1,3 +1,13 @@
+# Home Maintainer v0.6.1
+
+This patch fixes the v0.6 Home Insights build error and strengthens Project ↔ Room / Area connections.
+
+- Fixed Warranty Center/Home Insights references to the existing SystemDetailView.
+- Project detail now links directly back to its Room / Area.
+- Room / Area detail continues to show all linked projects.
+- Added “Add Project for This Area” from a Room / Area detail screen; the new project is pre-linked automatically.
+- Existing project editing still allows changing the linked Room / Area.
+
 # Home Maintainer v0.4
 
 This build continues the connected-home foundation from v0.3.

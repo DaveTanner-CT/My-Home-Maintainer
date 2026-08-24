@@ -35,7 +35,15 @@ struct ProjectDetailView: View {
 
             Section("Project") {
                 LabeledContent("Stage", value: project.stageRaw)
-                if !project.locationName.isEmpty { LabeledContent("Room / Area", value: project.locationName) }
+                if let room = project.room {
+                    NavigationLink {
+                        RoomDetailView(room: room)
+                    } label: {
+                        LabeledContent("Room / Area", value: room.name)
+                    }
+                } else if !project.roomName.isEmpty {
+                    LabeledContent("Room / Area", value: project.roomName)
+                }
                 if let target = project.targetDate {
                     LabeledContent("Target", value: target.formatted(date: .abbreviated, time: .omitted))
                 }

@@ -151,6 +151,7 @@ struct RoomDetailView: View {
     @Query private var paints: [PaintFinish]
     @Query private var projects: [Project]
     @Query private var systems: [HomeSystem]
+    @State private var showAddProject = false
 
     private var roomAppliances: [Appliance] { appliances.filter { $0.room?.persistentModelID == room.persistentModelID } }
     private var roomTasks: [MaintenanceTask] { tasks.filter { $0.room?.persistentModelID == room.persistentModelID } }
@@ -187,6 +188,9 @@ struct RoomDetailView: View {
                             .foregroundStyle(.secondary)
                         }
                     }
+                }
+                Button { showAddProject = true } label: {
+                    Label("Add Project for This Area", systemImage: "plus")
                 }
             }
 
@@ -229,6 +233,9 @@ struct RoomDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink("Edit") { RoomFormView(existing: room) }
             }
+        }
+        .sheet(isPresented: $showAddProject) {
+            NavigationStack { ProjectFormView(initialRoom: room) }
         }
     }
 }
