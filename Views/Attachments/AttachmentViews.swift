@@ -151,11 +151,7 @@ struct AttachmentDetailView: View {
             Section {
                 if attachment.isImage,
                    let image = UIImage(data: attachment.fileData) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    ExpandablePhoto(image: image, cornerRadius: 12)
                 } else {
                     NavigationLink {
                         QuickLookAttachmentPreview(attachment: attachment)

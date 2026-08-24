@@ -125,7 +125,7 @@ struct GlobalSearchView: View {
             }
         }
 
-        let matchingProjects = projects.filter { contains(q, [$0.title, $0.projectDescription, $0.stageRaw, $0.roomName, $0.notes]) }
+        let matchingProjects = projects.filter { contains(q, [$0.title, $0.projectDescription, $0.stageRaw, $0.locationName, $0.notes]) }
         if !matchingProjects.isEmpty {
             Section("Projects") {
                 ForEach(matchingProjects) { project in

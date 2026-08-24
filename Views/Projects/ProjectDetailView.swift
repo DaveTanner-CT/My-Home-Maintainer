@@ -27,13 +27,7 @@ struct ProjectDetailView: View {
         List {
             if let data = project.coverPhotoData, let image = UIImage(data: data) {
                 Section {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 190)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    ExpandablePhoto(image: image, height: 190, fill: true, cornerRadius: 14)
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -41,7 +35,7 @@ struct ProjectDetailView: View {
 
             Section("Project") {
                 LabeledContent("Stage", value: project.stageRaw)
-                if !project.roomName.isEmpty { LabeledContent("Room", value: project.roomName) }
+                if !project.locationName.isEmpty { LabeledContent("Room / Area", value: project.locationName) }
                 if let target = project.targetDate {
                     LabeledContent("Target", value: target.formatted(date: .abbreviated, time: .omitted))
                 }
@@ -142,11 +136,7 @@ struct ProjectItemDetailView: View {
         List {
             if let data = item.photoData, let image = UIImage(data: data) {
                 Section {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    ExpandablePhoto(image: image, cornerRadius: 12)
                 }
             }
 

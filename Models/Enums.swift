@@ -59,3 +59,17 @@ enum ProjectItemStatus: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 }
+
+// Broad location type used for both interior rooms and exterior/property areas.
+enum HomeAreaType: String, CaseIterable, Identifiable {
+    case interior = "Interior"
+    case exterior = "Exterior / Property"
+
+    var id: String { rawValue }
+    var iconName: String {
+        switch self {
+        case .interior: return "door.left.hand.open"
+        case .exterior: return "leaf"
+        }
+    }
+}

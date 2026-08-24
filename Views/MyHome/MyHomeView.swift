@@ -35,20 +35,112 @@ struct MyHomeView: View {
 }
 
 struct RoomsListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.name) private var rooms: [Room]
-    @State private var showAdd = false
+    @State private var addType: HomeAreaType?
+    @State private var showExteriorPresets = false
+
+    private var interiorRooms: [Room] { rooms.filter { $0.areaType == .interior } }
+    private var exteriorAreas: [Room] { rooms.filter { $0.areaType == .exterior } }
+
     var body: some View {
         List {
-            if rooms.isEmpty { ContentUnavailableView("No rooms yet", systemImage: "door.left.hand.open", description: Text("Add rooms to connect paint, appliances, systems, projects, and tasks.")) }
-            ForEach(rooms) { room in
-                NavigationLink { RoomDetailView(room: room) } label: {
-                    HStack { Image(systemName: "door.left.hand.open").foregroundStyle(.secondary); Text(room.name); Spacer(); if room.isFavorite { Image(systemName: "star.fill").foregroundStyle(.yellow) } }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+            if rooms.isEmpty {
+                ContentUnavailableView(
+                    "No rooms or areas yet",
+                    systemImage: "house.and.flag",
+                    description: Text("Add interior rooms and exterior property areas to connect paint, appliances, projects, tasks, and photos.")
+                )
+            }
+
+            if !interiorRooms.isEmpty {
+                Section("Interior") {
+                    ForEach(interiorRooms) { room in roomLink(room) }
+                }
+            }
+
+            if !exteriorAreas.isEmpty {
+                Section("Exterior & Property") {
+                    ForEach(exteriorAreas) { room in roomLink(room) }
+                }
+            }
+
+            if exteriorAreas.isEmpty {
+                Section("Exterior & Property") {
+                    Button {
+                        showExteriorPresets = true
+                    } label: {
+                        Label("Add Common Exterior Areas", systemImage: "leaf")
+                    }
                 }
             }
         }
         .navigationTitle("Rooms & Areas")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }
-        .sheet(isPresented: $showAdd) { NavigationStack { RoomFormView() } }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button { addType = .interior } label: {
+                        Label("Interior Room", systemImage: HomeAreaType.interior.iconName)
+                    }
+                    Button { addType = .exterior } label: {
+                        Label("Exterior / Property Area", systemImage: HomeAreaType.exterior.iconName)
+                    }
+                    Divider()
+                    Button { showExteriorPresets = true } label: {
+                        Label("Add Common Exterior Areas", systemImage: "wand.and.stars")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(item: $addType) { type in
+            NavigationStack { RoomFormView(initialAreaType: type) }
+        }
+        .confirmationDialog("Add common exterior areas?", isPresented: $showExteriorPresets, titleVisibility: .visible) {
+            Button("Add Missing Exterior Areas") { addExteriorPresets() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This adds only areas you do not already have. You can rename or delete any of them later.")
+        }
+    }
+
+    @ViewBuilder
+    private func roomLink(_ room: Room) -> some View {
+        NavigationLink { RoomDetailView(room: room) } label: {
+            HStack {
+                Image(systemName: room.areaType.iconName).foregroundStyle(.secondary)
+                Text(room.name)
+                Spacer()
+                if room.isFavorite { Image(systemName: "star.fill").foregroundStyle(.yellow) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+    }
+
+    private func addExteriorPresets() {
+        let presets = [
+            "Roof",
+            "Garage",
+            "Exterior Walls / Siding",
+            "Front Steps / Entry",
+            "Deck / Patio",
+            "Driveway",
+            "Walkways",
+            "Stone Walls",
+            "Exterior Lighting",
+            "Gardens / Landscaping",
+            "Greenhouse",
+            "Shed / Outbuildings",
+            "Fencing / Gates",
+            "Gutters / Drainage"
+        ]
+        let existingNames = Set(rooms.map { $0.name.lowercased() })
+        for name in presets where !existingNames.contains(name.lowercased()) {
+            modelContext.insert(Room(name: name, areaType: .exterior))
+        }
+        try? modelContext.save()
     }
 }
 
@@ -57,30 +149,87 @@ struct RoomDetailView: View {
     @Query private var appliances: [Appliance]
     @Query private var tasks: [MaintenanceTask]
     @Query private var paints: [PaintFinish]
-    @State private var showEdit = false
+    @Query private var projects: [Project]
+    @Query private var systems: [HomeSystem]
+
     private var roomAppliances: [Appliance] { appliances.filter { $0.room?.persistentModelID == room.persistentModelID } }
     private var roomTasks: [MaintenanceTask] { tasks.filter { $0.room?.persistentModelID == room.persistentModelID } }
     private var roomPaints: [PaintFinish] { paints.filter { $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame } }
+    private var roomProjects: [Project] {
+        projects.filter {
+            $0.room?.persistentModelID == room.persistentModelID ||
+            ($0.room == nil && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
+        }
+    }
+    private var roomSystems: [HomeSystem] {
+        systems.filter { $0.location.caseInsensitiveCompare(room.name) == .orderedSame }
+    }
+
     var body: some View {
         List {
-            if room.isFavorite { Section { Label("Favorite", systemImage: "star.fill").foregroundStyle(.yellow) } }
-            if !room.notes.isEmpty { Section("Notes") { Text(room.notes) } }
+            Section("Area") {
+                LabeledContent("Type", value: room.areaType.rawValue)
+                if room.isFavorite { Label("Favorite", systemImage: "star.fill").foregroundStyle(.yellow) }
+                if !room.notes.isEmpty { Text(room.notes) }
+            }
+
+            Section("Projects") {
+                if roomProjects.isEmpty { Text("No linked projects").foregroundStyle(.secondary) }
+                ForEach(roomProjects) { project in
+                    NavigationLink { ProjectDetailView(project: project) } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(project.title).font(.headline)
+                            HStack(spacing: 8) {
+                                Text(project.stage.rawValue)
+                                if let date = project.targetDate { Text(date.formatted(date: .abbreviated, time: .omitted)) }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
             Section("Paint & Finishes") {
                 if roomPaints.isEmpty { Text("No paint records").foregroundStyle(.secondary) }
-                ForEach(roomPaints) { paint in NavigationLink { PaintDetailView(paint: paint) } label: { VStack(alignment: .leading) { Text("\(paint.surface): \(paint.colorName)"); if !paint.colorCode.isEmpty { Text(paint.colorCode).font(.caption).foregroundStyle(.secondary) } } } }
+                ForEach(roomPaints) { paint in
+                    NavigationLink { PaintDetailView(paint: paint) } label: {
+                        VStack(alignment: .leading) {
+                            Text("\(paint.surface): \(paint.colorName)")
+                            if !paint.colorCode.isEmpty { Text(paint.colorCode).font(.caption).foregroundStyle(.secondary) }
+                        }
+                    }
+                }
             }
+
+            if !roomSystems.isEmpty {
+                Section("Home Systems") {
+                    ForEach(roomSystems) { system in
+                        NavigationLink(system.name) { SystemDetailView(system: system) }
+                    }
+                }
+            }
+
             Section("Appliances & Equipment") {
                 if roomAppliances.isEmpty { Text("No appliances").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
             }
+
             Section("Tasks") {
                 if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
-                ForEach(roomTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+                ForEach(roomTasks) { task in
+                    NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
+                }
             }
+
             AttachmentSection(owner: .room(room))
         }
         .navigationTitle(room.name)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { RoomFormView(existing: room) } } }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink("Edit") { RoomFormView(existing: room) }
+            }
+        }
     }
 }
 

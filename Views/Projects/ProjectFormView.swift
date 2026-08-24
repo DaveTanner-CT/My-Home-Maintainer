@@ -1,16 +1,18 @@
 import SwiftUI
+import SwiftData
 import PhotosUI
 import UIKit
 
 struct ProjectFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
     let existing: Project?
 
     @State private var title: String
     @State private var description: String
     @State private var stage: ProjectStage
-    @State private var roomName: String
+    @State private var selectedRoom: Room?
     @State private var budgetText: String
     @State private var hasTargetDate: Bool
     @State private var targetDate: Date
@@ -18,13 +20,14 @@ struct ProjectFormView: View {
     @State private var coverPhotoData: Data?
     @State private var selectedCoverPhoto: PhotosPickerItem?
     @State private var showDelete = false
+    @State private var didResolveLegacyRoom = false
 
     init(existing: Project? = nil) {
         self.existing = existing
         _title = State(initialValue: existing?.title ?? "")
         _description = State(initialValue: existing?.projectDescription ?? "")
         _stage = State(initialValue: existing?.stage ?? .idea)
-        _roomName = State(initialValue: existing?.roomName ?? "")
+        _selectedRoom = State(initialValue: existing?.room)
         _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? "")
         _hasTargetDate = State(initialValue: existing?.targetDate != nil)
         _targetDate = State(initialValue: existing?.targetDate ?? .now)
@@ -40,16 +43,24 @@ struct ProjectFormView: View {
                 Picker("Stage", selection: $stage) {
                     ForEach(ProjectStage.allCases) { Text($0.rawValue).tag($0) }
                 }
-                TextField("Room / area", text: $roomName)
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("None").tag(nil as Room?)
+                    ForEach(HomeAreaType.allCases) { type in
+                        let matching = rooms.filter { $0.areaType == type }
+                        if !matching.isEmpty {
+                            Section(type.rawValue) {
+                                ForEach(matching) { room in
+                                    Text(room.name).tag(Optional(room))
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Section("Cover Photo") {
                 if let data = coverPhotoData, let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    ExpandablePhoto(image: image, height: 220, fill: false, cornerRadius: 12)
                 }
                 PhotosPicker(selection: $selectedCoverPhoto, matching: .images) {
                     Label(coverPhotoData == nil ? "Add Cover Photo" : "Change Cover Photo", systemImage: "photo")
@@ -83,6 +94,15 @@ struct ProjectFormView: View {
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+        .onAppear {
+            // Older projects stored only a room-name string. Resolve that legacy value
+            // to the real Room record the first time the edit form opens.
+            guard !didResolveLegacyRoom else { return }
+            didResolveLegacyRoom = true
+            if selectedRoom == nil, let legacyName = existing?.roomName, !legacyName.isEmpty {
+                selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyName) == .orderedSame }
+            }
+        }
         .onChange(of: selectedCoverPhoto) { _, newValue in
             guard let newValue else { return }
             Task {
@@ -110,7 +130,8 @@ struct ProjectFormView: View {
         project.title = title
         project.projectDescription = description
         project.stage = stage
-        project.roomName = roomName
+        project.room = selectedRoom
+        project.roomName = selectedRoom?.name ?? ""
         project.budget = Double(budgetText)
         project.targetDate = hasTargetDate ? targetDate : nil
         project.notes = notes

@@ -41,7 +41,7 @@ private struct ProjectCardRow: View {
                 .overlay(Image(systemName: "hammer").foregroundStyle(.secondary))
             VStack(alignment: .leading, spacing: 4) {
                 Text(project.title).font(.headline)
-                Text([project.stageRaw, project.roomName].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+                Text([project.stageRaw, project.locationName].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
                 if let budget = project.budget { Text("Budget \(budget.formatted(AppFormatting.currency))").font(.caption) }
             }
         }

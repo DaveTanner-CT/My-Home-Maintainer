@@ -8,38 +8,46 @@ struct RoomFormView: View {
     @State private var name: String
     @State private var notes: String
     @State private var favorite: Bool
+    @State private var areaType: HomeAreaType
     @State private var showDelete = false
 
-    init(existing: Room? = nil) {
+    init(existing: Room? = nil, initialAreaType: HomeAreaType = .interior) {
         self.existing = existing
         _name = State(initialValue: existing?.name ?? "")
         _notes = State(initialValue: existing?.notes ?? "")
         _favorite = State(initialValue: existing?.isFavorite ?? false)
+        _areaType = State(initialValue: existing?.areaType ?? initialAreaType)
     }
 
     var body: some View {
         Form {
             Section("Room / Area") {
                 TextField("Name", text: $name)
+                Picker("Type", selection: $areaType) {
+                    ForEach(HomeAreaType.allCases) { type in
+                        Label(type.rawValue, systemImage: type.iconName).tag(type)
+                    }
+                }
                 Toggle("Favorite", isOn: $favorite)
                 TextField("Notes", text: $notes, axis: .vertical)
             }
-            if existing != nil { deleteSection(label: "Delete Room") }
+            if existing != nil { deleteSection(label: "Delete Room / Area") }
         }
-        .navigationTitle(existing == nil ? "Add Room" : "Edit Room")
+        .navigationTitle(existing == nil ? "Add Room / Area" : "Edit Room / Area")
         .toolbar { formToolbar(save: save) }
-        .confirmationDialog("Delete this room?", isPresented: $showDelete, titleVisibility: .visible) {
-            Button("Delete Room", role: .destructive) { delete() }
+        .confirmationDialog("Delete this room / area?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete Room / Area", role: .destructive) { delete() }
             Button("Cancel", role: .cancel) { }
-        } message: { Text("Related records will be kept, but may no longer have a room assigned.") }
+        } message: { Text("Related records will be kept, but may no longer have a room or area assigned.") }
     }
 
     private func save() {
-        let record = existing ?? Room(name: name)
+        let record = existing ?? Room(name: name, areaType: areaType)
         if existing == nil { modelContext.insert(record) }
         record.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         record.notes = notes
         record.isFavorite = favorite
+        record.areaType = areaType
         try? modelContext.save(); dismiss()
     }
     private func delete() { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }

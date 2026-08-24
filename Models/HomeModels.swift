@@ -25,11 +25,19 @@ final class Room {
     var name: String
     var notes: String
     var isFavorite: Bool
+    // Optional for lightweight migration of homes created before exterior/property areas existed.
+    var areaTypeRaw: String?
 
-    init(name: String, notes: String = "", isFavorite: Bool = false) {
+    init(name: String, notes: String = "", isFavorite: Bool = false, areaType: HomeAreaType = .interior) {
         self.name = name
         self.notes = notes
         self.isFavorite = isFavorite
+        self.areaTypeRaw = areaType.rawValue
+    }
+
+    var areaType: HomeAreaType {
+        get { HomeAreaType(rawValue: areaTypeRaw ?? "") ?? .interior }
+        set { areaTypeRaw = newValue.rawValue }
     }
 }
 

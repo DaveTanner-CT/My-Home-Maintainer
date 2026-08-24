@@ -9,18 +9,25 @@ final class Project {
     var targetDate: Date?
     var budget: Double?
     var notes: String
+    // roomName is retained for compatibility with projects created before linked areas.
     var roomName: String
+    var room: Room?
     var coverPhotoData: Data?
 
-    init(title: String, projectDescription: String = "", stage: ProjectStage = .idea, targetDate: Date? = nil, budget: Double? = nil, notes: String = "", roomName: String = "", coverPhotoData: Data? = nil) {
+    init(title: String, projectDescription: String = "", stage: ProjectStage = .idea, targetDate: Date? = nil, budget: Double? = nil, notes: String = "", roomName: String = "", room: Room? = nil, coverPhotoData: Data? = nil) {
         self.title = title
         self.projectDescription = projectDescription
         self.stageRaw = stage.rawValue
         self.targetDate = targetDate
         self.budget = budget
         self.notes = notes
-        self.roomName = roomName
+        self.roomName = room?.name ?? roomName
+        self.room = room
         self.coverPhotoData = coverPhotoData
+    }
+
+    var locationName: String {
+        room?.name ?? roomName
     }
 
     var stage: ProjectStage {
