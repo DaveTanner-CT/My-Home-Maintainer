@@ -45,5 +45,7 @@ private struct ProjectCardRow: View {
                 if let budget = project.budget { Text("Budget \(budget.formatted(AppFormatting.currency))").font(.caption) }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }

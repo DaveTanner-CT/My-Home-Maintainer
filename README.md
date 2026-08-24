@@ -32,3 +32,7 @@ Do not add an extra `HomeMaintainer-v0.2` folder level in GitHub.
 ## Build
 
 Use the existing Codemagic workflow: **Home Maintainer Ad Hoc iPhone Build**.
+
+
+## v0.2.3 navigation fix
+Edit actions on detail screens now push dedicated edit forms in the existing NavigationStack instead of relying on nested modal sheets. My Home and Project list rows have full-width tap targets, and vendor contact actions are isolated to their individual contact rows.

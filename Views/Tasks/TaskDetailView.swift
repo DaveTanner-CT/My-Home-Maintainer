@@ -5,7 +5,6 @@ struct TaskDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let task: MaintenanceTask
     @State private var showComplete = false
-    @State private var showEdit = false
     @State private var showDelete = false
 
     var body: some View {
@@ -42,9 +41,8 @@ struct TaskDetailView: View {
             Section { Button("Delete Task", role: .destructive) { showDelete = true } }
         }
         .navigationTitle(task.title).navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Edit") { showEdit = true } } }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { TaskFormView(existingTask: task) } } }
         .sheet(isPresented: $showComplete) { NavigationStack { CompleteTaskView(task: task) } }
-        .sheet(isPresented: $showEdit) { NavigationStack { TaskFormView(existingTask: task) } }
         .confirmationDialog("Delete this task?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Task", role: .destructive) { modelContext.delete(task); try? modelContext.save(); dismiss() }; Button("Cancel", role: .cancel) { } } message: { Text("Existing maintenance history will not be deleted.") }
     }
 }
