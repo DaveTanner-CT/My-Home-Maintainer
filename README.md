@@ -31,3 +31,8 @@ The SwiftUI app entry point now lives in `App/HomeKeeperApp.swift`, and XcodeGen
 - New rooms/areas can be designated Interior or Exterior / Property.
 - Optional one-tap starter set of common exterior/property areas: roof, garage, siding, steps/entry, deck/patio, driveway, walkways, stone walls, lighting, gardens, greenhouse, shed/outbuildings, fencing/gates, and gutters/drainage.
 - Exterior/property areas use the same connected-record behavior as interior rooms, so they can carry projects, tasks, paint/finishes, photos/documents, and related equipment records.
+
+## v0.6 additions
+- Home Insights dashboard for warranties, detector/consumable replacement watch, active projects, attachments, and recent maintenance spending.
+- Warranty Center combining Home Systems and Appliances by expiration date.
+- JSON Home Archive export including records, relationships by name, and attachment file data.

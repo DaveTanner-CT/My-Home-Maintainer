@@ -94,7 +94,12 @@ struct AppSettingsView: View {
         List {
             Section("Home") {
                 NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
+                NavigationLink { HomeInsightsView() } label: { Label("Home Insights", systemImage: "chart.bar.xaxis") }
+                NavigationLink { WarrantyCenterView() } label: { Label("Warranty Center", systemImage: "shield") }
                 NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
+            }
+            Section("Data") {
+                NavigationLink { DataExportView() } label: { Label("Export Data", systemImage: "square.and.arrow.up") }
             }
             Section("Notifications") {
                 Toggle("Lead-time reminders", isOn: $leadEnabled)
@@ -114,7 +119,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.4")
+                LabeledContent("Build", value: "0.6")
                 Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

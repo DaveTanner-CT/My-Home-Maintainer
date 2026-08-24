@@ -97,6 +97,8 @@ struct HomeDashboardView: View {
                     QuickLink(title: "Paint & Finishes", icon: "paintbrush", destination: AnyView(PaintListView()))
                     QuickLink(title: "Projects", icon: "hammer", destination: AnyView(ProjectsView()))
                     QuickLink(title: "Vendors", icon: "person.crop.circle.badge.checkmark", destination: AnyView(VendorsListView()))
+                    QuickLink(title: "Home Insights", icon: "chart.bar.xaxis", destination: AnyView(HomeInsightsView()))
+                    QuickLink(title: "Warranty Center", icon: "shield", destination: AnyView(WarrantyCenterView()))
                 }
             }
             .padding()
