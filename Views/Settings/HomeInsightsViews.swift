@@ -61,7 +61,7 @@ struct HomeInsightsView: View {
                         }
                     }
                     ForEach(replacementConsumables) { item in
-                        NavigationLink { ConsumableDetailView(consumable: item) } label: {
+                        NavigationLink { ConsumableDetailView(item: item) } label: {
                             warningRow(name: item.name, date: item.nextReplacement, subtitle: "Consumable")
                         }
                     }

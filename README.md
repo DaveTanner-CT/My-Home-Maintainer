@@ -46,3 +46,7 @@ The SwiftUI app entry point now lives in `App/HomeKeeperApp.swift`, and XcodeGen
 - Home Insights dashboard for warranties, detector/consumable replacement watch, active projects, attachments, and recent maintenance spending.
 - Warranty Center combining Home Systems and Appliances by expiration date.
 - JSON Home Archive export including records, relationships by name, and attachment file data.
+
+
+## v0.6.2
+- Fixed Home Insights consumable detail navigation argument label for Xcode compilation.
