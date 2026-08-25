@@ -93,7 +93,7 @@ struct HomeDashboardView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     QuickLink(title: "Home Systems", icon: "wrench.and.screwdriver", destination: AnyView(SystemsListView()))
                     QuickLink(title: "Rooms", icon: "door.left.hand.open", destination: AnyView(RoomsListView()))
-                    QuickLink(title: "Appliances", icon: "refrigerator", destination: AnyView(AppliancesListView()))
+                    QuickLink(title: "Devices & Equipment", icon: "refrigerator", destination: AnyView(AppliancesListView()))
                     QuickLink(title: "Paint & Finishes", icon: "paintbrush", destination: AnyView(PaintListView()))
                     QuickLink(title: "Projects", icon: "hammer", destination: AnyView(ProjectsView()))
                     QuickLink(title: "Vendors", icon: "person.crop.circle.badge.checkmark", destination: AnyView(VendorsListView()))

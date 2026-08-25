@@ -1,11 +1,11 @@
-# Home Maintainer v0.8
+# Home Maintainer v0.10
 
 This update strengthens the Room / Area hub so related records can be created where they belong.
 
 ## Room / Area connections
 - Add a Project directly from a Room / Area.
 - Add Paint / Finish directly from a Room / Area.
-- Add Appliance / Equipment directly from a Room / Area.
+- Add appliances, electronics, home technology, tools, and equipment directly from a Room / Area.
 - Add a maintenance Task directly from a Room / Area.
 - New records are automatically pre-linked to the Room / Area.
 - Tap any linked record to open its detail page and edit it.
@@ -28,6 +28,15 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Home Systems now have direct Room / Area relationships with legacy location matching retained for older records.
 - Room / Area detail pages can add and manage Fixtures and Home Systems directly.
 - Fixtures are included in global search and JSON export.
+
+
+## v0.10 additions
+- Reworked Shopping into a visible four-step workflow: add options → compare → choose/purchase → install/save to My Home.
+- Product options now have an optional buying-decision group (for example, Kitchen Faucet), so competing choices stay together in Shopping and Compare Options.
+- Add options directly from Shopping or directly into an existing comparison group.
+- Choose a purchase from Shopping or Compare Options, with the option to automatically close/reject the other contenders in that decision group.
+- Installed/saved project items now receive a distinct Installed / Saved to Home status.
+- Expanded Appliances & Equipment into Appliances, Electronics & Equipment, including Electronics, Home Technology, Outdoor Equipment, and Tools without adding another top-level button.
 
 ## v0.9 additions
 - Seasonal Maintenance planning by Spring, Summer, Fall, and Winter with one-tap task creation.

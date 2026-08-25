@@ -17,7 +17,7 @@ struct MyHomeView: View {
             Section("Home Records") {
                 NavigationLink { RoomsListView() } label: { Label("Rooms & Areas", systemImage: "door.left.hand.open") }
                 NavigationLink { SystemsListView() } label: { Label("Home Systems", systemImage: "wrench.and.screwdriver") }
-                NavigationLink { AppliancesListView() } label: { Label("Appliances & Equipment", systemImage: "refrigerator") }
+                NavigationLink { AppliancesListView() } label: { Label("Appliances, Electronics & Equipment", systemImage: "refrigerator") }
                 NavigationLink { FixturesListView() } label: { Label("Fixtures", systemImage: "lightbulb") }
                 NavigationLink { PaintListView() } label: { Label("Paint & Finishes", systemImage: "paintbrush") }
                 NavigationLink { DetectorsListView() } label: { Label("Smoke & CO Detectors", systemImage: "sensor.tag.radiowaves.forward") }
@@ -232,11 +232,11 @@ struct RoomDetailView: View {
                 Button { showAddSystem = true } label: { Label("Add Home System", systemImage: "plus") }
             }
 
-            Section("Appliances & Equipment") {
-                if roomAppliances.isEmpty { Text("No appliances or equipment").foregroundStyle(.secondary) }
+            Section("Appliances, Electronics & Equipment") {
+                if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
                 Button { showAddAppliance = true } label: {
-                    Label("Add Appliance / Equipment", systemImage: "plus")
+                    Label("Add Device / Equipment", systemImage: "plus")
                 }
             }
 
@@ -346,9 +346,9 @@ struct AppliancesListView: View {
     @State private var showAdd = false
     var body: some View {
         List {
-            if appliances.isEmpty { ContentUnavailableView("No appliances yet", systemImage: "refrigerator", description: Text("Add appliances to track warranties, models, purchases, and maintenance.")) }
+            if appliances.isEmpty { ContentUnavailableView("No devices or equipment yet", systemImage: "refrigerator", description: Text("Add appliances, electronics, home technology, tools, and equipment to track purchases, warranties, and maintenance.")) }
             ForEach(appliances) { appliance in NavigationLink { ApplianceDetailView(appliance: appliance) } label: { VStack(alignment: .leading, spacing: 3) { Text(appliance.name).font(.headline); Text([appliance.manufacturer, appliance.model].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()) } }
-        }.navigationTitle("Appliances")
+        }.navigationTitle("Devices & Equipment")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }
         .sheet(isPresented: $showAdd) { NavigationStack { ApplianceFormView() } }
     }
@@ -363,7 +363,7 @@ struct ApplianceDetailView: View {
     private var linkedHistory: [MaintenanceRecord] { history.filter { $0.relatedItemName.localizedCaseInsensitiveContains(appliance.name) } }
     var body: some View {
         List {
-            Section("Appliance") {
+            Section("Appliance / Electronics / Equipment") {
                 if !appliance.category.isEmpty { LabeledContent("Category", value: appliance.category) }
                 if !appliance.manufacturer.isEmpty { LabeledContent("Manufacturer", value: appliance.manufacturer) }
                 if !appliance.model.isEmpty { LabeledContent("Model", value: appliance.model) }

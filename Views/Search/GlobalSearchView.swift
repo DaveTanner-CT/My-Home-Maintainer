@@ -63,7 +63,7 @@ struct GlobalSearchView: View {
 
         let matchingAppliances = appliances.filter { contains(q, [$0.name, $0.category, $0.manufacturer, $0.model, $0.serialNumber, $0.purchasedFrom, $0.notes]) }
         if !matchingAppliances.isEmpty {
-            Section("Appliances") {
+            Section("Appliances, Electronics & Equipment") {
                 ForEach(matchingAppliances) { item in
                     NavigationLink { ApplianceDetailView(appliance: item) } label: {
                         SearchResultRow(icon: "refrigerator", title: item.name, subtitle: item.manufacturer)

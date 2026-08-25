@@ -135,7 +135,7 @@ struct ReplacementForecastView: View {
         }
         for appliance in appliances {
             if let date = appliance.purchaseDate {
-                result.append(.init(id: "a-\(appliance.persistentModelID)", name: appliance.name, kind: "Appliance / Equipment", location: appliance.room?.name ?? "", installed: date, years: applianceLife(appliance.category), detailDestination: AnyView(ApplianceDetailView(appliance: appliance))))
+                result.append(.init(id: "a-\(appliance.persistentModelID)", name: appliance.name, kind: "Appliance / Electronics / Equipment", location: appliance.room?.name ?? "", installed: date, years: applianceLife("\(appliance.category) \(appliance.name)"), detailDestination: AnyView(ApplianceDetailView(appliance: appliance))))
             }
         }
         for fixture in fixtures {
@@ -193,6 +193,9 @@ struct ReplacementForecastView: View {
         if value.contains("microwave") { return 9 }
         if value.contains("freezer") { return 12 }
         if value.contains("water heater") { return 10 }
+        if value.contains("router") || value.contains("wifi") || value.contains("network") || value.contains("home technology") { return 5 }
+        if value.contains("television") || value.contains(" tv") || value.contains("electronics") { return 7 }
+        if value.contains("tool") || value.contains("outdoor equipment") { return 10 }
         return 12
     }
     private func fixtureLife(_ category: String) -> Int {

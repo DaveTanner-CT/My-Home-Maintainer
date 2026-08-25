@@ -20,7 +20,7 @@ struct ProjectDetailView: View {
     private var plannedItems: [ProjectItem] { items.filter { $0.status != .rejected } }
     private var plannedTotal: Double { plannedItems.reduce(0) { $0 + $1.estimatedTotal } }
     private var purchasedTotal: Double {
-        items.filter { $0.status == .purchased }.reduce(0) { $0 + ($1.actualPurchaseCost ?? $1.estimatedTotal) }
+        items.filter { $0.status == .purchased || $0.status == .installed }.reduce(0) { $0 + ($1.actualPurchaseCost ?? $1.estimatedTotal) }
     }
 
     var body: some View {
@@ -68,7 +68,7 @@ struct ProjectDetailView: View {
                 NavigationLink {
                     ProjectShoppingView(project: project)
                 } label: {
-                    Label("Shopping Mode", systemImage: "cart")
+                    Label("Shopping: Options → Purchase → Install", systemImage: "cart")
                 }
                 NavigationLink {
                     ProjectComparisonView(project: project)
@@ -158,6 +158,7 @@ struct ProjectItemDetailView: View {
 
             Section("Item") {
                 LabeledContent("Category", value: item.category)
+                if !item.isIdeaOnly { LabeledContent("Buying decision", value: item.comparisonGroupName) }
                 LabeledContent("Status", value: item.status.rawValue)
                 if item.isIdeaOnly { Text("Idea only").foregroundStyle(.secondary) }
             }
@@ -194,12 +195,10 @@ struct ProjectItemDetailView: View {
                     } label: {
                         Label("Mark Favorite", systemImage: "star")
                     }
-                    Button {
-                        item.status = .purchased
-                        if item.purchaseDate == nil { item.purchaseDate = .now }
-                        try? modelContext.save()
+                    NavigationLink {
+                        ProjectPurchaseView(project: project, item: item)
                     } label: {
-                        Label("Mark Purchased", systemImage: "checkmark.circle")
+                        Label("Choose & Record Purchase", systemImage: "cart.badge.plus")
                     }
                     Button(role: .destructive) {
                         item.status = .rejected

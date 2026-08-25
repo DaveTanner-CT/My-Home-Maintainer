@@ -132,10 +132,11 @@ struct ApplianceFormView: View {
     @State private var purchasedFrom: String; @State private var price: String; @State private var hasPurchaseDate: Bool; @State private var purchaseDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date; @State private var manufacturerWebsite: String; @State private var registrationLink: String
     @State private var notes: String; @State private var selectedRoom: Room?; @State private var showDelete = false
+    private let standardCategories = ["Appliance", "Electronics", "Home Technology", "Outdoor Equipment", "Tool", "Other"]
 
     init(existing: Appliance? = nil, initialRoom: Room? = nil) {
         self.existing = existing
-        _name = State(initialValue: existing?.name ?? ""); _category = State(initialValue: existing?.category ?? ""); _manufacturer = State(initialValue: existing?.manufacturer ?? "")
+        _name = State(initialValue: existing?.name ?? ""); _category = State(initialValue: existing?.category ?? "Appliance"); _manufacturer = State(initialValue: existing?.manufacturer ?? "")
         _model = State(initialValue: existing?.model ?? ""); _serial = State(initialValue: existing?.serialNumber ?? ""); _purchasedFrom = State(initialValue: existing?.purchasedFrom ?? "")
         _price = State(initialValue: existing?.purchasePrice.map { String($0) } ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
         _hasWarrantyDate = State(initialValue: existing?.warrantyExpiration != nil); _warrantyDate = State(initialValue: existing?.warrantyExpiration ?? .now)
@@ -144,8 +145,12 @@ struct ApplianceFormView: View {
     }
     var body: some View {
         Form {
-            Section("Appliance / Equipment") {
-                TextField("Name", text: $name); TextField("Category", text: $category); TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); TextField("Serial number", text: $serial)
+            Section("Appliance, Electronics & Equipment") {
+                TextField("Name", text: $name)
+                Picker("Type", selection: $category) {
+                    ForEach(categoryOptions, id: \.self) { Text($0).tag($0) }
+                }
+                TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); TextField("Serial number", text: $serial)
                 Picker("Room", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
             }
             Section("Purchase & Warranty") {
@@ -158,11 +163,15 @@ struct ApplianceFormView: View {
                 TextField("Product registration link", text: $registrationLink).keyboardType(.URL).textInputAutocapitalization(.never)
                 TextField("Notes", text: $notes, axis: .vertical)
             }
-            if existing != nil { Section { Button("Delete Appliance", role: .destructive) { showDelete = true } } }
+            if existing != nil { Section { Button("Delete Record", role: .destructive) { showDelete = true } } }
         }
-        .navigationTitle(existing == nil ? "Add Appliance" : "Edit Appliance")
+        .navigationTitle(existing == nil ? "Add Device / Equipment" : "Edit Device / Equipment")
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.isEmpty) } }
-        .confirmationDialog("Delete this appliance?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Appliance", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+        .confirmationDialog("Delete this appliance, electronic, or equipment record?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Record", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+    }
+    private var categoryOptions: [String] {
+        if category.isEmpty || standardCategories.contains(category) { return standardCategories }
+        return [category] + standardCategories
     }
     private func save() {
         let record = existing ?? Appliance(name: name, category: category); if existing == nil { modelContext.insert(record) }

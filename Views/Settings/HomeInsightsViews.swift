@@ -47,7 +47,7 @@ struct HomeInsightsView: View {
                     }
                     ForEach(expiringAppliances) { appliance in
                         NavigationLink { ApplianceDetailView(appliance: appliance) } label: {
-                            warningRow(name: appliance.name, date: appliance.warrantyExpiration, subtitle: "Appliance")
+                            warningRow(name: appliance.name, date: appliance.warrantyExpiration, subtitle: "Device / Equipment")
                         }
                     }
                 }
@@ -121,7 +121,7 @@ struct WarrantyCenterView: View {
         }
         let applianceEntries = appliances.compactMap { item -> WarrantyEntry? in
             guard let date = item.warrantyExpiration else { return nil }
-            return .init(name: item.name, kind: "Appliance", date: date, destination: AnyView(ApplianceDetailView(appliance: item)))
+            return .init(name: item.name, kind: "Device / Equipment", date: date, destination: AnyView(ApplianceDetailView(appliance: item)))
         }
         return (systemEntries + applianceEntries).sorted { $0.date < $1.date }
     }
@@ -129,7 +129,7 @@ struct WarrantyCenterView: View {
     var body: some View {
         List {
             if entries.isEmpty {
-                ContentUnavailableView("No warranties recorded", systemImage: "shield", description: Text("Add warranty expiration dates to Home Systems and Appliances to track them here."))
+                ContentUnavailableView("No warranties recorded", systemImage: "shield", description: Text("Add warranty expiration dates to Home Systems and devices/equipment to track them here."))
             } else {
                 ForEach(entries) { entry in
                     NavigationLink { entry.destination } label: {

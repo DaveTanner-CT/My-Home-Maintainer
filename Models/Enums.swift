@@ -55,6 +55,7 @@ enum ProjectItemStatus: String, CaseIterable, Identifiable {
     case considering = "Considering"
     case favorite = "Favorite"
     case purchased = "Purchased"
+    case installed = "Installed / Saved to Home"
     case rejected = "Rejected"
 
     var id: String { rawValue }

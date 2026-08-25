@@ -35,7 +35,7 @@ struct MaintenanceRecordSnapshot: Codable { let date: Date; let title, notes, ve
 struct DetectorSnapshot: Codable { let location, type, manufacturer, model, batteryType, notes: String; let manufactureDate, installationDate, replacementDate: Date?; let isHardwired: Bool }
 struct ConsumableSnapshot: Codable { let name, type, size, manufacturer, modelPartNumber, purchaseLink, notes: String; let replacementIntervalMonths: Int?; let lastReplaced, nextReplacement: Date? }
 struct ProjectSnapshot: Codable { let title, projectDescription, stage, notes, roomName: String; let targetDate: Date?; let budget: Double? }
-struct ProjectItemSnapshot: Codable { let projectName, title, category, manufacturer, model, sku, finishColor, dimensions, store, website, notes, status: String; let unitCost, quantity, actualPurchaseCost: Double?; let purchaseDate: Date?; let isIdeaOnly: Bool }
+struct ProjectItemSnapshot: Codable { let projectName, title, category, comparisonGroup, manufacturer, model, sku, finishColor, dimensions, store, website, notes, status: String; let unitCost, quantity, actualPurchaseCost: Double?; let purchaseDate: Date?; let isIdeaOnly: Bool }
 struct MeasurementSnapshot: Codable { let projectName, name, unit, notes: String; let value: Double }
 struct AttachmentSnapshot: Codable { let name, caption, category, fileName, typeIdentifier, ownerType, ownerName: String; let createdAt: Date; let fileData: Data }
 
@@ -60,7 +60,7 @@ enum HomeExportService {
 
         return HomeArchive(
             exportedAt: .now,
-            appVersion: "0.8",
+            appVersion: "0.10",
             homes: homes.map { .init(name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) },
             rooms: rooms.map { .init(name: $0.name, notes: $0.notes, areaType: $0.areaType.rawValue, isFavorite: $0.isFavorite) },
             vendors: vendors.map { .init(businessName: $0.businessName, contactName: $0.contactName, category: $0.category, phone: $0.phone, email: $0.email, website: $0.website, address: $0.address, notes: $0.notes, isFavorite: $0.isFavorite) },
@@ -73,7 +73,7 @@ enum HomeExportService {
             detectors: detectors.map { .init(location: $0.location, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, batteryType: $0.batteryType, notes: $0.notes, manufactureDate: $0.manufactureDate, installationDate: $0.installationDate, replacementDate: $0.replacementDate, isHardwired: $0.isHardwired) },
             consumables: consumables.map { .init(name: $0.name, type: $0.type, size: $0.size, manufacturer: $0.manufacturer, modelPartNumber: $0.modelPartNumber, purchaseLink: $0.purchaseLink, notes: $0.notes, replacementIntervalMonths: $0.replacementIntervalMonths, lastReplaced: $0.lastReplaced, nextReplacement: $0.nextReplacement) },
             projects: projects.map { .init(title: $0.title, projectDescription: $0.projectDescription, stage: $0.stage.rawValue, notes: $0.notes, roomName: $0.locationName, targetDate: $0.targetDate, budget: $0.budget) },
-            projectItems: items.map { .init(projectName: $0.project?.title ?? "", title: $0.title, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, sku: $0.sku, finishColor: $0.finishColor, dimensions: $0.dimensions, store: $0.store, website: $0.website, notes: $0.notes, status: $0.status.rawValue, unitCost: $0.unitCost, quantity: $0.quantity, actualPurchaseCost: $0.actualPurchaseCost, purchaseDate: $0.purchaseDate, isIdeaOnly: $0.isIdeaOnly) },
+            projectItems: items.map { .init(projectName: $0.project?.title ?? "", title: $0.title, category: $0.category, comparisonGroup: $0.comparisonGroupName, manufacturer: $0.manufacturer, model: $0.model, sku: $0.sku, finishColor: $0.finishColor, dimensions: $0.dimensions, store: $0.store, website: $0.website, notes: $0.notes, status: $0.status.rawValue, unitCost: $0.unitCost, quantity: $0.quantity, actualPurchaseCost: $0.actualPurchaseCost, purchaseDate: $0.purchaseDate, isIdeaOnly: $0.isIdeaOnly) },
             measurements: measurements.map { .init(projectName: $0.project?.title ?? "", name: $0.name, unit: $0.unit, notes: $0.notes, value: $0.value) },
             attachments: attachments.map { attachment in
                 let owner = ownerDescription(for: attachment)

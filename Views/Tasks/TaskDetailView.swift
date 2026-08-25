@@ -32,7 +32,7 @@ struct TaskDetailView: View {
             }
             Section("Related") {
                 if let system = task.system { NavigationLink { SystemDetailView(system: system) } label: { LabeledContent("System", value: system.name) } }
-                if let appliance = task.appliance { NavigationLink { ApplianceDetailView(appliance: appliance) } label: { LabeledContent("Appliance", value: appliance.name) } }
+                if let appliance = task.appliance { NavigationLink { ApplianceDetailView(appliance: appliance) } label: { LabeledContent("Device / Equipment", value: appliance.name) } }
                 if let room = task.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room", value: room.name) } }
                 if let project = task.project { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Project", value: project.title) } }
                 if task.system == nil && task.appliance == nil && task.room == nil && task.project == nil { Text("No related records").foregroundStyle(.secondary) }

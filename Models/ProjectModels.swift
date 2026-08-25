@@ -41,6 +41,8 @@ final class ProjectItem {
     var project: Project?
     var title: String
     var category: String
+    // Optional label that groups multiple product options for one buying decision (for example, "Kitchen Faucet").
+    var comparisonGroup: String?
     var manufacturer: String
     var model: String
     var sku: String
@@ -57,10 +59,11 @@ final class ProjectItem {
     var photoData: Data?
     var isIdeaOnly: Bool
 
-    init(project: Project? = nil, title: String, category: String = "Inspiration", manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
+    init(project: Project? = nil, title: String, category: String = "Inspiration", comparisonGroup: String? = nil, manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
         self.project = project
         self.title = title
         self.category = category
+        self.comparisonGroup = comparisonGroup
         self.manufacturer = manufacturer
         self.model = model
         self.sku = sku
@@ -85,6 +88,11 @@ final class ProjectItem {
 
     var estimatedTotal: Double {
         (unitCost ?? 0) * quantity
+    }
+
+    var comparisonGroupName: String {
+        let trimmed = (comparisonGroup ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? (category.isEmpty ? "Other" : category) : trimmed
     }
 }
 
