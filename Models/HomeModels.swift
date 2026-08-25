@@ -81,8 +81,9 @@ final class HomeSystem {
     var notes: String
     var website: String
     var vendor: Vendor?
+    var room: Room?
 
-    init(name: String, type: String, manufacturer: String = "", model: String = "", serialNumber: String = "", installationDate: Date? = nil, purchaseCost: Double? = nil, warrantyExpiration: Date? = nil, expectedServiceLifeYears: Int? = nil, location: String = "", notes: String = "", website: String = "", vendor: Vendor? = nil) {
+    init(name: String, type: String, manufacturer: String = "", model: String = "", serialNumber: String = "", installationDate: Date? = nil, purchaseCost: Double? = nil, warrantyExpiration: Date? = nil, expectedServiceLifeYears: Int? = nil, location: String = "", notes: String = "", website: String = "", vendor: Vendor? = nil, room: Room? = nil) {
         self.name = name
         self.type = type
         self.manufacturer = manufacturer
@@ -96,7 +97,10 @@ final class HomeSystem {
         self.notes = notes
         self.website = website
         self.vendor = vendor
+        self.room = room
     }
+
+    var locationName: String { room?.name ?? location }
 }
 
 @Model
@@ -171,5 +175,43 @@ final class PaintFinish {
 
     var locationName: String {
         room?.name ?? roomName
+    }
+}
+
+
+@Model
+final class Fixture {
+    var name: String
+    var category: String
+    var manufacturer: String
+    var model: String
+    var partNumber: String
+    var finishColor: String
+    var installationDate: Date?
+    var purchaseDate: Date?
+    var purchasePrice: Double?
+    var purchasedFrom: String
+    var warrantyExpiration: Date?
+    var productLink: String
+    var notes: String
+    var room: Room?
+    var vendor: Vendor?
+
+    init(name: String, category: String = "", manufacturer: String = "", model: String = "", partNumber: String = "", finishColor: String = "", installationDate: Date? = nil, purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, productLink: String = "", notes: String = "", room: Room? = nil, vendor: Vendor? = nil) {
+        self.name = name
+        self.category = category
+        self.manufacturer = manufacturer
+        self.model = model
+        self.partNumber = partNumber
+        self.finishColor = finishColor
+        self.installationDate = installationDate
+        self.purchaseDate = purchaseDate
+        self.purchasePrice = purchasePrice
+        self.purchasedFrom = purchasedFrom
+        self.warrantyExpiration = warrantyExpiration
+        self.productLink = productLink
+        self.notes = notes
+        self.room = room
+        self.vendor = vendor
     }
 }

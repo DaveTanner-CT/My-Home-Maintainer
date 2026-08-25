@@ -62,6 +62,7 @@ struct SystemFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
+    @Query(sort: \Room.name) private var rooms: [Room]
     let existing: HomeSystem?
     @State private var name: String; @State private var type: String; @State private var manufacturer: String
     @State private var model: String; @State private var serial: String; @State private var location: String
@@ -69,9 +70,9 @@ struct SystemFormView: View {
     @State private var hasInstallDate: Bool; @State private var installDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date
     @State private var purchaseCost: String; @State private var serviceLife: Int
-    @State private var selectedVendor: Vendor?; @State private var showDelete = false
+    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var showDelete = false
 
-    init(existing: HomeSystem? = nil) {
+    init(existing: HomeSystem? = nil, initialRoom: Room? = nil) {
         self.existing = existing
         _name = State(initialValue: existing?.name ?? ""); _type = State(initialValue: existing?.type ?? "")
         _manufacturer = State(initialValue: existing?.manufacturer ?? ""); _model = State(initialValue: existing?.model ?? "")
@@ -82,13 +83,16 @@ struct SystemFormView: View {
         _purchaseCost = State(initialValue: existing?.purchaseCost.map { String($0) } ?? "")
         _serviceLife = State(initialValue: existing?.expectedServiceLifeYears ?? 0)
         _selectedVendor = State(initialValue: existing?.vendor)
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
     }
 
     var body: some View {
         Form {
             Section("System") {
                 TextField("Name", text: $name); TextField("Type", text: $type); TextField("Manufacturer", text: $manufacturer)
-                TextField("Model", text: $model); TextField("Serial number", text: $serial); TextField("Location", text: $location)
+                TextField("Model", text: $model); TextField("Serial number", text: $serial)
+                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
+                if selectedRoom == nil { TextField("Location", text: $location) }
             }
             Section("Ownership") {
                 Toggle("Installation date", isOn: $hasInstallDate); if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) }
@@ -109,7 +113,7 @@ struct SystemFormView: View {
     private func save() {
         let record = existing ?? HomeSystem(name: name, type: type); if existing == nil { modelContext.insert(record) }
         record.name = name; record.type = type; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial
-        record.location = location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
+        record.room = selectedRoom; record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
         record.purchaseCost = Double(purchaseCost); record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
         record.expectedServiceLifeYears = serviceLife == 0 ? nil : serviceLife; record.vendor = selectedVendor
         try? modelContext.save(); dismiss()

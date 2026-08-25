@@ -18,6 +18,7 @@ struct MyHomeView: View {
                 NavigationLink { RoomsListView() } label: { Label("Rooms & Areas", systemImage: "door.left.hand.open") }
                 NavigationLink { SystemsListView() } label: { Label("Home Systems", systemImage: "wrench.and.screwdriver") }
                 NavigationLink { AppliancesListView() } label: { Label("Appliances & Equipment", systemImage: "refrigerator") }
+                NavigationLink { FixturesListView() } label: { Label("Fixtures", systemImage: "lightbulb") }
                 NavigationLink { PaintListView() } label: { Label("Paint & Finishes", systemImage: "paintbrush") }
                 NavigationLink { DetectorsListView() } label: { Label("Smoke & CO Detectors", systemImage: "sensor.tag.radiowaves.forward") }
                 NavigationLink { ConsumablesListView() } label: { Label("Filters & Consumables", systemImage: "shippingbox") }
@@ -152,9 +153,12 @@ struct RoomDetailView: View {
     @Query private var paints: [PaintFinish]
     @Query private var projects: [Project]
     @Query private var systems: [HomeSystem]
+    @Query private var fixtures: [Fixture]
     @State private var showAddProject = false
     @State private var showAddPaint = false
     @State private var showAddAppliance = false
+    @State private var showAddFixture = false
+    @State private var showAddSystem = false
     @State private var showAddTask = false
 
     private var roomAppliances: [Appliance] { appliances.filter { $0.room?.persistentModelID == room.persistentModelID } }
@@ -172,8 +176,12 @@ struct RoomDetailView: View {
         }
     }
     private var roomSystems: [HomeSystem] {
-        systems.filter { $0.location.caseInsensitiveCompare(room.name) == .orderedSame }
+        systems.filter {
+            $0.room?.persistentModelID == room.persistentModelID ||
+            ($0.room == nil && $0.location.caseInsensitiveCompare(room.name) == .orderedSame)
+        }
     }
+    private var roomFixtures: [Fixture] { fixtures.filter { $0.room?.persistentModelID == room.persistentModelID } }
 
     var body: some View {
         List {
@@ -218,12 +226,10 @@ struct RoomDetailView: View {
                 }
             }
 
-            if !roomSystems.isEmpty {
-                Section("Home Systems") {
-                    ForEach(roomSystems) { system in
-                        NavigationLink(system.name) { SystemDetailView(system: system) }
-                    }
-                }
+            Section("Home Systems") {
+                if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
+                ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
+                Button { showAddSystem = true } label: { Label("Add Home System", systemImage: "plus") }
             }
 
             Section("Appliances & Equipment") {
@@ -232,6 +238,12 @@ struct RoomDetailView: View {
                 Button { showAddAppliance = true } label: {
                     Label("Add Appliance / Equipment", systemImage: "plus")
                 }
+            }
+
+            Section("Fixtures") {
+                if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
+                ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
+                Button { showAddFixture = true } label: { Label("Add Fixture", systemImage: "plus") }
             }
 
             Section("Tasks") {
@@ -255,15 +267,22 @@ struct RoomDetailView: View {
         .sheet(isPresented: $showAddProject) { NavigationStack { ProjectFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddPaint) { NavigationStack { PaintFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddAppliance) { NavigationStack { ApplianceFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddFixture) { NavigationStack { FixtureFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddSystem) { NavigationStack { SystemFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: room) } }
-        .onAppear { connectLegacyPaintRecords() }
+        .onAppear { connectLegacyRecords() }
     }
 
-    private func connectLegacyPaintRecords() {
+    private func connectLegacyRecords() {
         var changed = false
         for paint in roomPaints where paint.room == nil {
             paint.room = room
             paint.roomName = room.name
+            changed = true
+        }
+        for system in roomSystems where system.room == nil {
+            system.room = room
+            system.location = room.name
             changed = true
         }
         if changed { try? modelContext.save() }
@@ -297,7 +316,7 @@ struct SystemDetailView: View {
                 if !system.manufacturer.isEmpty { LabeledContent("Manufacturer", value: system.manufacturer) }
                 if !system.model.isEmpty { LabeledContent("Model", value: system.model) }
                 if !system.serialNumber.isEmpty { LabeledContent("Serial", value: system.serialNumber) }
-                if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
+                if let room = system.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } } else if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
             }
             if system.warrantyExpiration != nil || (system.installationDate != nil && system.expectedServiceLifeYears != nil) {
                 Section("Health & Planning") {

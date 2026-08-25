@@ -11,6 +11,7 @@ struct HomeKeeperApp: App {
             HomeSystem.self,
             Appliance.self,
             PaintFinish.self,
+            Fixture.self,
             Detector.self,
             Consumable.self,
             MaintenanceTask.self,

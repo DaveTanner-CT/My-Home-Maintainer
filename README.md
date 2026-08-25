@@ -28,3 +28,8 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Home Systems now have direct Room / Area relationships with legacy location matching retained for older records.
 - Room / Area detail pages can add and manage Fixtures and Home Systems directly.
 - Fixtures are included in global search and JSON export.
+
+## v0.9 additions
+- Seasonal Maintenance planning by Spring, Summer, Fall, and Winter with one-tap task creation.
+- Replacement Forecast for systems, appliances/equipment, and fixtures using recorded dates and service-life assumptions.
+- Project completion handoff: purchased project items can be promoted into permanent Appliance, Fixture, Home System, Paint/Finish, or home-history records, carrying the linked Room/Area and project photo forward.

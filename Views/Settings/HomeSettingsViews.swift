@@ -97,6 +97,8 @@ struct AppSettingsView: View {
                 NavigationLink { HomeInsightsView() } label: { Label("Home Insights", systemImage: "chart.bar.xaxis") }
                 NavigationLink { WarrantyCenterView() } label: { Label("Warranty Center", systemImage: "shield") }
                 NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
+                NavigationLink { SeasonalMaintenanceView() } label: { Label("Seasonal Planning", systemImage: "calendar.badge.clock") }
+                NavigationLink { ReplacementForecastView() } label: { Label("Replacement Forecast", systemImage: "chart.line.uptrend.xyaxis") }
             }
             Section("Data") {
                 NavigationLink { DataExportView() } label: { Label("Export Data", systemImage: "square.and.arrow.up") }
@@ -119,7 +121,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.7")
+                LabeledContent("Build", value: "0.9")
                 Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

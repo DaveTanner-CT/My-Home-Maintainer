@@ -50,6 +50,14 @@ struct ProjectDetailView: View {
                 if !project.projectDescription.isEmpty { Text(project.projectDescription) }
             }
 
+            Section("Project Actions") {
+                NavigationLink {
+                    ProjectCompletionView(project: project)
+                } label: {
+                    Label(project.stage == .completed ? "Save Project Items to My Home" : "Finish Project / Save to My Home", systemImage: "checkmark.seal")
+                }
+            }
+
             Section("Budget") {
                 if let budget = project.budget { LabeledContent("Budget", value: budget.formatted(AppFormatting.currency)) }
                 LabeledContent("Planned", value: plannedTotal.formatted(AppFormatting.currency))

@@ -9,6 +9,7 @@ struct GlobalSearchView: View {
     @Query private var rooms: [Room]
     @Query private var vendors: [Vendor]
     @Query private var paints: [PaintFinish]
+    @Query private var fixtures: [Fixture]
     @Query private var detectors: [Detector]
     @Query private var consumables: [Consumable]
     @Query private var projects: [Project]
@@ -21,7 +22,7 @@ struct GlobalSearchView: View {
     var body: some View {
         List {
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                ContentUnavailableView("Search your home", systemImage: "magnifyingglass", description: Text("Find tasks, systems, appliances, rooms, paint colors, vendors, projects, and maintenance history."))
+                ContentUnavailableView("Search your home", systemImage: "magnifyingglass", description: Text("Find tasks, systems, appliances, fixtures, rooms, paint colors, vendors, projects, and maintenance history."))
             } else {
                 searchSections
             }
@@ -66,6 +67,18 @@ struct GlobalSearchView: View {
                 ForEach(matchingAppliances) { item in
                     NavigationLink { ApplianceDetailView(appliance: item) } label: {
                         SearchResultRow(icon: "refrigerator", title: item.name, subtitle: item.manufacturer)
+                    }
+                }
+            }
+        }
+
+
+        let matchingFixtures = fixtures.filter { contains(q, [$0.name, $0.category, $0.manufacturer, $0.model, $0.partNumber, $0.finishColor, $0.purchasedFrom, $0.notes, $0.room?.name ?? ""]) }
+        if !matchingFixtures.isEmpty {
+            Section("Fixtures") {
+                ForEach(matchingFixtures) { fixture in
+                    NavigationLink { FixtureDetailView(fixture: fixture) } label: {
+                        SearchResultRow(icon: "lightbulb", title: fixture.name, subtitle: [fixture.category, fixture.room?.name ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
                     }
                 }
             }
