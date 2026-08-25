@@ -1,280 +1,142 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 import UIKit
 
-struct ProjectDetailView: View {
-    let project: Project
-    @Query private var allItems: [ProjectItem]
-    @Query private var allMeasurements: [ProjectMeasurement]
-    @State private var showAddItem = false
-    @State private var showAddMeasurement = false
+struct ProjectFormView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
+    let existing: Project?
 
-    private var items: [ProjectItem] {
-        allItems.filter { $0.project?.persistentModelID == project.persistentModelID }
-    }
+    @State private var title: String
+    @State private var description: String
+    @State private var stage: ProjectStage
+    @State private var selectedRoom: Room?
+    @State private var budgetText: String
+    @State private var hasTargetDate: Bool
+    @State private var targetDate: Date
+    @State private var notes: String
+    @State private var coverPhotoData: Data?
+    @State private var selectedCoverPhoto: PhotosPickerItem?
+    @State private var showDelete = false
+    @State private var didResolveLegacyRoom = false
 
-    private var measurements: [ProjectMeasurement] {
-        allMeasurements.filter { $0.project?.persistentModelID == project.persistentModelID }
-    }
-
-    private var plannedItems: [ProjectItem] { items.filter { $0.status != .rejected } }
-    private var plannedTotal: Double { plannedItems.reduce(0) { $0 + $1.estimatedTotal } }
-    private var purchasedTotal: Double {
-        items.filter { $0.status == .purchased }.reduce(0) { $0 + ($1.actualPurchaseCost ?? $1.estimatedTotal) }
+    init(existing: Project? = nil, initialRoom: Room? = nil) {
+        self.existing = existing
+        _title = State(initialValue: existing?.title ?? "")
+        _description = State(initialValue: existing?.projectDescription ?? "")
+        _stage = State(initialValue: existing?.stage ?? .idea)
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? "")
+        _hasTargetDate = State(initialValue: existing?.targetDate != nil)
+        _targetDate = State(initialValue: existing?.targetDate ?? .now)
+        _notes = State(initialValue: existing?.notes ?? "")
+        _coverPhotoData = State(initialValue: existing?.coverPhotoData)
     }
 
     var body: some View {
-        List {
-            if let data = project.coverPhotoData, let image = UIImage(data: data) {
-                Section {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 190)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            }
-
+        Form {
             Section("Project") {
-                LabeledContent("Stage", value: project.stageRaw)
-                if !project.roomName.isEmpty { LabeledContent("Room", value: project.roomName) }
-                if let target = project.targetDate {
-                    LabeledContent("Target", value: target.formatted(date: .abbreviated, time: .omitted))
+                TextField("Project name", text: $title)
+                TextField("Description", text: $description, axis: .vertical)
+                Picker("Stage", selection: $stage) {
+                    ForEach(ProjectStage.allCases) { Text($0.rawValue).tag($0) }
                 }
-                if !project.projectDescription.isEmpty { Text(project.projectDescription) }
-            }
-
-            Section("Budget") {
-                if let budget = project.budget { LabeledContent("Budget", value: budget.formatted(AppFormatting.currency)) }
-                LabeledContent("Planned", value: plannedTotal.formatted(AppFormatting.currency))
-                LabeledContent("Purchased", value: purchasedTotal.formatted(AppFormatting.currency))
-                if let budget = project.budget {
-                    LabeledContent("Remaining", value: (budget - purchasedTotal).formatted(AppFormatting.currency))
-                }
-                NavigationLink {
-                    ProjectShoppingView(project: project)
-                } label: {
-                    Label("Shopping Mode", systemImage: "cart")
-                }
-                NavigationLink {
-                    ProjectComparisonView(project: project)
-                } label: {
-                    Label("Compare Options", systemImage: "rectangle.split.3x1")
-                }
-            }
-
-            if !items.isEmpty {
-                ForEach(groupedCategories, id: \.self) { category in
-                    Section(category) {
-                        ForEach(items.filter { $0.category == category }) { item in
-                            NavigationLink {
-                                ProjectItemDetailView(project: project, item: item)
-                            } label: {
-                                ProjectItemRow(item: item)
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("None").tag(nil as Room?)
+                    ForEach(HomeAreaType.allCases) { type in
+                        let matching = rooms.filter { $0.areaType == type }
+                        if !matching.isEmpty {
+                            Section(type.rawValue) {
+                                ForEach(matching) { room in
+                                    Text(room.name).tag(Optional(room))
+                                }
                             }
                         }
                     }
                 }
-            } else {
-                Section("Design Board") {
-                    Text("No ideas or products yet.").foregroundStyle(.secondary)
-                    Button { showAddItem = true } label: {
-                        Label("Add First Idea / Item", systemImage: "plus")
-                    }
+            }
+
+            Section("Cover Photo") {
+                if let data = coverPhotoData, let image = UIImage(data: data) {
+                    ExpandablePhoto(image: image, height: 220, fill: false, cornerRadius: 12)
+                }
+                PhotosPicker(selection: $selectedCoverPhoto, matching: .images) {
+                    Label(coverPhotoData == nil ? "Add Cover Photo" : "Change Cover Photo", systemImage: "photo")
+                }
+                if coverPhotoData != nil {
+                    Button("Remove Cover Photo", role: .destructive) { coverPhotoData = nil }
                 }
             }
 
-            Section("Measurements") {
-                if measurements.isEmpty { Text("No measurements yet").foregroundStyle(.secondary) }
-                ForEach(measurements) { measurement in
-                    NavigationLink {
-                        ProjectMeasurementDetailView(project: project, measurement: measurement)
-                    } label: {
-                        LabeledContent(measurement.name, value: "\(measurement.value.formatted()) \(measurement.unit)")
-                    }
+            Section("Planning") {
+                TextField("Budget", text: $budgetText).keyboardType(.decimalPad)
+                Toggle("Target date", isOn: $hasTargetDate)
+                if hasTargetDate {
+                    DatePicker("Target", selection: $targetDate, displayedComponents: .date)
                 }
-                Button { showAddMeasurement = true } label: {
-                    Label("Add Measurement", systemImage: "ruler")
-                }
+                TextField("Notes", text: $notes, axis: .vertical)
             }
 
-            AttachmentSection(owner: .project(project))
-
-            if !project.notes.isEmpty {
-                Section("Notes") { Text(project.notes) }
-            }
-        }
-        .navigationTitle(project.title)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                NavigationLink("Edit") { ProjectFormView(existing: project) }
-                Menu {
-                    Button { showAddItem = true } label: { Label("Idea / Product", systemImage: "lightbulb") }
-                    Button { showAddMeasurement = true } label: { Label("Measurement", systemImage: "ruler") }
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
-        .sheet(isPresented: $showAddItem) {
-            NavigationStack { ProjectItemFormView(project: project) }
-        }
-        .sheet(isPresented: $showAddMeasurement) {
-            NavigationStack { ProjectMeasurementFormView(project: project) }
-        }
-    }
-
-    private var groupedCategories: [String] {
-        Array(Set(items.map(\.category))).sorted()
-    }
-}
-
-struct ProjectItemDetailView: View {
-    let project: Project
-    let item: ProjectItem
-    @Environment(\.modelContext) private var modelContext
-
-    var body: some View {
-        List {
-            if let data = item.photoData, let image = UIImage(data: data) {
+            if existing != nil {
                 Section {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    Button("Delete Project", role: .destructive) { showDelete = true }
                 }
-            }
-
-            Section("Item") {
-                LabeledContent("Category", value: item.category)
-                LabeledContent("Status", value: item.status.rawValue)
-                if item.isIdeaOnly { Text("Idea only").foregroundStyle(.secondary) }
-            }
-
-            if !item.isIdeaOnly {
-                Section("Product") {
-                    if !item.manufacturer.isEmpty { LabeledContent("Manufacturer", value: item.manufacturer) }
-                    if !item.model.isEmpty { LabeledContent("Model", value: item.model) }
-                    if !item.sku.isEmpty { LabeledContent("SKU", value: item.sku) }
-                    if !item.finishColor.isEmpty { LabeledContent("Color / finish", value: item.finishColor) }
-                    if !item.dimensions.isEmpty { LabeledContent("Dimensions", value: item.dimensions) }
-                    if !item.store.isEmpty { LabeledContent("Store", value: item.store) }
-                    if let cost = item.unitCost {
-                        LabeledContent("Unit cost", value: cost.formatted(AppFormatting.currency))
-                        LabeledContent("Quantity", value: item.quantity.formatted())
-                        LabeledContent("Estimated total", value: item.estimatedTotal.formatted(AppFormatting.currency))
-                    }
-                    if let date = item.purchaseDate {
-                        LabeledContent("Purchased", value: date.formatted(date: .abbreviated, time: .omitted))
-                    }
-                    if let actual = item.actualPurchaseCost {
-                        LabeledContent("Actual cost", value: actual.formatted(AppFormatting.currency))
-                    }
-                    if !item.website.isEmpty,
-                       let url = URL(string: item.website.hasPrefix("http") ? item.website : "https://\(item.website)") {
-                        Link("Open Product Link", destination: url)
-                    }
-                }
-
-                Section("Quick Status") {
-                    Button {
-                        item.status = .favorite
-                        try? modelContext.save()
-                    } label: {
-                        Label("Mark Favorite", systemImage: "star")
-                    }
-                    Button {
-                        item.status = .purchased
-                        if item.purchaseDate == nil { item.purchaseDate = .now }
-                        try? modelContext.save()
-                    } label: {
-                        Label("Mark Purchased", systemImage: "checkmark.circle")
-                    }
-                    Button(role: .destructive) {
-                        item.status = .rejected
-                        try? modelContext.save()
-                    } label: {
-                        Label("Reject Option", systemImage: "xmark.circle")
-                    }
-                }
-            }
-
-            AttachmentSection(owner: .projectItem(item))
-
-            if !item.notes.isEmpty {
-                Section("Notes") { Text(item.notes) }
             }
         }
-        .navigationTitle(item.title)
+        .navigationTitle(existing == nil ? "New Project" : "Edit Project")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink("Edit") { ProjectItemFormView(project: project, existing: item) }
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { save() }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+        }
+        .onAppear {
+            // Older projects stored only a room-name string. Resolve that legacy value
+            // to the real Room record the first time the edit form opens.
+            guard !didResolveLegacyRoom else { return }
+            didResolveLegacyRoom = true
+            if selectedRoom == nil, let legacyName = existing?.roomName, !legacyName.isEmpty {
+                selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyName) == .orderedSame }
+            }
+        }
+        .onChange(of: selectedCoverPhoto) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                coverPhotoData = try? await newValue.loadTransferable(type: Data.self)
+                selectedCoverPhoto = nil
+            }
+        }
+        .confirmationDialog("Delete this project?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete Project", role: .destructive) {
+                if let existing {
+                    modelContext.delete(existing)
+                    try? modelContext.save()
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Project items linked to this project may also become unavailable.")
         }
     }
-}
 
-struct ProjectMeasurementDetailView: View {
-    let project: Project
-    let measurement: ProjectMeasurement
-
-    var body: some View {
-        List {
-            Section("Measurement") {
-                LabeledContent("Value", value: "\(measurement.value.formatted()) \(measurement.unit)")
-                if !measurement.notes.isEmpty { Text(measurement.notes) }
-            }
-        }
-        .navigationTitle(measurement.name)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink("Edit") { ProjectMeasurementFormView(project: project, existing: measurement) }
-            }
-        }
-    }
-}
-
-struct ProjectItemRow: View {
-    let item: ProjectItem
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            if let data = item.photoData, let image = UIImage(data: data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 54, height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text(item.title).font(.headline)
-                    Spacer()
-                    if item.status == .favorite { Image(systemName: "star.fill").foregroundStyle(.yellow) }
-                    if item.status == .purchased { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green) }
-                    if item.status == .rejected { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
-                }
-                if item.isIdeaOnly {
-                    Text("Idea").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                } else {
-                    let detail = [item.manufacturer, item.finishColor, item.store].filter { !$0.isEmpty }.joined(separator: " · ")
-                    if !detail.isEmpty { Text(detail).font(.caption).foregroundStyle(.secondary) }
-                    if item.unitCost != nil {
-                        Text("\(item.quantity.formatted()) × \((item.unitCost ?? 0).formatted(AppFormatting.currency)) = \(item.estimatedTotal.formatted(AppFormatting.currency))")
-                            .font(.caption)
-                    }
-                }
-                if !item.notes.isEmpty {
-                    Text(item.notes).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                }
-            }
-        }
-        .padding(.vertical, 4)
+    private func save() {
+        let project = existing ?? Project(title: title)
+        if existing == nil { modelContext.insert(project) }
+        project.title = title
+        project.projectDescription = description
+        project.stage = stage
+        project.room = selectedRoom
+        project.roomName = selectedRoom?.name ?? ""
+        project.budget = Double(budgetText)
+        project.targetDate = hasTargetDate ? targetDate : nil
+        project.notes = notes
+        project.coverPhotoData = coverPhotoData
+        try? modelContext.save()
+        dismiss()
     }
 }

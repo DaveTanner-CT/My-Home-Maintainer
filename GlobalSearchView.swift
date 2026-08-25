@@ -1,190 +1,58 @@
-import SwiftUI
-import SwiftData
+import Foundation
+import UserNotifications
 
-struct HomeDashboardView: View {
-    @Query private var homes: [Home]
-    @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
-    @State private var showSearch = false
-    @State private var showAddTask = false
-    @State private var completionTask: MaintenanceTask?
+actor NotificationManager {
+    static let shared = NotificationManager()
 
-    private var activeTasks: [MaintenanceTask] { tasks.filter { !$0.isCompleted } }
-    private var overdue: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .overdue } }
-    private var current: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .current } }
-    private var upcoming: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .upcoming } }
-    private var attention: [MaintenanceTask] { overdue + current }
-
-    var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(homes.first?.name ?? "My Home")
-                        .font(.largeTitle.bold())
-                    Text("What needs your attention?")
-                        .foregroundStyle(.secondary)
-                }
-
-                Button {
-                    showSearch = true
-                } label: {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                        Text("Search your home...")
-                        Spacer()
-                    }
-                    .foregroundStyle(.secondary)
-                    .padding(12)
-                    .background(.quaternary.opacity(0.6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                HStack(spacing: 10) {
-                    SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
-                    SummaryCard(title: "Current", count: current.count, tint: .orange)
-                    SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
-                }
-
-                sectionTitle("Needs Attention")
-
-                if attention.isEmpty {
-                    EmptyCard(icon: "checkmark.circle", title: "You're caught up", subtitle: "No overdue or current maintenance tasks.")
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(attention.prefix(8)) { task in
-                            NavigationLink {
-                                TaskDetailView(task: task)
-                            } label: {
-                                TaskRowView(task: task) { completionTask = task }
-                            }
-                            .buttonStyle(.plain)
-                            Divider()
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .background(.background)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
-                }
-
-                HStack {
-                    sectionTitle("Coming Soon")
-                    Spacer()
-                    NavigationLink("View All Tasks") { TasksHubView(initialSection: .all) }
-                        .font(.caption.weight(.semibold))
-                }
-                VStack(spacing: 0) {
-                    ForEach(upcoming.prefix(4)) { task in
-                        NavigationLink {
-                            TaskDetailView(task: task)
-                        } label: {
-                            TaskRowView(task: task) { completionTask = task }
-                        }
-                        .buttonStyle(.plain)
-                        Divider()
-                    }
-                }
-                .padding(.horizontal, 14)
-                .background(.background)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
-
-                sectionTitle("Quick Access")
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    QuickLink(title: "Home Systems", icon: "wrench.and.screwdriver", destination: AnyView(SystemsListView()))
-                    QuickLink(title: "Rooms", icon: "door.left.hand.open", destination: AnyView(RoomsListView()))
-                    QuickLink(title: "Appliances", icon: "refrigerator", destination: AnyView(AppliancesListView()))
-                    QuickLink(title: "Paint & Finishes", icon: "paintbrush", destination: AnyView(PaintListView()))
-                    QuickLink(title: "Projects", icon: "hammer", destination: AnyView(ProjectsView()))
-                    QuickLink(title: "Vendors", icon: "person.crop.circle.badge.checkmark", destination: AnyView(VendorsListView()))
-                }
-            }
-            .padding()
-        }
-        .background(Color(.systemGroupedBackground))
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                NavigationLink { AppSettingsView() } label: { Image(systemName: "gearshape") }
-                    .accessibilityLabel("Settings")
-                Button { showAddTask = true } label: { Image(systemName: "plus") }
-                    .accessibilityLabel("Add Task")
-            }
-        }
-        .sheet(isPresented: $showSearch) { NavigationStack { GlobalSearchView() } }
-        .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView() } }
-        .sheet(item: $completionTask) { task in
-            NavigationStack { CompleteTaskView(task: task) }
+    func requestAuthorization() async {
+        do {
+            _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+        } catch {
+            print("Notification authorization failed: \(error)")
         }
     }
 
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.caption.weight(.bold))
-            .foregroundStyle(.secondary)
-            .tracking(0.8)
-    }
-}
+    func schedule(for task: MaintenanceTask) async {
+        let center = UNUserNotificationCenter.current()
+        let base = "task-\(task.persistentModelID)"
+        let identifiers = ["\(base)-lead", "\(base)-due", "\(base)-overdue"]
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        guard !task.isCompleted else { return }
 
-private struct SummaryCard: View {
-    let title: String
-    let count: Int
-    let tint: Color
+        let defaults = UserDefaults.standard
+        let leadEnabled = defaults.object(forKey: "notificationLeadEnabled") as? Bool ?? true
+        let dueEnabled = defaults.object(forKey: "notificationDueEnabled") as? Bool ?? true
+        let overdueEnabled = defaults.object(forKey: "notificationOverdueEnabled") as? Bool ?? true
+        let hourValue = defaults.object(forKey: "notificationHour") as? Int ?? 9
+        let hour = min(max(hourValue, 0), 23)
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("\(count)")
-                .font(.title2.bold())
-                .foregroundStyle(tint)
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+        if leadEnabled, task.leadTimeDays > 0,
+           let leadDate = Calendar.current.date(byAdding: .day, value: -task.leadTimeDays, to: task.dueDate) {
+            await add(identifier: "\(base)-lead", title: task.title, body: "This home task is ready for your attention. Due \(task.dueDate.formatted(date: .abbreviated, time: .omitted)).", date: leadDate, hour: hour)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-}
 
-private struct QuickLink: View {
-    let title: String
-    let icon: String
-    let destination: AnyView
-
-    var body: some View {
-        NavigationLink {
-            destination
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .frame(width: 28)
-                    .font(.title3)
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-            }
-            .padding(14)
-            .background(.background)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+        if dueEnabled {
+            await add(identifier: "\(base)-due", title: task.title, body: "This home maintenance task is due today.", date: task.dueDate, hour: hour)
         }
-        .buttonStyle(.plain)
-    }
-}
 
-struct EmptyCard: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon).font(.title2).foregroundStyle(.secondary)
-            Text(title).font(.headline)
-            Text(subtitle).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        if overdueEnabled, let overdueDate = Calendar.current.date(byAdding: .day, value: 1, to: task.dueDate) {
+            await add(identifier: "\(base)-overdue", title: "Overdue: \(task.title)", body: "This maintenance task is overdue. Open Home Maintainer to review or complete it.", date: overdueDate, hour: hour)
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func add(identifier: String, title: String, body: String, date: Date, hour: Int) async {
+        let fireDate = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: date) ?? date
+        guard fireDate > .now else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        do {
+            try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+        } catch {
+            print("Unable to schedule notification: \(error)")
+        }
     }
 }

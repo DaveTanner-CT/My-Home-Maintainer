@@ -1,38 +1,203 @@
-import SwiftUI
-import PhotosUI
+import Foundation
+import SwiftData
 
-struct ProjectItemFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
-    let project: Project; let existing: ProjectItem?
-    @State private var title: String; @State private var category: String; @State private var isIdeaOnly: Bool; @State private var manufacturer: String; @State private var model: String; @State private var sku: String; @State private var finishColor: String; @State private var dimensions: String; @State private var store: String; @State private var website: String; @State private var unitCostText: String; @State private var quantity: Double; @State private var actualCostText: String; @State private var purchaseDate: Date; @State private var notes: String; @State private var status: ProjectItemStatus; @State private var selectedPhoto: PhotosPickerItem?; @State private var photoData: Data?; @State private var showDelete = false
-    private let categories = ["Inspiration", "Paint & Colors", "Flooring / Tile", "Fixtures", "Lighting", "Hardware", "Furniture", "Storage", "Appliances", "Materials", "Contractor Ideas"]
+enum SeedData {
+    static func insertIfNeeded(context: ModelContext) {
+        let homeCount = (try? context.fetchCount(FetchDescriptor<Home>())) ?? 0
+        guard homeCount == 0 else { return }
 
-    init(project: Project, existing: ProjectItem? = nil) {
-        self.project = project; self.existing = existing
-        _title = State(initialValue: existing?.title ?? ""); _category = State(initialValue: existing?.category ?? "Inspiration"); _isIdeaOnly = State(initialValue: existing?.isIdeaOnly ?? false)
-        _manufacturer = State(initialValue: existing?.manufacturer ?? ""); _model = State(initialValue: existing?.model ?? ""); _sku = State(initialValue: existing?.sku ?? ""); _finishColor = State(initialValue: existing?.finishColor ?? ""); _dimensions = State(initialValue: existing?.dimensions ?? ""); _store = State(initialValue: existing?.store ?? ""); _website = State(initialValue: existing?.website ?? ""); _unitCostText = State(initialValue: existing?.unitCost.map { String($0) } ?? ""); _quantity = State(initialValue: existing?.quantity ?? 1); _actualCostText = State(initialValue: existing?.actualPurchaseCost.map { String($0) } ?? ""); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now); _notes = State(initialValue: existing?.notes ?? ""); _status = State(initialValue: existing?.status ?? .considering); _photoData = State(initialValue: existing?.photoData)
+        let home = Home(name: "My Home", address: "", yearBuilt: 1998, squareFeet: 2450)
+        context.insert(home)
+
+        let kitchen = Room(name: "Kitchen")
+        let familyRoom = Room(name: "Family Room")
+        let mudRoom = Room(name: "Mud Room")
+        let basement = Room(name: "Basement")
+        context.insert(kitchen)
+        context.insert(familyRoom)
+        context.insert(mudRoom)
+        context.insert(basement)
+
+        let hvacVendor = Vendor(
+            businessName: "ABC Heating & Cooling",
+            contactName: "Jane Smith",
+            category: "HVAC",
+            phone: "860-555-1212",
+            email: "service@example.com",
+            website: "https://example.com",
+            isFavorite: true
+        )
+        context.insert(hvacVendor)
+
+        let furnace = HomeSystem(
+            name: "Carrier Furnace",
+            type: "Furnace",
+            manufacturer: "Carrier",
+            model: "Infinity",
+            installationDate: Calendar.current.date(from: DateComponents(year: 2019, month: 10, day: 1)),
+            expectedServiceLifeYears: 18,
+            location: "Basement utility room",
+            vendor: hvacVendor
+        )
+        context.insert(furnace)
+
+        let waterHeater = HomeSystem(
+            name: "Bradford White Water Heater",
+            type: "Water Heater",
+            manufacturer: "Bradford White",
+            installationDate: Calendar.current.date(from: DateComponents(year: 2018, month: 5, day: 1)),
+            expectedServiceLifeYears: 12,
+            location: "Basement"
+        )
+        context.insert(waterHeater)
+
+        let refrigerator = Appliance(
+            name: "Kitchen Refrigerator",
+            category: "Refrigerator",
+            manufacturer: "Samsung",
+            purchaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 3, day: 14)),
+            purchasePrice: 2499,
+            purchasedFrom: "Best Buy",
+            room: kitchen
+        )
+        context.insert(refrigerator)
+
+        let hallDetector = Detector(
+            location: "Upstairs Hall",
+            type: "Combination",
+            manufacturer: "First Alert",
+            manufactureDate: Calendar.current.date(from: DateComponents(year: 2021, month: 9, day: 1)),
+            installationDate: Calendar.current.date(from: DateComponents(year: 2021, month: 10, day: 1)),
+            batteryType: "AA",
+            isHardwired: true
+        )
+        context.insert(hallDetector)
+
+        let furnaceFilter = Consumable(
+            name: "Furnace Filter",
+            type: "HVAC Filter",
+            size: "20 × 25 × 1",
+            manufacturer: "Filtrete",
+            modelPartNumber: "1900",
+            replacementIntervalMonths: 3,
+            lastReplaced: Calendar.current.date(byAdding: .month, value: -2, to: .now),
+            notes: "Stored on basement shelf near furnace."
+        )
+        context.insert(furnaceFilter)
+
+        let paint = PaintFinish(
+            roomName: "Family Room",
+            surface: "Walls",
+            brand: "Benjamin Moore",
+            colorName: "Revere Pewter",
+            colorCode: "HC-172",
+            sheen: "Eggshell",
+            store: "Ring's End"
+        )
+        context.insert(paint)
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let monthlyTest = MaintenanceTask(
+            title: "Test smoke & CO alarms",
+            taskDescription: "Test every smoke and carbon monoxide detector in the home.",
+            category: .safety,
+            dueDate: today,
+            leadTimeDays: 0,
+            recurrence: .monthly,
+            recurrenceAnchor: .scheduledDate,
+            priority: 3,
+            instructions: "Use each detector's test button and confirm the audible alarm operates."
+        )
+        context.insert(monthlyTest)
+
+        let batteries = MaintenanceTask(
+            title: "Replace detector batteries",
+            taskDescription: "Replace batteries in smoke and CO detectors that do not use sealed 10-year batteries.",
+            category: .safety,
+            dueDate: calendar.date(byAdding: .month, value: 2, to: today) ?? today,
+            leadTimeDays: 14,
+            recurrence: .sixMonths,
+            recurrenceAnchor: .scheduledDate,
+            priority: 2
+        )
+        context.insert(batteries)
+
+        let detectorUnits = MaintenanceTask(
+            title: "Replace smoke / CO detector units",
+            taskDescription: "Replace detector units that have reached ten years of service or the manufacturer's replacement date.",
+            category: .safety,
+            dueDate: calendar.date(byAdding: .year, value: 10, to: today) ?? today,
+            leadTimeDays: 60,
+            recurrence: .tenYears,
+            recurrenceAnchor: .scheduledDate,
+            priority: 3
+        )
+        context.insert(detectorUnits)
+
+        let extinguisher = MaintenanceTask(
+            title: "Inspect fire extinguishers",
+            category: .safety,
+            dueDate: calendar.date(byAdding: .month, value: 1, to: today) ?? today,
+            leadTimeDays: 7,
+            recurrence: .monthly,
+            recurrenceAnchor: .scheduledDate,
+            priority: 2
+        )
+        context.insert(extinguisher)
+
+        let furnaceService = MaintenanceTask(
+            title: "Schedule annual furnace service",
+            taskDescription: "Schedule annual heating-system maintenance before the heating season.",
+            category: .hvac,
+            dueDate: calendar.date(byAdding: .day, value: 53, to: today) ?? today,
+            leadTimeDays: 60,
+            recurrence: .annually,
+            recurrenceAnchor: .scheduledDate,
+            priority: 2,
+            instructions: "Ask technician to clean and inspect the furnace and replace the filter if needed.",
+            system: furnace,
+            vendor: hvacVendor
+        )
+        context.insert(furnaceService)
+
+        let waterFilter = MaintenanceTask(
+            title: "Replace refrigerator water filter",
+            category: .appliances,
+            dueDate: calendar.date(byAdding: .day, value: -12, to: today) ?? today,
+            leadTimeDays: 14,
+            recurrence: .sixMonths,
+            recurrenceAnchor: .completionDate,
+            priority: 2,
+            appliance: refrigerator
+        )
+        context.insert(waterFilter)
+
+        let project = Project(
+            title: "Update Mud Room",
+            projectDescription: "Refresh the mud room with new paint, tile, hooks, lighting, and better storage.",
+            stage: .planning,
+            targetDate: calendar.date(byAdding: .month, value: 8, to: today),
+            budget: 4000,
+            roomName: "Mud Room"
+        )
+        context.insert(project)
+
+        let items = [
+            ProjectItem(project: project, title: "Dark green cabinets with brass hardware", category: "Inspiration", notes: "Warm, durable look with natural wood bench.", status: .favorite, isIdeaOnly: true),
+            ProjectItem(project: project, title: "Slate-look porcelain tile", category: "Flooring / Tile", manufacturer: "Sample Tile Co.", finishColor: "Charcoal", store: "Home Depot", unitCost: 4.89, quantity: 90, notes: "Need approximately 82 sq. ft. plus overage."),
+            ProjectItem(project: project, title: "Matte black wall hooks", category: "Hardware", manufacturer: "Liberty", finishColor: "Matte Black", store: "Home Depot", unitCost: 12.99, quantity: 8, status: .favorite),
+            ProjectItem(project: project, title: "Schoolhouse pendant light", category: "Lighting", store: "Online", unitCost: 189, quantity: 1, status: .considering)
+        ]
+        items.forEach(context.insert)
+
+        let measurements = [
+            ProjectMeasurement(project: project, name: "Back wall", value: 104, unit: "inches"),
+            ProjectMeasurement(project: project, name: "Bench area", value: 72, unit: "inches"),
+            ProjectMeasurement(project: project, name: "Floor", value: 82, unit: "sq. ft.")
+        ]
+        measurements.forEach(context.insert)
+
+        try? context.save()
     }
-
-    var body: some View {
-        Form {
-            Section("Idea / Item") { TextField("Name", text: $title); Picker("Category", selection: $category) { ForEach(categories, id: \.self) { Text($0).tag($0) } }; Toggle("Idea only", isOn: $isIdeaOnly); Picker("Status", selection: $status) { ForEach(ProjectItemStatus.allCases) { Text($0.rawValue).tag($0) } } }
-            if !isIdeaOnly { Section("Product") { TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); TextField("SKU", text: $sku); TextField("Color / finish", text: $finishColor); TextField("Dimensions", text: $dimensions); TextField("Store", text: $store); TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never); TextField("Unit cost", text: $unitCostText).keyboardType(.decimalPad); Stepper("Quantity: \(quantity.formatted())", value: $quantity, in: 1...1000); if status == .purchased { DatePicker("Purchase date", selection: $purchaseDate, displayedComponents: .date); TextField("Actual purchase cost", text: $actualCostText).keyboardType(.decimalPad) } } }
-            Section("Photo & Notes") { PhotosPicker(selection: $selectedPhoto, matching: .images) { Label(photoData == nil ? "Add Photo" : "Change Photo", systemImage: "photo") }; if photoData != nil { Button("Remove Photo", role: .destructive) { photoData = nil } }; TextField("Notes", text: $notes, axis: .vertical) }
-            if existing != nil { Section { Button("Delete Project Item", role: .destructive) { showDelete = true } } }
-        }
-        .navigationTitle(existing == nil ? "Add Project Item" : "Edit Project Item").navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.isEmpty) } }
-        .onChange(of: selectedPhoto) { _, newValue in guard let newValue else { return }; Task { photoData = try? await newValue.loadTransferable(type: Data.self) } }
-        .confirmationDialog("Delete this project item?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Item", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
-    }
-    private func save() { let item = existing ?? ProjectItem(project: project, title: title); if existing == nil { modelContext.insert(item) }; item.project = project; item.title = title; item.category = category; item.isIdeaOnly = isIdeaOnly; item.manufacturer = manufacturer; item.model = model; item.sku = sku; item.finishColor = finishColor; item.dimensions = dimensions; item.store = store; item.website = website; item.unitCost = Double(unitCostText); item.quantity = quantity; item.actualPurchaseCost = Double(actualCostText); item.purchaseDate = status == .purchased ? purchaseDate : nil; item.notes = notes; item.status = status; item.photoData = photoData; try? modelContext.save(); dismiss() }
-}
-
-struct ProjectMeasurementFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
-    let project: Project; let existing: ProjectMeasurement?
-    @State private var name: String; @State private var valueText: String; @State private var unit: String; @State private var notes: String; @State private var showDelete = false
-    init(project: Project, existing: ProjectMeasurement? = nil) { self.project = project; self.existing = existing; _name = State(initialValue: existing?.name ?? ""); _valueText = State(initialValue: existing.map { String($0.value) } ?? ""); _unit = State(initialValue: existing?.unit ?? "in"); _notes = State(initialValue: existing?.notes ?? "") }
-    var body: some View { Form { Section("Measurement") { TextField("Name", text: $name); TextField("Value", text: $valueText).keyboardType(.decimalPad); Picker("Unit", selection: $unit) { ForEach(["in","ft","sq ft","cm","m","sq m"], id: \.self) { Text($0).tag($0) } }; TextField("Notes", text: $notes, axis: .vertical) }; if existing != nil { Section { Button("Delete Measurement", role: .destructive) { showDelete = true } } } }.navigationTitle(existing == nil ? "Add Measurement" : "Edit Measurement").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.isEmpty || Double(valueText) == nil) } }.confirmationDialog("Delete this measurement?", isPresented: $showDelete) { Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } } }
-    private func save() { guard let value = Double(valueText) else { return }; let m = existing ?? ProjectMeasurement(project: project, name: name, value: value, unit: unit); if existing == nil { modelContext.insert(m) }; m.project = project; m.name = name; m.value = value; m.unit = unit; m.notes = notes; try? modelContext.save(); dismiss() }
 }

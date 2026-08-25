@@ -1,4 +1,4 @@
-# Home Maintainer v0.7
+# Home Maintainer v0.8
 
 This update strengthens the Room / Area hub so related records can be created where they belong.
 
@@ -20,3 +20,11 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Full-screen zoomable photos.
 - Exterior & Property areas.
 - Recommended maintenance and notifications.
+
+
+## v0.8 additions
+- New Fixtures records for faucets, lighting, sinks, toilets, fans, hardware, thermostats, and other installed items.
+- Fixtures link directly to Rooms / Areas and support photos/documents, vendor, purchase, warranty, finish/color, and replacement-part details.
+- Home Systems now have direct Room / Area relationships with legacy location matching retained for older records.
+- Room / Area detail pages can add and manage Fixtures and Home Systems directly.
+- Fixtures are included in global search and JSON export.
