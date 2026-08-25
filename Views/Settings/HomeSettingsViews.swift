@@ -99,7 +99,7 @@ struct AppSettingsView: View {
                 NavigationLink { WarrantyCenterView() } label: { Label("Warranty Center", systemImage: "shield") }
                 NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
                 NavigationLink { SeasonalMaintenanceView() } label: { Label("Seasonal Planning", systemImage: "calendar.badge.clock") }
-                NavigationLink { ReplacementForecastView() } label: { Label("Replacement Forecast", systemImage: "chart.line.uptrend.xyaxis") }
+                NavigationLink { HomeOutlookView() } label: { Label("Home Outlook", systemImage: "chart.line.uptrend.xyaxis") }
             }
             Section("Data & Transfer") {
                 NavigationLink { HomeTransferView() } label: { Label("Home Transfer", systemImage: "house.and.flag") }

@@ -83,3 +83,11 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Added Review & Add (prefilled Task form) and Quick Add flows, plus Add All Missing Recommendations.
 - TaskFormView now supports richer prefilled task creation (description, category, recurrence, priority) without changing existing callers.
 - Safety baseline recommendations remain visible for every home; detector replacement and consumable dates can produce date-aware one-time recommendations.
+
+
+## v0.15
+- Added Home Outlook with 1-year, 3-year, 5-year, and all-horizon replacement planning.
+- Shows known historical cost baselines without pretending they are future-price forecasts.
+- Flags missing purchase/install dates, costs, and system service-life estimates.
+- Lets a forecasted replacement become a linked planning project in one tap, carrying its Room/Area and known baseline budget.
+- Replaced the dashboard/settings Replacement Forecast shortcut with Home Outlook while preserving the existing detailed forecast implementation.

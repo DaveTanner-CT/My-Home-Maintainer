@@ -100,7 +100,7 @@ struct HomeDashboardView: View {
                     QuickLink(title: "Home Insights", icon: "chart.bar.xaxis", destination: AnyView(HomeInsightsView()))
                     QuickLink(title: "Warranty Center", icon: "shield", destination: AnyView(WarrantyCenterView()))
                     QuickLink(title: "Seasonal Planning", icon: "calendar.badge.clock", destination: AnyView(SeasonalMaintenanceView()))
-                    QuickLink(title: "Replacement Forecast", icon: "chart.line.uptrend.xyaxis", destination: AnyView(ReplacementForecastView()))
+                    QuickLink(title: "Home Outlook", icon: "chart.line.uptrend.xyaxis", destination: AnyView(HomeOutlookView()))
                 }
             }
             .padding()
