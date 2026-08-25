@@ -1,208 +1,142 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
+import UIKit
 
-struct GlobalSearchView: View {
+struct ProjectFormView: View {
     @Environment(\.dismiss) private var dismiss
-    @Query private var tasks: [MaintenanceTask]
-    @Query private var systems: [HomeSystem]
-    @Query private var appliances: [Appliance]
-    @Query private var rooms: [Room]
-    @Query private var vendors: [Vendor]
-    @Query private var paints: [PaintFinish]
-    @Query private var fixtures: [Fixture]
-    @Query private var detectors: [Detector]
-    @Query private var consumables: [Consumable]
-    @Query private var projects: [Project]
-    @Query private var projectItems: [ProjectItem]
-    @Query private var records: [MaintenanceRecord]
-    @Query private var attachments: [HomeAttachment]
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
+    let existing: Project?
 
-    @State private var query = ""
+    @State private var title: String
+    @State private var description: String
+    @State private var stage: ProjectStage
+    @State private var selectedRoom: Room?
+    @State private var budgetText: String
+    @State private var hasTargetDate: Bool
+    @State private var targetDate: Date
+    @State private var notes: String
+    @State private var coverPhotoData: Data?
+    @State private var selectedCoverPhoto: PhotosPickerItem?
+    @State private var showDelete = false
+    @State private var didResolveLegacyRoom = false
 
-    var body: some View {
-        List {
-            if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                ContentUnavailableView("Search your home", systemImage: "magnifyingglass", description: Text("Find tasks, systems, appliances, fixtures, rooms, paint colors, vendors, projects, and maintenance history."))
-            } else {
-                searchSections
-            }
-        }
-        .navigationTitle("Search")
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, prompt: "Search your home")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-        }
+    init(existing: Project? = nil, initialRoom: Room? = nil) {
+        self.existing = existing
+        _title = State(initialValue: existing?.title ?? "")
+        _description = State(initialValue: existing?.projectDescription ?? "")
+        _stage = State(initialValue: existing?.stage ?? .idea)
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? "")
+        _hasTargetDate = State(initialValue: existing?.targetDate != nil)
+        _targetDate = State(initialValue: existing?.targetDate ?? .now)
+        _notes = State(initialValue: existing?.notes ?? "")
+        _coverPhotoData = State(initialValue: existing?.coverPhotoData)
     }
 
-    @ViewBuilder
-    private var searchSections: some View {
-        let q = query.lowercased()
-
-        let matchingTasks = tasks.filter { contains(q, [$0.title, $0.taskDescription, $0.notes, $0.categoryRaw, $0.vendor?.businessName ?? ""]) }
-        if !matchingTasks.isEmpty {
-            Section("Tasks") {
-                ForEach(matchingTasks) { task in
-                    NavigationLink { TaskDetailView(task: task) } label: {
-                        SearchResultRow(icon: "checklist", title: task.title, subtitle: task.categoryRaw)
-                    }
+    var body: some View {
+        Form {
+            Section("Project") {
+                TextField("Project name", text: $title)
+                TextField("Description", text: $description, axis: .vertical)
+                Picker("Stage", selection: $stage) {
+                    ForEach(ProjectStage.allCases) { Text($0.rawValue).tag($0) }
                 }
-            }
-        }
-
-        let matchingSystems = systems.filter { contains(q, [$0.name, $0.type, $0.manufacturer, $0.model, $0.serialNumber, $0.location, $0.notes]) }
-        if !matchingSystems.isEmpty {
-            Section("Systems") {
-                ForEach(matchingSystems) { item in
-                    NavigationLink { SystemDetailView(system: item) } label: {
-                        SearchResultRow(icon: "wrench.and.screwdriver", title: item.name, subtitle: item.type)
-                    }
-                }
-            }
-        }
-
-        let matchingAppliances = appliances.filter { contains(q, [$0.name, $0.category, $0.manufacturer, $0.model, $0.serialNumber, $0.purchasedFrom, $0.notes]) }
-        if !matchingAppliances.isEmpty {
-            Section("Appliances") {
-                ForEach(matchingAppliances) { item in
-                    NavigationLink { ApplianceDetailView(appliance: item) } label: {
-                        SearchResultRow(icon: "refrigerator", title: item.name, subtitle: item.manufacturer)
-                    }
-                }
-            }
-        }
-
-
-        let matchingFixtures = fixtures.filter { contains(q, [$0.name, $0.category, $0.manufacturer, $0.model, $0.partNumber, $0.finishColor, $0.purchasedFrom, $0.notes, $0.room?.name ?? ""]) }
-        if !matchingFixtures.isEmpty {
-            Section("Fixtures") {
-                ForEach(matchingFixtures) { fixture in
-                    NavigationLink { FixtureDetailView(fixture: fixture) } label: {
-                        SearchResultRow(icon: "lightbulb", title: fixture.name, subtitle: [fixture.category, fixture.room?.name ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
-                    }
-                }
-            }
-        }
-
-        let matchingRooms = rooms.filter { contains(q, [$0.name, $0.notes]) }
-        if !matchingRooms.isEmpty {
-            Section("Rooms") {
-                ForEach(matchingRooms) { room in
-                    NavigationLink { RoomDetailView(room: room) } label: {
-                        SearchResultRow(icon: "door.left.hand.open", title: room.name, subtitle: "Room / Area")
-                    }
-                }
-            }
-        }
-
-        let matchingPaints = paints.filter { contains(q, [$0.locationName, $0.surface, $0.brand, $0.colorName, $0.colorCode, $0.sheen, $0.store, $0.notes]) }
-        if !matchingPaints.isEmpty {
-            Section("Paint & Finishes") {
-                ForEach(matchingPaints) { paint in
-                    NavigationLink { PaintDetailView(paint: paint) } label: {
-                        SearchResultRow(icon: "paintbrush", title: [paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " "), subtitle: "\(paint.locationName) · \(paint.surface)")
-                    }
-                }
-            }
-        }
-
-
-        let matchingDetectors = detectors.filter { contains(q, [$0.location, $0.type, $0.manufacturer, $0.model, $0.batteryType, $0.notes]) }
-        if !matchingDetectors.isEmpty {
-            Section("Smoke & CO Detectors") {
-                ForEach(matchingDetectors) { detector in
-                    NavigationLink { DetectorDetailView(detector: detector) } label: {
-                        SearchResultRow(icon: "sensor.tag.radiowaves.forward", title: detector.location, subtitle: detector.type)
-                    }
-                }
-            }
-        }
-
-        let matchingConsumables = consumables.filter { contains(q, [$0.name, $0.type, $0.size, $0.manufacturer, $0.modelPartNumber, $0.notes]) }
-        if !matchingConsumables.isEmpty {
-            Section("Filters & Consumables") {
-                ForEach(matchingConsumables) { item in
-                    NavigationLink { ConsumableDetailView(item: item) } label: {
-                        SearchResultRow(icon: "shippingbox", title: item.name, subtitle: [item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "))
-                    }
-                }
-            }
-        }
-
-        let matchingVendors = vendors.filter { contains(q, [$0.businessName, $0.contactName, $0.category, $0.phone, $0.email, $0.notes]) }
-        if !matchingVendors.isEmpty {
-            Section("Vendors") {
-                ForEach(matchingVendors) { vendor in
-                    NavigationLink { VendorDetailView(vendor: vendor) } label: { VendorRow(vendor: vendor) }
-                }
-            }
-        }
-
-        let matchingProjects = projects.filter { contains(q, [$0.title, $0.projectDescription, $0.stageRaw, $0.locationName, $0.notes]) }
-        if !matchingProjects.isEmpty {
-            Section("Projects") {
-                ForEach(matchingProjects) { project in
-                    NavigationLink { ProjectDetailView(project: project) } label: {
-                        SearchResultRow(icon: "hammer", title: project.title, subtitle: project.stageRaw)
-                    }
-                }
-            }
-        }
-
-        let matchingProjectItems = projectItems.filter { contains(q, [$0.title, $0.category, $0.manufacturer, $0.model, $0.sku, $0.finishColor, $0.store, $0.notes]) }
-        if !matchingProjectItems.isEmpty {
-            Section("Project Items") {
-                ForEach(matchingProjectItems) { item in
-                    if let project = item.project {
-                        NavigationLink { ProjectItemDetailView(project: project, item: item) } label: {
-                            SearchResultRow(icon: "cart", title: item.title, subtitle: [project.title, item.store].filter { !$0.isEmpty }.joined(separator: " · "))
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("None").tag(nil as Room?)
+                    ForEach(HomeAreaType.allCases) { type in
+                        let matching = rooms.filter { $0.areaType == type }
+                        if !matching.isEmpty {
+                            Section(type.rawValue) {
+                                ForEach(matching) { room in
+                                    Text(room.name).tag(Optional(room))
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
+            Section("Cover Photo") {
+                if let data = coverPhotoData, let image = UIImage(data: data) {
+                    ExpandablePhoto(image: image, height: 220, fill: false, cornerRadius: 12)
+                }
+                PhotosPicker(selection: $selectedCoverPhoto, matching: .images) {
+                    Label(coverPhotoData == nil ? "Add Cover Photo" : "Change Cover Photo", systemImage: "photo")
+                }
+                if coverPhotoData != nil {
+                    Button("Remove Cover Photo", role: .destructive) { coverPhotoData = nil }
+                }
+            }
 
-        let matchingAttachments = attachments.filter { contains(q, [$0.name, $0.caption, $0.category, $0.fileName]) }
-        if !matchingAttachments.isEmpty {
-            Section("Photos & Documents") {
-                ForEach(matchingAttachments) { attachment in
-                    NavigationLink { AttachmentDetailView(attachment: attachment) } label: {
-                        SearchResultRow(icon: attachment.isImage ? "photo" : "doc", title: attachment.name, subtitle: attachment.caption.isEmpty ? attachment.fileName : attachment.caption)
-                    }
+            Section("Planning") {
+                TextField("Budget", text: $budgetText).keyboardType(.decimalPad)
+                Toggle("Target date", isOn: $hasTargetDate)
+                if hasTargetDate {
+                    DatePicker("Target", selection: $targetDate, displayedComponents: .date)
+                }
+                TextField("Notes", text: $notes, axis: .vertical)
+            }
+
+            if existing != nil {
+                Section {
+                    Button("Delete Project", role: .destructive) { showDelete = true }
                 }
             }
         }
-
-        let matchingRecords = records.filter { contains(q, [$0.title, $0.vendorName, $0.taskTitle, $0.relatedItemName, $0.notes]) }
-        if !matchingRecords.isEmpty {
-            Section("Maintenance History") {
-                ForEach(matchingRecords) { record in
-                    NavigationLink { MaintenanceRecordDetailView(record: record) } label: {
-                        SearchResultRow(icon: "clock.arrow.circlepath", title: record.title, subtitle: record.date.formatted(date: .abbreviated, time: .omitted))
-                    }
+        .navigationTitle(existing == nil ? "New Project" : "Edit Project")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { save() }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .onAppear {
+            // Older projects stored only a room-name string. Resolve that legacy value
+            // to the real Room record the first time the edit form opens.
+            guard !didResolveLegacyRoom else { return }
+            didResolveLegacyRoom = true
+            if selectedRoom == nil, let legacyName = existing?.roomName, !legacyName.isEmpty {
+                selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyName) == .orderedSame }
+            }
+        }
+        .onChange(of: selectedCoverPhoto) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                coverPhotoData = try? await newValue.loadTransferable(type: Data.self)
+                selectedCoverPhoto = nil
+            }
+        }
+        .confirmationDialog("Delete this project?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete Project", role: .destructive) {
+                if let existing {
+                    modelContext.delete(existing)
+                    try? modelContext.save()
+                    dismiss()
                 }
             }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Project items linked to this project may also become unavailable.")
         }
     }
 
-    private func contains(_ query: String, _ fields: [String]) -> Bool {
-        fields.joined(separator: " ").lowercased().contains(query)
-    }
-}
-
-private struct SearchResultRow: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon).frame(width: 28).foregroundStyle(.secondary)
-            VStack(alignment: .leading) {
-                Text(title.isEmpty ? "Untitled" : title).font(.headline)
-                if !subtitle.isEmpty { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
-            }
-        }
+    private func save() {
+        let project = existing ?? Project(title: title)
+        if existing == nil { modelContext.insert(project) }
+        project.title = title
+        project.projectDescription = description
+        project.stage = stage
+        project.room = selectedRoom
+        project.roomName = selectedRoom?.name ?? ""
+        project.budget = Double(budgetText)
+        project.targetDate = hasTargetDate ? targetDate : nil
+        project.notes = notes
+        project.coverPhotoData = coverPhotoData
+        try? modelContext.save()
+        dismiss()
     }
 }

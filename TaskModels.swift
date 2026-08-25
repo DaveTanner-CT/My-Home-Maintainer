@@ -2,121 +2,108 @@ import Foundation
 import SwiftData
 
 @Model
-final class HomeAttachment {
-    var name: String
-    var caption: String
-    var category: String
-    var fileName: String
-    var typeIdentifier: String
-    var createdAt: Date
-    var fileData: Data
-
+final class MaintenanceTask {
+    var title: String
+    var taskDescription: String
+    var categoryRaw: String
+    var dueDate: Date
+    var leadTimeDays: Int
+    var recurrenceRaw: String
+    var recurrenceAnchorRaw: String
+    var priority: Int
+    var notes: String
+    var instructions: String
+    var contactName: String
+    var phone: String
+    var email: String
+    var website: String
+    var isCompleted: Bool
+    var completedDate: Date?
     var room: Room?
-    var task: MaintenanceTask?
-    var vendor: Vendor?
     var system: HomeSystem?
     var appliance: Appliance?
-    var paint: PaintFinish?
-    var project: Project?
-    var projectItem: ProjectItem?
-    var maintenanceRecord: MaintenanceRecord?
-    var detector: Detector?
-    var consumable: Consumable?
     var fixture: Fixture?
+    var project: Project?
+    var vendor: Vendor?
 
-    init(
-        name: String,
-        caption: String = "",
-        category: String = "Document",
-        fileName: String,
-        typeIdentifier: String,
-        createdAt: Date = .now,
-        fileData: Data
-    ) {
-        self.name = name
-        self.caption = caption
-        self.category = category
-        self.fileName = fileName
-        self.typeIdentifier = typeIdentifier
-        self.createdAt = createdAt
-        self.fileData = fileData
+    init(title: String, taskDescription: String = "", category: TaskCategory = .general, dueDate: Date, leadTimeDays: Int = 0, recurrence: RecurrenceRule = .oneTime, recurrenceAnchor: RecurrenceAnchor = .scheduledDate, priority: Int = 1, notes: String = "", instructions: String = "", contactName: String = "", phone: String = "", email: String = "", website: String = "", room: Room? = nil, system: HomeSystem? = nil, appliance: Appliance? = nil, fixture: Fixture? = nil, project: Project? = nil, vendor: Vendor? = nil) {
+        self.title = title
+        self.taskDescription = taskDescription
+        self.categoryRaw = category.rawValue
+        self.dueDate = dueDate
+        self.leadTimeDays = leadTimeDays
+        self.recurrenceRaw = recurrence.rawValue
+        self.recurrenceAnchorRaw = recurrenceAnchor.rawValue
+        self.priority = priority
+        self.notes = notes
+        self.instructions = instructions
+        self.contactName = contactName
+        self.phone = phone
+        self.email = email
+        self.website = website
+        self.isCompleted = false
+        self.completedDate = nil
+        self.room = room
+        self.system = system
+        self.appliance = appliance
+        self.fixture = fixture
+        self.project = project
+        self.vendor = vendor
     }
 
-    var isImage: Bool {
-        typeIdentifier.hasPrefix("image/") || ["jpg", "jpeg", "png", "heic", "gif", "webp"].contains((fileName as NSString).pathExtension.lowercased())
+    var category: TaskCategory {
+        get { TaskCategory(rawValue: categoryRaw) ?? .general }
+        set { categoryRaw = newValue.rawValue }
+    }
+
+    var recurrence: RecurrenceRule {
+        get { RecurrenceRule(rawValue: recurrenceRaw) ?? .oneTime }
+        set { recurrenceRaw = newValue.rawValue }
+    }
+
+    var recurrenceAnchor: RecurrenceAnchor {
+        get { RecurrenceAnchor(rawValue: recurrenceAnchorRaw) ?? .scheduledDate }
+        set { recurrenceAnchorRaw = newValue.rawValue }
     }
 }
 
-enum AttachmentOwnerReference {
-    case room(Room)
-    case task(MaintenanceTask)
-    case vendor(Vendor)
-    case system(HomeSystem)
-    case appliance(Appliance)
-    case paint(PaintFinish)
-    case project(Project)
-    case projectItem(ProjectItem)
-    case maintenanceRecord(MaintenanceRecord)
-    case detector(Detector)
-    case consumable(Consumable)
-    case fixture(Fixture)
+@Model
+final class MaintenanceRecord {
+    var date: Date
+    var title: String
+    var cost: Double?
+    var notes: String
+    var vendorName: String
+    var taskTitle: String
+    var relatedItemName: String
+    // Optional for records created before Home History gained typed events and direct links.
+    var eventTypeRaw: String?
+    var room: Room?
+    var system: HomeSystem?
+    var appliance: Appliance?
+    var fixture: Fixture?
+    var project: Project?
+    var vendor: Vendor?
 
-    func matches(_ attachment: HomeAttachment) -> Bool {
-        switch self {
-        case .room(let owner):
-            return attachment.room?.persistentModelID == owner.persistentModelID
-        case .task(let owner):
-            return attachment.task?.persistentModelID == owner.persistentModelID
-        case .vendor(let owner):
-            return attachment.vendor?.persistentModelID == owner.persistentModelID
-        case .system(let owner):
-            return attachment.system?.persistentModelID == owner.persistentModelID
-        case .appliance(let owner):
-            return attachment.appliance?.persistentModelID == owner.persistentModelID
-        case .paint(let owner):
-            return attachment.paint?.persistentModelID == owner.persistentModelID
-        case .project(let owner):
-            return attachment.project?.persistentModelID == owner.persistentModelID
-        case .projectItem(let owner):
-            return attachment.projectItem?.persistentModelID == owner.persistentModelID
-        case .maintenanceRecord(let owner):
-            return attachment.maintenanceRecord?.persistentModelID == owner.persistentModelID
-        case .detector(let owner):
-            return attachment.detector?.persistentModelID == owner.persistentModelID
-        case .consumable(let owner):
-            return attachment.consumable?.persistentModelID == owner.persistentModelID
-        case .fixture(let owner):
-            return attachment.fixture?.persistentModelID == owner.persistentModelID
-        }
+    init(date: Date = .now, title: String, cost: Double? = nil, notes: String = "", vendorName: String = "", taskTitle: String = "", relatedItemName: String = "", eventType: HomeEventType = .maintenance, room: Room? = nil, system: HomeSystem? = nil, appliance: Appliance? = nil, fixture: Fixture? = nil, project: Project? = nil, vendor: Vendor? = nil) {
+        self.date = date
+        self.title = title
+        self.cost = cost
+        self.notes = notes
+        self.vendorName = vendorName
+        self.taskTitle = taskTitle
+        self.relatedItemName = relatedItemName
+        self.eventTypeRaw = eventType.rawValue
+        self.room = room
+        self.system = system
+        self.appliance = appliance
+        self.fixture = fixture
+        self.project = project
+        self.vendor = vendor
     }
 
-    func assign(to attachment: HomeAttachment) {
-        attachment.room = nil
-        attachment.task = nil
-        attachment.vendor = nil
-        attachment.system = nil
-        attachment.appliance = nil
-        attachment.paint = nil
-        attachment.project = nil
-        attachment.projectItem = nil
-        attachment.maintenanceRecord = nil
-        attachment.detector = nil
-        attachment.consumable = nil
-        attachment.fixture = nil
-
-        switch self {
-        case .room(let owner): attachment.room = owner
-        case .task(let owner): attachment.task = owner
-        case .vendor(let owner): attachment.vendor = owner
-        case .system(let owner): attachment.system = owner
-        case .appliance(let owner): attachment.appliance = owner
-        case .paint(let owner): attachment.paint = owner
-        case .project(let owner): attachment.project = owner
-        case .projectItem(let owner): attachment.projectItem = owner
-        case .maintenanceRecord(let owner): attachment.maintenanceRecord = owner
-        case .detector(let owner): attachment.detector = owner
-        case .consumable(let owner): attachment.consumable = owner
-        case .fixture(let owner): attachment.fixture = owner
-        }
+    var eventType: HomeEventType {
+        get { HomeEventType(rawValue: eventTypeRaw ?? "") ?? .maintenance }
+        set { eventTypeRaw = newValue.rawValue }
     }
 }

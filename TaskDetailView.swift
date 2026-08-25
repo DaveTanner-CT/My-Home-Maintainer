@@ -1,93 +1,50 @@
 import SwiftUI
-import SwiftData
-import UIKit
 
-struct ProjectComparisonView: View {
-    let project: Project
-    @Query private var allItems: [ProjectItem]
-    @State private var selectedCategory = "All"
-
-    private var projectItems: [ProjectItem] {
-        allItems.filter {
-            $0.project?.persistentModelID == project.persistentModelID &&
-            !$0.isIdeaOnly &&
-            $0.status != .rejected
-        }
-    }
-
-    private var categories: [String] {
-        Array(Set(projectItems.map(\.category))).sorted()
-    }
-
-    private var displayedItems: [ProjectItem] {
-        projectItems.filter { selectedCategory == "All" || $0.category == selectedCategory }
-    }
+struct TaskDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    let task: MaintenanceTask
+    @State private var showComplete = false
+    @State private var showDelete = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            Picker("Category", selection: $selectedCategory) {
-                Text("All").tag("All")
-                ForEach(categories, id: \.self) { Text($0).tag($0) }
+        List {
+            Section {
+                HStack { StatusBadge(status: TaskEngine.status(for: task)); Spacer(); Text(task.category.rawValue).font(.subheadline).foregroundStyle(.secondary) }
+                LabeledContent("Due", value: task.dueDate.formatted(date: .long, time: .omitted))
+                if task.leadTimeDays > 0, let currentDate = Calendar.current.date(byAdding: .day, value: -task.leadTimeDays, to: task.dueDate) { LabeledContent("Current starting", value: currentDate.formatted(date: .abbreviated, time: .omitted)) }
+                LabeledContent("Lead time", value: "\(task.leadTimeDays) days")
+                LabeledContent("Repeats", value: task.recurrence.rawValue)
+                if task.recurrence != .oneTime { LabeledContent("Recurrence basis", value: task.recurrenceAnchor.rawValue) }
+                LabeledContent("Priority", value: task.priority == 2 ? "High" : task.priority == 0 ? "Low" : "Normal")
             }
-            .pickerStyle(.menu)
-            .padding()
-
-            if displayedItems.isEmpty {
-                ContentUnavailableView("Nothing to compare", systemImage: "rectangle.split.3x1", description: Text("Add two or more product options to the project."))
-            } else {
-                ScrollView(.horizontal) {
-                    LazyHStack(alignment: .top, spacing: 14) {
-                        ForEach(displayedItems) { item in
-                            NavigationLink {
-                                ProjectItemDetailView(project: project, item: item)
-                            } label: {
-                                comparisonCard(item)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding()
+            if !task.taskDescription.isEmpty || !task.instructions.isEmpty || !task.notes.isEmpty {
+                Section("Details") { if !task.taskDescription.isEmpty { Text(task.taskDescription) }; if !task.instructions.isEmpty { LabeledContent("Instructions") { Text(task.instructions) } }; if !task.notes.isEmpty { LabeledContent("Notes") { Text(task.notes) } } }
+            }
+            if task.vendor != nil || !task.contactName.isEmpty || !task.phone.isEmpty || !task.email.isEmpty || !task.website.isEmpty {
+                Section("Contact") {
+                    if let vendor = task.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
+                    if !task.contactName.isEmpty { LabeledContent("Contact", value: task.contactName) }
+                    if !task.phone.isEmpty, let url = URL(string: "tel:\(task.phone.filter { $0.isNumber })") { Link(destination: url) { Label(task.phone, systemImage: "phone") } }
+                    if !task.email.isEmpty, let url = URL(string: "mailto:\(task.email)") { Link(destination: url) { Label(task.email, systemImage: "envelope") } }
+                    if !task.website.isEmpty, let url = URL(string: task.website.hasPrefix("http") ? task.website : "https://\(task.website)") { Link(destination: url) { Label("Website", systemImage: "safari") } }
                 }
             }
+            Section("Related") {
+                if let system = task.system { NavigationLink { SystemDetailView(system: system) } label: { LabeledContent("System", value: system.name) } }
+                if let fixture = task.fixture { NavigationLink { FixtureDetailView(fixture: fixture) } label: { LabeledContent("Fixture", value: fixture.name) } }
+                if let appliance = task.appliance { NavigationLink { ApplianceDetailView(appliance: appliance) } label: { LabeledContent("Device / Equipment", value: appliance.name) } }
+                if let room = task.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room", value: room.name) } }
+                if let project = task.project { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Project", value: project.title) } }
+                if task.system == nil && task.appliance == nil && task.fixture == nil && task.room == nil && task.project == nil { Text("No related records").foregroundStyle(.secondary) }
+            }
+            AttachmentSection(owner: .task(task))
+            if !task.isCompleted { Section { Button { showComplete = true } label: { Label("Complete Task", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) } } }
+            Section { Button("Delete Task", role: .destructive) { showDelete = true } }
         }
-        .navigationTitle("Compare Options")
-    }
-
-    @ViewBuilder
-    private func comparisonCard(_ item: ProjectItem) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let data = item.photoData, let image = UIImage(data: data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 230, height: 150)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.quaternary)
-                    .frame(width: 230, height: 150)
-                    .overlay(Image(systemName: "photo").font(.largeTitle).foregroundStyle(.secondary))
-            }
-
-            HStack {
-                Text(item.title).font(.headline)
-                Spacer()
-                if item.status == .favorite { Image(systemName: "star.fill").foregroundStyle(.yellow) }
-            }
-            Text(item.category).font(.caption).foregroundStyle(.secondary)
-
-            if !item.finishColor.isEmpty { LabeledContent("Color", value: item.finishColor) }
-            if !item.dimensions.isEmpty { LabeledContent("Size", value: item.dimensions) }
-            if !item.store.isEmpty { LabeledContent("Store", value: item.store) }
-            if let price = item.unitCost { LabeledContent("Price", value: price.formatted(AppFormatting.currency)) }
-            if !item.notes.isEmpty {
-                Text(item.notes).font(.caption).foregroundStyle(.secondary).lineLimit(4)
-            }
-        }
-        .padding(14)
-        .frame(width: 260, alignment: .topLeading)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.quaternary))
+        .navigationTitle(task.title).navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { TaskFormView(existingTask: task) } } }
+        .sheet(isPresented: $showComplete) { NavigationStack { CompleteTaskView(task: task) } }
+        .confirmationDialog("Delete this task?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Task", role: .destructive) { modelContext.delete(task); try? modelContext.save(); dismiss() }; Button("Cancel", role: .cancel) { } } message: { Text("Existing maintenance history will not be deleted.") }
     }
 }

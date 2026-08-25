@@ -1,51 +1,33 @@
 import SwiftUI
-import SwiftData
 
-struct ProjectsView: View {
-    @Query(sort: \Project.title) private var projects: [Project]
-    @State private var showNewProject = false
+struct StatusBadge: View {
+    let status: TaskDisplayStatus
 
     var body: some View {
-        List {
-            ForEach(ProjectStage.allCases) { stage in
-                let stageProjects = projects.filter { $0.stage == stage }
-                if !stageProjects.isEmpty {
-                    Section(stage.rawValue) {
-                        ForEach(stageProjects) { project in
-                            NavigationLink { ProjectDetailView(project: project) } label: {
-                                ProjectCardRow(project: project)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle("Projects")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showNewProject = true } label: { Image(systemName: "plus") }
-            }
-        }
-        .sheet(isPresented: $showNewProject) { NavigationStack { ProjectFormView() } }
+        Text(status.rawValue)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(background)
+            .foregroundStyle(foreground)
+            .clipShape(Capsule())
     }
-}
 
-private struct ProjectCardRow: View {
-    let project: Project
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.quaternary)
-                .frame(width: 54, height: 54)
-                .overlay(Image(systemName: "hammer").foregroundStyle(.secondary))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(project.title).font(.headline)
-                Text([project.stageRaw, project.locationName].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
-                if let budget = project.budget { Text("Budget \(budget.formatted(AppFormatting.currency))").font(.caption) }
-            }
+    private var background: Color {
+        switch status {
+        case .overdue: return .red.opacity(0.14)
+        case .current: return .orange.opacity(0.14)
+        case .upcoming: return .blue.opacity(0.12)
+        case .completed: return .green.opacity(0.14)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
+    }
+
+    private var foreground: Color {
+        switch status {
+        case .overdue: return .red
+        case .current: return .orange
+        case .upcoming: return .blue
+        case .completed: return .green
+        }
     }
 }

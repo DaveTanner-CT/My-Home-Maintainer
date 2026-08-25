@@ -42,3 +42,12 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Seasonal Maintenance planning by Spring, Summer, Fall, and Winter with one-tap task creation.
 - Replacement Forecast for systems, appliances/equipment, and fixtures using recorded dates and service-life assumptions.
 - Project completion handoff: purchased project items can be promoted into permanent Appliance, Fixture, Home System, Paint/Finish, or home-history records, carrying the linked Room/Area and project photo forward.
+
+## v0.11 connected workflow
+- Room / Area pages now act as mini dashboards with project, task, asset, warranty, and recent-history context.
+- Fixtures, devices/equipment, systems, and paint records can link back to a source/related project.
+- Fixture tasks are first-class links; task completion writes typed, directly linked Home History records.
+- Warranty reminders can be created directly from fixture, device/equipment, and system detail screens.
+- Project lifecycle is explicit: Plan -> Shop & Compare -> Purchase -> Install & Save -> Complete.
+- Installed project items become permanent home records that link back to the project and create installation history.
+- Home History is a unified typed timeline for maintenance, repairs, installations, purchases, replacements, inspections, and projects.

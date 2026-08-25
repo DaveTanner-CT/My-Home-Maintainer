@@ -1,106 +1,101 @@
 import Foundation
-import SwiftData
 
-@Model
-final class Project {
-    var title: String
-    var projectDescription: String
-    var stageRaw: String
-    var targetDate: Date?
-    var budget: Double?
-    var notes: String
-    // roomName is retained for compatibility with projects created before linked areas.
-    var roomName: String
-    var room: Room?
-    var coverPhotoData: Data?
+enum TaskCategory: String, CaseIterable, Identifiable {
+    case safety = "Safety"
+    case hvac = "HVAC"
+    case plumbing = "Plumbing"
+    case electrical = "Electrical"
+    case exterior = "Exterior"
+    case appliances = "Appliances"
+    case general = "General"
+    case project = "Project"
 
-    init(title: String, projectDescription: String = "", stage: ProjectStage = .idea, targetDate: Date? = nil, budget: Double? = nil, notes: String = "", roomName: String = "", room: Room? = nil, coverPhotoData: Data? = nil) {
-        self.title = title
-        self.projectDescription = projectDescription
-        self.stageRaw = stage.rawValue
-        self.targetDate = targetDate
-        self.budget = budget
-        self.notes = notes
-        self.roomName = room?.name ?? roomName
-        self.room = room
-        self.coverPhotoData = coverPhotoData
-    }
+    var id: String { rawValue }
+}
 
-    var locationName: String {
-        room?.name ?? roomName
-    }
+enum RecurrenceRule: String, CaseIterable, Identifiable {
+    case oneTime = "One Time"
+    case weekly = "Weekly"
+    case monthly = "Monthly"
+    case quarterly = "Quarterly"
+    case sixMonths = "Every 6 Months"
+    case annually = "Annually"
+    case tenYears = "Every 10 Years"
 
-    var stage: ProjectStage {
-        get { ProjectStage(rawValue: stageRaw) ?? .idea }
-        set { stageRaw = newValue.rawValue }
+    var id: String { rawValue }
+}
+
+enum RecurrenceAnchor: String, CaseIterable, Identifiable {
+    case scheduledDate = "Scheduled Date"
+    case completionDate = "Completion Date"
+
+    var id: String { rawValue }
+}
+
+enum TaskDisplayStatus: String, CaseIterable {
+    case overdue = "Overdue"
+    case current = "Current"
+    case upcoming = "Upcoming"
+    case completed = "Completed"
+}
+
+enum ProjectStage: String, CaseIterable, Identifiable {
+    case idea = "Idea"
+    case planning = "Planning"
+    case shopping = "Shopping"
+    case scheduled = "Scheduled"
+    case inProgress = "In Progress"
+    case completed = "Completed"
+    case onHold = "On Hold"
+
+    var id: String { rawValue }
+}
+
+enum ProjectItemStatus: String, CaseIterable, Identifiable {
+    case considering = "Considering"
+    case favorite = "Favorite"
+    case purchased = "Purchased"
+    case installed = "Installed / Saved to Home"
+    case rejected = "Rejected"
+
+    var id: String { rawValue }
+}
+
+// Broad location type used for both interior rooms and exterior/property areas.
+enum HomeAreaType: String, CaseIterable, Identifiable {
+    case interior = "Interior"
+    case exterior = "Exterior / Property"
+
+    var id: String { rawValue }
+    var iconName: String {
+        switch self {
+        case .interior: return "door.left.hand.open"
+        case .exterior: return "leaf"
+        }
     }
 }
 
-@Model
-final class ProjectItem {
-    var project: Project?
-    var title: String
-    var category: String
-    var manufacturer: String
-    var model: String
-    var sku: String
-    var finishColor: String
-    var dimensions: String
-    var store: String
-    var website: String
-    var unitCost: Double?
-    var quantity: Double
-    var actualPurchaseCost: Double?
-    var purchaseDate: Date?
-    var notes: String
-    var statusRaw: String
-    var photoData: Data?
-    var isIdeaOnly: Bool
+enum HomeEventType: String, CaseIterable, Identifiable {
+    case maintenance = "Maintenance"
+    case repair = "Repair"
+    case installation = "Installation"
+    case purchase = "Purchase"
+    case replacement = "Replacement"
+    case inspection = "Inspection"
+    case project = "Project"
+    case other = "Other"
 
-    init(project: Project? = nil, title: String, category: String = "Inspiration", manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
-        self.project = project
-        self.title = title
-        self.category = category
-        self.manufacturer = manufacturer
-        self.model = model
-        self.sku = sku
-        self.finishColor = finishColor
-        self.dimensions = dimensions
-        self.store = store
-        self.website = website
-        self.unitCost = unitCost
-        self.quantity = quantity
-        self.actualPurchaseCost = actualPurchaseCost
-        self.purchaseDate = purchaseDate
-        self.notes = notes
-        self.statusRaw = status.rawValue
-        self.photoData = photoData
-        self.isIdeaOnly = isIdeaOnly
-    }
-
-    var status: ProjectItemStatus {
-        get { ProjectItemStatus(rawValue: statusRaw) ?? .considering }
-        set { statusRaw = newValue.rawValue }
-    }
-
-    var estimatedTotal: Double {
-        (unitCost ?? 0) * quantity
-    }
-}
-
-@Model
-final class ProjectMeasurement {
-    var project: Project?
-    var name: String
-    var value: Double
-    var unit: String
-    var notes: String
-
-    init(project: Project? = nil, name: String, value: Double, unit: String, notes: String = "") {
-        self.project = project
-        self.name = name
-        self.value = value
-        self.unit = unit
-        self.notes = notes
+    var id: String { rawValue }
+    var iconName: String {
+        switch self {
+        case .maintenance: return "wrench.and.screwdriver"
+        case .repair: return "hammer"
+        case .installation: return "square.and.arrow.down"
+        case .purchase: return "cart"
+        case .replacement: return "arrow.triangle.2.circlepath"
+        case .inspection: return "magnifyingglass"
+        case .project: return "checkmark.seal"
+        case .other: return "clock.arrow.circlepath"
+        }
     }
 }

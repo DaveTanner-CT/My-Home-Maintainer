@@ -1,143 +1,194 @@
 import SwiftUI
-import UIKit
+import SwiftData
 
-/// A tappable image that opens a full-screen viewer with pinch-to-zoom, pan,
-/// double-tap zoom, and a one-tap close button.
-struct ExpandablePhoto: View {
-    let image: UIImage
-    var height: CGFloat? = nil
-    var fill: Bool = false
-    var cornerRadius: CGFloat = 12
+struct HomeDashboardView: View {
+    @Query private var homes: [Home]
+    @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
+    @State private var showSearch = false
+    @State private var showAddTask = false
+    @State private var completionTask: MaintenanceTask?
 
-    @State private var showViewer = false
+    private var activeTasks: [MaintenanceTask] { tasks.filter { !$0.isCompleted } }
+    private var overdue: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .overdue } }
+    private var current: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .current } }
+    private var upcoming: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .upcoming } }
+    private var attention: [MaintenanceTask] { overdue + current }
 
     var body: some View {
-        Button {
-            showViewer = true
-        } label: {
-            ZStack(alignment: .bottomTrailing) {
-                Group {
-                    if fill {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(homes.first?.name ?? "My Home")
+                        .font(.largeTitle.bold())
+                    Text("What needs your attention?")
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    showSearch = true
+                } label: {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                        Text("Search your home...")
+                        Spacer()
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+                    .background(.quaternary.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                HStack(spacing: 10) {
+                    SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
+                    SummaryCard(title: "Current", count: current.count, tint: .orange)
+                    SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
+                }
+
+                sectionTitle("Needs Attention")
+
+                if attention.isEmpty {
+                    EmptyCard(icon: "checkmark.circle", title: "You're caught up", subtitle: "No overdue or current maintenance tasks.")
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(attention.prefix(8)) { task in
+                            NavigationLink {
+                                TaskDetailView(task: task)
+                            } label: {
+                                TaskRowView(task: task) { completionTask = task }
+                            }
+                            .buttonStyle(.plain)
+                            Divider()
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .background(.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+                }
+
+                HStack {
+                    sectionTitle("Coming Soon")
+                    Spacer()
+                    NavigationLink("View All Tasks") { TasksHubView(initialSection: .all) }
+                        .font(.caption.weight(.semibold))
+                }
+                VStack(spacing: 0) {
+                    ForEach(upcoming.prefix(4)) { task in
+                        NavigationLink {
+                            TaskDetailView(task: task)
+                        } label: {
+                            TaskRowView(task: task) { completionTask = task }
+                        }
+                        .buttonStyle(.plain)
+                        Divider()
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: height)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .padding(.horizontal, 14)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
 
-                Label("Zoom", systemImage: "arrow.up.left.and.arrow.down.right")
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .padding(8)
+                sectionTitle("Quick Access")
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    QuickLink(title: "Home Systems", icon: "wrench.and.screwdriver", destination: AnyView(SystemsListView()))
+                    QuickLink(title: "Rooms", icon: "door.left.hand.open", destination: AnyView(RoomsListView()))
+                    QuickLink(title: "Devices & Equipment", icon: "refrigerator", destination: AnyView(AppliancesListView()))
+                    QuickLink(title: "Paint & Finishes", icon: "paintbrush", destination: AnyView(PaintListView()))
+                    QuickLink(title: "Projects", icon: "hammer", destination: AnyView(ProjectsView()))
+                    QuickLink(title: "Vendors", icon: "person.crop.circle.badge.checkmark", destination: AnyView(VendorsListView()))
+                    QuickLink(title: "Home Insights", icon: "chart.bar.xaxis", destination: AnyView(HomeInsightsView()))
+                    QuickLink(title: "Warranty Center", icon: "shield", destination: AnyView(WarrantyCenterView()))
+                    QuickLink(title: "Seasonal Planning", icon: "calendar.badge.clock", destination: AnyView(SeasonalMaintenanceView()))
+                    QuickLink(title: "Replacement Forecast", icon: "chart.line.uptrend.xyaxis", destination: AnyView(ReplacementForecastView()))
+                }
+            }
+            .padding()
+        }
+        .background(Color(.systemGroupedBackground))
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                NavigationLink { AppSettingsView() } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel("Settings")
+                Button { showAddTask = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add Task")
             }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Open photo full screen")
-        .fullScreenCover(isPresented: $showViewer) {
-            FullScreenPhotoViewer(image: image)
+        .sheet(isPresented: $showSearch) { NavigationStack { GlobalSearchView() } }
+        .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView() } }
+        .sheet(item: $completionTask) { task in
+            NavigationStack { CompleteTaskView(task: task) }
         }
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.secondary)
+            .tracking(0.8)
     }
 }
 
-struct FullScreenPhotoViewer: View {
-    @Environment(\.dismiss) private var dismiss
-    let image: UIImage
+private struct SummaryCard: View {
+    let title: String
+    let count: Int
+    let tint: Color
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
-
-            ZoomingScrollView(image: image)
-                .ignoresSafeArea()
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 42, height: 42)
-                    .background(.black.opacity(0.62), in: Circle())
-            }
-            .padding(.top, 12)
-            .padding(.trailing, 16)
-            .accessibilityLabel("Close photo")
+        VStack(alignment: .leading, spacing: 5) {
+            Text("\(count)")
+                .font(.title2.bold())
+                .foregroundStyle(tint)
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
-        .statusBarHidden(true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
-private struct ZoomingScrollView: UIViewRepresentable {
-    let image: UIImage
+private struct QuickLink: View {
+    let title: String
+    let icon: String
+    let destination: AnyView
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeUIView(context: Context) -> UIScrollView {
-        let scrollView = UIScrollView()
-        scrollView.backgroundColor = .black
-        scrollView.delegate = context.coordinator
-        scrollView.minimumZoomScale = 1
-        scrollView.maximumZoomScale = 6
-        scrollView.bouncesZoom = true
-        scrollView.showsHorizontalScrollIndicator = false
-        scrollView.showsVerticalScrollIndicator = false
-
-        let imageView = UIImageView(image: image)
-        imageView.contentMode = .scaleAspectFit
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.isUserInteractionEnabled = true
-        scrollView.addSubview(imageView)
-        context.coordinator.imageView = imageView
-
-        NSLayoutConstraint.activate([
-            imageView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
-            imageView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-            imageView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
-            imageView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
-            imageView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
-        ])
-
-        let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.didDoubleTap(_:)))
-        doubleTap.numberOfTapsRequired = 2
-        scrollView.addGestureRecognizer(doubleTap)
-        context.coordinator.scrollView = scrollView
-
-        return scrollView
-    }
-
-    func updateUIView(_ uiView: UIScrollView, context: Context) {
-        context.coordinator.imageView?.image = image
-    }
-
-    final class Coordinator: NSObject, UIScrollViewDelegate {
-        weak var imageView: UIImageView?
-        weak var scrollView: UIScrollView?
-
-        func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
-
-        @objc func didDoubleTap(_ gesture: UITapGestureRecognizer) {
-            guard let scrollView, let imageView else { return }
-            if scrollView.zoomScale > scrollView.minimumZoomScale + 0.1 {
-                scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
-                return
+    var body: some View {
+        NavigationLink {
+            destination
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .frame(width: 28)
+                    .font(.title3)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
             }
-
-            let point = gesture.location(in: imageView)
-            let targetScale = min(3, scrollView.maximumZoomScale)
-            let width = scrollView.bounds.width / targetScale
-            let height = scrollView.bounds.height / targetScale
-            let rect = CGRect(x: point.x - width / 2, y: point.y - height / 2, width: width, height: height)
-            scrollView.zoom(to: rect, animated: true)
+            .padding(14)
+            .background(.background)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .buttonStyle(.plain)
+    }
+}
+
+struct EmptyCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon).font(.title2).foregroundStyle(.secondary)
+            Text(title).font(.headline)
+            Text(subtitle).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }

@@ -1,38 +1,143 @@
 import SwiftUI
-import PhotosUI
+import UIKit
 
-struct ProjectItemFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
-    let project: Project; let existing: ProjectItem?
-    @State private var title: String; @State private var category: String; @State private var isIdeaOnly: Bool; @State private var manufacturer: String; @State private var model: String; @State private var sku: String; @State private var finishColor: String; @State private var dimensions: String; @State private var store: String; @State private var website: String; @State private var unitCostText: String; @State private var quantity: Double; @State private var actualCostText: String; @State private var purchaseDate: Date; @State private var notes: String; @State private var status: ProjectItemStatus; @State private var selectedPhoto: PhotosPickerItem?; @State private var photoData: Data?; @State private var showDelete = false
-    private let categories = ["Inspiration", "Paint & Colors", "Flooring / Tile", "Fixtures", "Lighting", "Hardware", "Furniture", "Storage", "Appliances", "Materials", "Contractor Ideas"]
+/// A tappable image that opens a full-screen viewer with pinch-to-zoom, pan,
+/// double-tap zoom, and a one-tap close button.
+struct ExpandablePhoto: View {
+    let image: UIImage
+    var height: CGFloat? = nil
+    var fill: Bool = false
+    var cornerRadius: CGFloat = 12
 
-    init(project: Project, existing: ProjectItem? = nil) {
-        self.project = project; self.existing = existing
-        _title = State(initialValue: existing?.title ?? ""); _category = State(initialValue: existing?.category ?? "Inspiration"); _isIdeaOnly = State(initialValue: existing?.isIdeaOnly ?? false)
-        _manufacturer = State(initialValue: existing?.manufacturer ?? ""); _model = State(initialValue: existing?.model ?? ""); _sku = State(initialValue: existing?.sku ?? ""); _finishColor = State(initialValue: existing?.finishColor ?? ""); _dimensions = State(initialValue: existing?.dimensions ?? ""); _store = State(initialValue: existing?.store ?? ""); _website = State(initialValue: existing?.website ?? ""); _unitCostText = State(initialValue: existing?.unitCost.map { String($0) } ?? ""); _quantity = State(initialValue: existing?.quantity ?? 1); _actualCostText = State(initialValue: existing?.actualPurchaseCost.map { String($0) } ?? ""); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now); _notes = State(initialValue: existing?.notes ?? ""); _status = State(initialValue: existing?.status ?? .considering); _photoData = State(initialValue: existing?.photoData)
-    }
+    @State private var showViewer = false
 
     var body: some View {
-        Form {
-            Section("Idea / Item") { TextField("Name", text: $title); Picker("Category", selection: $category) { ForEach(categories, id: \.self) { Text($0).tag($0) } }; Toggle("Idea only", isOn: $isIdeaOnly); Picker("Status", selection: $status) { ForEach(ProjectItemStatus.allCases) { Text($0.rawValue).tag($0) } } }
-            if !isIdeaOnly { Section("Product") { TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); TextField("SKU", text: $sku); TextField("Color / finish", text: $finishColor); TextField("Dimensions", text: $dimensions); TextField("Store", text: $store); TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never); TextField("Unit cost", text: $unitCostText).keyboardType(.decimalPad); Stepper("Quantity: \(quantity.formatted())", value: $quantity, in: 1...1000); if status == .purchased { DatePicker("Purchase date", selection: $purchaseDate, displayedComponents: .date); TextField("Actual purchase cost", text: $actualCostText).keyboardType(.decimalPad) } } }
-            Section("Photo & Notes") { PhotosPicker(selection: $selectedPhoto, matching: .images) { Label(photoData == nil ? "Add Photo" : "Change Photo", systemImage: "photo") }; if photoData != nil { Button("Remove Photo", role: .destructive) { photoData = nil } }; TextField("Notes", text: $notes, axis: .vertical) }
-            if existing != nil { Section { Button("Delete Project Item", role: .destructive) { showDelete = true } } }
+        Button {
+            showViewer = true
+        } label: {
+            ZStack(alignment: .bottomTrailing) {
+                Group {
+                    if fill {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+
+                Label("Zoom", systemImage: "arrow.up.left.and.arrow.down.right")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(8)
+            }
         }
-        .navigationTitle(existing == nil ? "Add Project Item" : "Edit Project Item").navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.isEmpty) } }
-        .onChange(of: selectedPhoto) { _, newValue in guard let newValue else { return }; Task { photoData = try? await newValue.loadTransferable(type: Data.self) } }
-        .confirmationDialog("Delete this project item?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Item", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open photo full screen")
+        .fullScreenCover(isPresented: $showViewer) {
+            FullScreenPhotoViewer(image: image)
+        }
     }
-    private func save() { let item = existing ?? ProjectItem(project: project, title: title); if existing == nil { modelContext.insert(item) }; item.project = project; item.title = title; item.category = category; item.isIdeaOnly = isIdeaOnly; item.manufacturer = manufacturer; item.model = model; item.sku = sku; item.finishColor = finishColor; item.dimensions = dimensions; item.store = store; item.website = website; item.unitCost = Double(unitCostText); item.quantity = quantity; item.actualPurchaseCost = Double(actualCostText); item.purchaseDate = status == .purchased ? purchaseDate : nil; item.notes = notes; item.status = status; item.photoData = photoData; try? modelContext.save(); dismiss() }
 }
 
-struct ProjectMeasurementFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
-    let project: Project; let existing: ProjectMeasurement?
-    @State private var name: String; @State private var valueText: String; @State private var unit: String; @State private var notes: String; @State private var showDelete = false
-    init(project: Project, existing: ProjectMeasurement? = nil) { self.project = project; self.existing = existing; _name = State(initialValue: existing?.name ?? ""); _valueText = State(initialValue: existing.map { String($0.value) } ?? ""); _unit = State(initialValue: existing?.unit ?? "in"); _notes = State(initialValue: existing?.notes ?? "") }
-    var body: some View { Form { Section("Measurement") { TextField("Name", text: $name); TextField("Value", text: $valueText).keyboardType(.decimalPad); Picker("Unit", selection: $unit) { ForEach(["in","ft","sq ft","cm","m","sq m"], id: \.self) { Text($0).tag($0) } }; TextField("Notes", text: $notes, axis: .vertical) }; if existing != nil { Section { Button("Delete Measurement", role: .destructive) { showDelete = true } } } }.navigationTitle(existing == nil ? "Add Measurement" : "Edit Measurement").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.isEmpty || Double(valueText) == nil) } }.confirmationDialog("Delete this measurement?", isPresented: $showDelete) { Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } } }
-    private func save() { guard let value = Double(valueText) else { return }; let m = existing ?? ProjectMeasurement(project: project, name: name, value: value, unit: unit); if existing == nil { modelContext.insert(m) }; m.project = project; m.name = name; m.value = value; m.unit = unit; m.notes = notes; try? modelContext.save(); dismiss() }
+struct FullScreenPhotoViewer: View {
+    @Environment(\.dismiss) private var dismiss
+    let image: UIImage
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+
+            ZoomingScrollView(image: image)
+                .ignoresSafeArea()
+
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(.black.opacity(0.62), in: Circle())
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 16)
+            .accessibilityLabel("Close photo")
+        }
+        .statusBarHidden(true)
+    }
+}
+
+private struct ZoomingScrollView: UIViewRepresentable {
+    let image: UIImage
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.backgroundColor = .black
+        scrollView.delegate = context.coordinator
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 6
+        scrollView.bouncesZoom = true
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
+
+        let imageView = UIImageView(image: image)
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isUserInteractionEnabled = true
+        scrollView.addSubview(imageView)
+        context.coordinator.imageView = imageView
+
+        NSLayoutConstraint.activate([
+            imageView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            imageView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            imageView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            imageView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
+        ])
+
+        let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.didDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTap)
+        context.coordinator.scrollView = scrollView
+
+        return scrollView
+    }
+
+    func updateUIView(_ uiView: UIScrollView, context: Context) {
+        context.coordinator.imageView?.image = image
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate {
+        weak var imageView: UIImageView?
+        weak var scrollView: UIScrollView?
+
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
+
+        @objc func didDoubleTap(_ gesture: UITapGestureRecognizer) {
+            guard let scrollView, let imageView else { return }
+            if scrollView.zoomScale > scrollView.minimumZoomScale + 0.1 {
+                scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
+                return
+            }
+
+            let point = gesture.location(in: imageView)
+            let targetScale = min(3, scrollView.maximumZoomScale)
+            let width = scrollView.bounds.width / targetScale
+            let height = scrollView.bounds.height / targetScale
+            let rect = CGRect(x: point.x - width / 2, y: point.y - height / 2, width: width, height: height)
+            scrollView.zoom(to: rect, animated: true)
+        }
+    }
 }

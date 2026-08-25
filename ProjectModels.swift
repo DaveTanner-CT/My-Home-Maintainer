@@ -2,159 +2,115 @@ import Foundation
 import SwiftData
 
 @Model
-final class Home {
-    var name: String
-    var address: String
-    var yearBuilt: Int?
-    var purchaseDate: Date?
-    var squareFeet: Int?
+final class Project {
+    var title: String
+    var projectDescription: String
+    var stageRaw: String
+    var targetDate: Date?
+    var budget: Double?
     var notes: String
-
-    init(name: String = "My Home", address: String = "", yearBuilt: Int? = nil, purchaseDate: Date? = nil, squareFeet: Int? = nil, notes: String = "") {
-        self.name = name
-        self.address = address
-        self.yearBuilt = yearBuilt
-        self.purchaseDate = purchaseDate
-        self.squareFeet = squareFeet
-        self.notes = notes
-    }
-}
-
-@Model
-final class Room {
-    var name: String
-    var notes: String
-    var isFavorite: Bool
-
-    init(name: String, notes: String = "", isFavorite: Bool = false) {
-        self.name = name
-        self.notes = notes
-        self.isFavorite = isFavorite
-    }
-}
-
-@Model
-final class Vendor {
-    var businessName: String
-    var contactName: String
-    var category: String
-    var phone: String
-    var email: String
-    var website: String
-    var address: String
-    var notes: String
-    var isFavorite: Bool
-
-    init(businessName: String, contactName: String = "", category: String = "", phone: String = "", email: String = "", website: String = "", address: String = "", notes: String = "", isFavorite: Bool = false) {
-        self.businessName = businessName
-        self.contactName = contactName
-        self.category = category
-        self.phone = phone
-        self.email = email
-        self.website = website
-        self.address = address
-        self.notes = notes
-        self.isFavorite = isFavorite
-    }
-}
-
-@Model
-final class HomeSystem {
-    var name: String
-    var type: String
-    var manufacturer: String
-    var model: String
-    var serialNumber: String
-    var installationDate: Date?
-    var purchaseCost: Double?
-    var warrantyExpiration: Date?
-    var expectedServiceLifeYears: Int?
-    var location: String
-    var notes: String
-    var website: String
-    var vendor: Vendor?
-
-    init(name: String, type: String, manufacturer: String = "", model: String = "", serialNumber: String = "", installationDate: Date? = nil, purchaseCost: Double? = nil, warrantyExpiration: Date? = nil, expectedServiceLifeYears: Int? = nil, location: String = "", notes: String = "", website: String = "", vendor: Vendor? = nil) {
-        self.name = name
-        self.type = type
-        self.manufacturer = manufacturer
-        self.model = model
-        self.serialNumber = serialNumber
-        self.installationDate = installationDate
-        self.purchaseCost = purchaseCost
-        self.warrantyExpiration = warrantyExpiration
-        self.expectedServiceLifeYears = expectedServiceLifeYears
-        self.location = location
-        self.notes = notes
-        self.website = website
-        self.vendor = vendor
-    }
-}
-
-@Model
-final class Appliance {
-    var name: String
-    var category: String
-    var manufacturer: String
-    var model: String
-    var serialNumber: String
-    var purchaseDate: Date?
-    var purchasePrice: Double?
-    var purchasedFrom: String
-    var warrantyExpiration: Date?
-    var manufacturerWebsite: String
-    var productRegistrationLink: String
-    var notes: String
-    var room: Room?
-
-    init(name: String, category: String, manufacturer: String = "", model: String = "", serialNumber: String = "", purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, manufacturerWebsite: String = "", productRegistrationLink: String = "", notes: String = "", room: Room? = nil) {
-        self.name = name
-        self.category = category
-        self.manufacturer = manufacturer
-        self.model = model
-        self.serialNumber = serialNumber
-        self.purchaseDate = purchaseDate
-        self.purchasePrice = purchasePrice
-        self.purchasedFrom = purchasedFrom
-        self.warrantyExpiration = warrantyExpiration
-        self.manufacturerWebsite = manufacturerWebsite
-        self.productRegistrationLink = productRegistrationLink
-        self.notes = notes
-        self.room = room
-    }
-}
-
-@Model
-final class PaintFinish {
+    // roomName is retained for compatibility with projects created before linked areas.
     var roomName: String
-    var surface: String
-    var brand: String
-    var productLine: String
-    var colorName: String
-    var colorCode: String
-    var sheen: String
-    var store: String
-    var purchaseDate: Date?
-    var quantity: Double?
-    var containerSize: String
-    var cost: Double?
-    var notes: String
-    var productLink: String
+    var room: Room?
+    var coverPhotoData: Data?
 
-    init(roomName: String, surface: String, brand: String = "", productLine: String = "", colorName: String = "", colorCode: String = "", sheen: String = "", store: String = "", purchaseDate: Date? = nil, quantity: Double? = nil, containerSize: String = "", cost: Double? = nil, notes: String = "", productLink: String = "") {
-        self.roomName = roomName
-        self.surface = surface
-        self.brand = brand
-        self.productLine = productLine
-        self.colorName = colorName
-        self.colorCode = colorCode
-        self.sheen = sheen
-        self.store = store
-        self.purchaseDate = purchaseDate
-        self.quantity = quantity
-        self.containerSize = containerSize
-        self.cost = cost
+    init(title: String, projectDescription: String = "", stage: ProjectStage = .idea, targetDate: Date? = nil, budget: Double? = nil, notes: String = "", roomName: String = "", room: Room? = nil, coverPhotoData: Data? = nil) {
+        self.title = title
+        self.projectDescription = projectDescription
+        self.stageRaw = stage.rawValue
+        self.targetDate = targetDate
+        self.budget = budget
         self.notes = notes
-        self.productLink = productLink
+        self.roomName = room?.name ?? roomName
+        self.room = room
+        self.coverPhotoData = coverPhotoData
+    }
+
+    var locationName: String {
+        room?.name ?? roomName
+    }
+
+    var stage: ProjectStage {
+        get { ProjectStage(rawValue: stageRaw) ?? .idea }
+        set { stageRaw = newValue.rawValue }
+    }
+}
+
+@Model
+final class ProjectItem {
+    var project: Project?
+    var title: String
+    var category: String
+    // Optional label that groups multiple product options for one buying decision (for example, "Kitchen Faucet").
+    var comparisonGroup: String?
+    var manufacturer: String
+    var model: String
+    var sku: String
+    var finishColor: String
+    var dimensions: String
+    var store: String
+    var website: String
+    var unitCost: Double?
+    var quantity: Double
+    var actualPurchaseCost: Double?
+    var purchaseDate: Date?
+    var installedDate: Date?
+    var notes: String
+    var statusRaw: String
+    var photoData: Data?
+    var isIdeaOnly: Bool
+
+    init(project: Project? = nil, title: String, category: String = "Inspiration", comparisonGroup: String? = nil, manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, installedDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
+        self.project = project
+        self.title = title
+        self.category = category
+        self.comparisonGroup = comparisonGroup
+        self.manufacturer = manufacturer
+        self.model = model
+        self.sku = sku
+        self.finishColor = finishColor
+        self.dimensions = dimensions
+        self.store = store
+        self.website = website
+        self.unitCost = unitCost
+        self.quantity = quantity
+        self.actualPurchaseCost = actualPurchaseCost
+        self.purchaseDate = purchaseDate
+        self.installedDate = installedDate
+        self.notes = notes
+        self.statusRaw = status.rawValue
+        self.photoData = photoData
+        self.isIdeaOnly = isIdeaOnly
+    }
+
+    var status: ProjectItemStatus {
+        get { ProjectItemStatus(rawValue: statusRaw) ?? .considering }
+        set { statusRaw = newValue.rawValue }
+    }
+
+    var estimatedTotal: Double {
+        (unitCost ?? 0) * quantity
+    }
+
+    var comparisonGroupName: String {
+        let trimmed = (comparisonGroup ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? (category.isEmpty ? "Other" : category) : trimmed
+    }
+}
+
+@Model
+final class ProjectMeasurement {
+    var project: Project?
+    var name: String
+    var value: Double
+    var unit: String
+    var notes: String
+
+    init(project: Project? = nil, name: String, value: Double, unit: String, notes: String = "") {
+        self.project = project
+        self.name = name
+        self.value = value
+        self.unit = unit
+        self.notes = notes
     }
 }

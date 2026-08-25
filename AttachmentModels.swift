@@ -2,67 +2,121 @@ import Foundation
 import SwiftData
 
 @Model
-final class Detector {
-    var location: String
-    var type: String
-    var manufacturer: String
-    var model: String
-    var manufactureDate: Date?
-    var installationDate: Date?
-    var batteryType: String
-    var isHardwired: Bool
-    var replacementDate: Date?
-    var notes: String
+final class HomeAttachment {
+    var name: String
+    var caption: String
+    var category: String
+    var fileName: String
+    var typeIdentifier: String
+    var createdAt: Date
+    var fileData: Data
 
-    init(location: String, type: String = "Combination", manufacturer: String = "", model: String = "", manufactureDate: Date? = nil, installationDate: Date? = nil, batteryType: String = "", isHardwired: Bool = false, replacementDate: Date? = nil, notes: String = "") {
-        self.location = location
-        self.type = type
-        self.manufacturer = manufacturer
-        self.model = model
-        self.manufactureDate = manufactureDate
-        self.installationDate = installationDate
-        self.batteryType = batteryType
-        self.isHardwired = isHardwired
-        self.replacementDate = replacementDate ?? Self.calculateReplacementDate(manufactureDate: manufactureDate, installationDate: installationDate)
-        self.notes = notes
+    var room: Room?
+    var task: MaintenanceTask?
+    var vendor: Vendor?
+    var system: HomeSystem?
+    var appliance: Appliance?
+    var paint: PaintFinish?
+    var project: Project?
+    var projectItem: ProjectItem?
+    var maintenanceRecord: MaintenanceRecord?
+    var detector: Detector?
+    var consumable: Consumable?
+    var fixture: Fixture?
+
+    init(
+        name: String,
+        caption: String = "",
+        category: String = "Document",
+        fileName: String,
+        typeIdentifier: String,
+        createdAt: Date = .now,
+        fileData: Data
+    ) {
+        self.name = name
+        self.caption = caption
+        self.category = category
+        self.fileName = fileName
+        self.typeIdentifier = typeIdentifier
+        self.createdAt = createdAt
+        self.fileData = fileData
     }
 
-    static func calculateReplacementDate(manufactureDate: Date?, installationDate: Date?) -> Date? {
-        let base = manufactureDate ?? installationDate
-        guard let base else { return nil }
-        return Calendar.current.date(byAdding: .year, value: 10, to: base)
+    var isImage: Bool {
+        typeIdentifier.hasPrefix("image/") || ["jpg", "jpeg", "png", "heic", "gif", "webp"].contains((fileName as NSString).pathExtension.lowercased())
     }
 }
 
-@Model
-final class Consumable {
-    var name: String
-    var type: String
-    var size: String
-    var manufacturer: String
-    var modelPartNumber: String
-    var purchaseLink: String
-    var replacementIntervalMonths: Int?
-    var lastReplaced: Date?
-    var nextReplacement: Date?
-    var notes: String
+enum AttachmentOwnerReference {
+    case room(Room)
+    case task(MaintenanceTask)
+    case vendor(Vendor)
+    case system(HomeSystem)
+    case appliance(Appliance)
+    case paint(PaintFinish)
+    case project(Project)
+    case projectItem(ProjectItem)
+    case maintenanceRecord(MaintenanceRecord)
+    case detector(Detector)
+    case consumable(Consumable)
+    case fixture(Fixture)
 
-    init(name: String, type: String = "", size: String = "", manufacturer: String = "", modelPartNumber: String = "", purchaseLink: String = "", replacementIntervalMonths: Int? = nil, lastReplaced: Date? = nil, nextReplacement: Date? = nil, notes: String = "") {
-        self.name = name
-        self.type = type
-        self.size = size
-        self.manufacturer = manufacturer
-        self.modelPartNumber = modelPartNumber
-        self.purchaseLink = purchaseLink
-        self.replacementIntervalMonths = replacementIntervalMonths
-        self.lastReplaced = lastReplaced
-        if let nextReplacement {
-            self.nextReplacement = nextReplacement
-        } else if let months = replacementIntervalMonths, let lastReplaced {
-            self.nextReplacement = Calendar.current.date(byAdding: .month, value: months, to: lastReplaced)
-        } else {
-            self.nextReplacement = nil
+    func matches(_ attachment: HomeAttachment) -> Bool {
+        switch self {
+        case .room(let owner):
+            return attachment.room?.persistentModelID == owner.persistentModelID
+        case .task(let owner):
+            return attachment.task?.persistentModelID == owner.persistentModelID
+        case .vendor(let owner):
+            return attachment.vendor?.persistentModelID == owner.persistentModelID
+        case .system(let owner):
+            return attachment.system?.persistentModelID == owner.persistentModelID
+        case .appliance(let owner):
+            return attachment.appliance?.persistentModelID == owner.persistentModelID
+        case .paint(let owner):
+            return attachment.paint?.persistentModelID == owner.persistentModelID
+        case .project(let owner):
+            return attachment.project?.persistentModelID == owner.persistentModelID
+        case .projectItem(let owner):
+            return attachment.projectItem?.persistentModelID == owner.persistentModelID
+        case .maintenanceRecord(let owner):
+            return attachment.maintenanceRecord?.persistentModelID == owner.persistentModelID
+        case .detector(let owner):
+            return attachment.detector?.persistentModelID == owner.persistentModelID
+        case .consumable(let owner):
+            return attachment.consumable?.persistentModelID == owner.persistentModelID
+        case .fixture(let owner):
+            return attachment.fixture?.persistentModelID == owner.persistentModelID
         }
-        self.notes = notes
+    }
+
+    func assign(to attachment: HomeAttachment) {
+        attachment.room = nil
+        attachment.task = nil
+        attachment.vendor = nil
+        attachment.system = nil
+        attachment.appliance = nil
+        attachment.paint = nil
+        attachment.project = nil
+        attachment.projectItem = nil
+        attachment.maintenanceRecord = nil
+        attachment.detector = nil
+        attachment.consumable = nil
+        attachment.fixture = nil
+
+        switch self {
+        case .room(let owner): attachment.room = owner
+        case .task(let owner): attachment.task = owner
+        case .vendor(let owner): attachment.vendor = owner
+        case .system(let owner): attachment.system = owner
+        case .appliance(let owner): attachment.appliance = owner
+        case .paint(let owner): attachment.paint = owner
+        case .project(let owner): attachment.project = owner
+        case .projectItem(let owner): attachment.projectItem = owner
+        case .maintenanceRecord(let owner): attachment.maintenanceRecord = owner
+        case .detector(let owner): attachment.detector = owner
+        case .consumable(let owner): attachment.consumable = owner
+        case .fixture(let owner): attachment.fixture = owner
+        }
     }
 }

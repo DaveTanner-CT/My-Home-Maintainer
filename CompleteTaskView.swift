@@ -1,145 +1,90 @@
 import SwiftUI
 import SwiftData
 
-struct ProjectShoppingView: View {
-    let project: Project
+struct CompleteTaskView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query private var allItems: [ProjectItem]
+    @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
 
-    @State private var statusFilter = "Need to Buy"
-    @State private var grouping = "Store"
+    let task: MaintenanceTask
 
-    private let statusOptions = ["Need to Buy", "All", "Considering", "Favorite", "Purchased"]
-    private let groupingOptions = ["Store", "Category"]
-
-    private var projectItems: [ProjectItem] {
-        allItems.filter {
-            $0.project?.persistentModelID == project.persistentModelID &&
-            !$0.isIdeaOnly
-        }
-    }
-
-    private var items: [ProjectItem] {
-        projectItems.filter { item in
-            switch statusFilter {
-            case "Need to Buy": return item.status == .considering || item.status == .favorite
-            case "Considering": return item.status == .considering
-            case "Favorite": return item.status == .favorite
-            case "Purchased": return item.status == .purchased
-            default: return item.status != .rejected
-            }
-        }
-    }
-
-    private var groups: [String] {
-        Array(Set(items.map { groupName(for: $0) })).sorted()
-    }
+    @State private var completionDate = Date()
+    @State private var sameVendor = true
+    @State private var selectedVendor: Vendor?
+    @State private var costText = ""
+    @State private var notes = ""
+    @State private var eventType: HomeEventType = .maintenance
 
     var body: some View {
-        List {
-            Section("Shopping View") {
-                Picker("Show", selection: $statusFilter) {
-                    ForEach(statusOptions, id: \.self) { Text($0).tag($0) }
-                }
-                Picker("Group by", selection: $grouping) {
-                    ForEach(groupingOptions, id: \.self) { Text($0).tag($0) }
-                }
-            }
-
-            if items.isEmpty {
-                ContentUnavailableView("No matching shopping items", systemImage: "cart", description: Text("Change the filter or add product items to this project."))
-            } else {
-                ForEach(groups, id: \.self) { group in
-                    Section(group) {
-                        ForEach(items.filter { groupName(for: $0) == group }) { item in
-                            NavigationLink {
-                                ProjectItemDetailView(project: project, item: item)
-                            } label: {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Image(systemName: statusIcon(for: item))
-                                        .foregroundStyle(statusColor(for: item))
-                                        .font(.title3)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.title).font(.headline)
-                                        Text("Qty \(item.quantity.formatted()) · \(item.estimatedTotal.formatted(AppFormatting.currency))")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        if !item.store.isEmpty && grouping != "Store" { Text(item.store).font(.caption) }
-                                        if !item.finishColor.isEmpty { Text(item.finishColor).font(.caption) }
-                                        if !item.sku.isEmpty { Text("SKU: \(item.sku)").font(.caption2).foregroundStyle(.secondary) }
-                                    }
-                                }
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    item.status = .purchased
-                                    if item.purchaseDate == nil { item.purchaseDate = .now }
-                                    try? modelContext.save()
-                                } label: {
-                                    Label("Purchased", systemImage: "checkmark")
-                                }
-                                .tint(.green)
-
-                                Button {
-                                    item.status = .favorite
-                                    try? modelContext.save()
-                                } label: {
-                                    Label("Favorite", systemImage: "star")
-                                }
-                                .tint(.orange)
-                            }
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    item.status = .rejected
-                                    try? modelContext.save()
-                                } label: {
-                                    Label("Reject", systemImage: "xmark")
-                                }
-                            }
-                        }
+        Form {
+            Section("Completion") {
+                DatePicker("Completion date", selection: $completionDate, displayedComponents: .date)
+                Picker("History type", selection: $eventType) { ForEach(HomeEventType.allCases) { Text($0.rawValue).tag($0) } }
+                if task.vendor != nil { Toggle("Same vendor as task", isOn: $sameVendor) }
+                if !sameVendor || task.vendor == nil {
+                    Picker("Vendor", selection: $selectedVendor) {
+                        Text("None").tag(nil as Vendor?)
+                        ForEach(vendors) { Text($0.businessName).tag(Optional($0)) }
                     }
                 }
+                TextField("Cost", text: $costText).keyboardType(.decimalPad)
+                TextField("Completion notes", text: $notes, axis: .vertical)
             }
 
-            Section("Project Spending") {
-                LabeledContent("Planned", value: plannedTotal.formatted(AppFormatting.currency))
-                LabeledContent("Purchased", value: purchasedTotal.formatted(AppFormatting.currency))
-                if let budget = project.budget {
-                    LabeledContent("Budget remaining", value: (budget - purchasedTotal).formatted(AppFormatting.currency))
-                }
+            Section("Will be saved to Home History") {
+                if let fixture = task.fixture { LabeledContent("Fixture", value: fixture.name) }
+                if let appliance = task.appliance { LabeledContent("Device / Equipment", value: appliance.name) }
+                if let system = task.system { LabeledContent("System", value: system.name) }
+                if let room = resolvedRoom { LabeledContent("Room / Area", value: room.name) }
+                if let project = task.project { LabeledContent("Project", value: project.title) }
+            }
+
+            if let next = TaskEngine.nextDueDate(for: task, completionDate: completionDate) {
+                Section("Next Occurrence") { LabeledContent("Next due", value: next.formatted(date: .long, time: .omitted)) }
             }
         }
-        .navigationTitle("Shopping Mode")
-    }
-
-    private var plannedTotal: Double {
-        projectItems.filter { $0.status != .rejected }.reduce(0) { $0 + $1.estimatedTotal }
-    }
-
-    private var purchasedTotal: Double {
-        projectItems.filter { $0.status == .purchased }.reduce(0) { $0 + ($1.actualPurchaseCost ?? $1.estimatedTotal) }
-    }
-
-    private func groupName(for item: ProjectItem) -> String {
-        if grouping == "Category" { return item.category.isEmpty ? "Uncategorized" : item.category }
-        return item.store.isEmpty ? "Store Not Set" : item.store
-    }
-
-    private func statusColor(for item: ProjectItem) -> Color {
-        switch item.status {
-        case .purchased: return .green
-        case .favorite: return .orange
-        case .rejected: return .red
-        case .considering: return .secondary
+        .navigationTitle("Complete Task")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { complete() } }
         }
     }
 
-    private func statusIcon(for item: ProjectItem) -> String {
-        switch item.status {
-        case .purchased: return "checkmark.circle.fill"
-        case .favorite: return "star.fill"
-        case .rejected: return "xmark.circle"
-        case .considering: return "circle"
+    private var resolvedRoom: Room? { task.room ?? task.fixture?.room ?? task.appliance?.room ?? task.system?.room ?? task.project?.room }
+
+    private func complete() {
+        let vendor = sameVendor ? task.vendor : selectedVendor
+        let relatedName = task.fixture?.name ?? task.system?.name ?? task.appliance?.name ?? resolvedRoom?.name ?? task.project?.title ?? ""
+        let record = MaintenanceRecord(
+            date: completionDate,
+            title: task.title,
+            cost: Double(costText),
+            notes: notes,
+            vendorName: vendor?.businessName ?? "",
+            taskTitle: task.title,
+            relatedItemName: relatedName,
+            eventType: eventType,
+            room: resolvedRoom,
+            system: task.system,
+            appliance: task.appliance,
+            fixture: task.fixture,
+            project: task.project,
+            vendor: vendor
+        )
+        modelContext.insert(record)
+
+        if let nextDate = TaskEngine.nextDueDate(for: task, completionDate: completionDate) {
+            task.dueDate = nextDate
+            task.isCompleted = false
+            task.completedDate = completionDate
+        } else {
+            task.isCompleted = true
+            task.completedDate = completionDate
         }
+
+        try? modelContext.save()
+        Task { await NotificationManager.shared.schedule(for: task) }
+        dismiss()
     }
 }

@@ -1,142 +1,240 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
-import UIKit
 
-struct ProjectFormView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Room.name) private var rooms: [Room]
-    let existing: Project?
+enum TasksHubSection: String, CaseIterable, Identifiable {
+    case attention = "Attention"
+    case upcoming = "Upcoming"
+    case all = "All"
+    case calendar = "Calendar"
 
-    @State private var title: String
-    @State private var description: String
-    @State private var stage: ProjectStage
-    @State private var selectedRoom: Room?
-    @State private var budgetText: String
-    @State private var hasTargetDate: Bool
-    @State private var targetDate: Date
-    @State private var notes: String
-    @State private var coverPhotoData: Data?
-    @State private var selectedCoverPhoto: PhotosPickerItem?
-    @State private var showDelete = false
-    @State private var didResolveLegacyRoom = false
+    var id: String { rawValue }
+}
 
-    init(existing: Project? = nil, initialRoom: Room? = nil) {
-        self.existing = existing
-        _title = State(initialValue: existing?.title ?? "")
-        _description = State(initialValue: existing?.projectDescription ?? "")
-        _stage = State(initialValue: existing?.stage ?? .idea)
-        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
-        _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? "")
-        _hasTargetDate = State(initialValue: existing?.targetDate != nil)
-        _targetDate = State(initialValue: existing?.targetDate ?? .now)
-        _notes = State(initialValue: existing?.notes ?? "")
-        _coverPhotoData = State(initialValue: existing?.coverPhotoData)
+struct TasksHubView: View {
+    @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
+
+    @State private var section: TasksHubSection
+    @State private var searchText = ""
+    @State private var categoryFilter = "All"
+    @State private var statusFilter = "All"
+    @State private var selectedDate = Date()
+    @State private var showAdd = false
+    @State private var completionTask: MaintenanceTask?
+
+    init(initialSection: TasksHubSection = .attention) {
+        _section = State(initialValue: initialSection)
+    }
+
+    private var searchedTasks: [MaintenanceTask] {
+        tasks.filter { task in
+            searchText.isEmpty || [
+                task.title,
+                task.taskDescription,
+                task.notes,
+                task.categoryRaw,
+                task.vendor?.businessName ?? "",
+                task.room?.name ?? "",
+                task.system?.name ?? "",
+                task.appliance?.name ?? ""
+            ]
+            .joined(separator: " ")
+            .localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    private var categoryFilteredTasks: [MaintenanceTask] {
+        searchedTasks.filter { task in
+            categoryFilter == "All" || task.categoryRaw == categoryFilter
+        }
+    }
+
+    private var attentionTasks: [MaintenanceTask] {
+        categoryFilteredTasks.filter {
+            let status = TaskEngine.status(for: $0)
+            return status == .overdue || status == .current
+        }
+    }
+
+    private var upcomingTasks: [MaintenanceTask] {
+        categoryFilteredTasks.filter { TaskEngine.status(for: $0) == .upcoming }
+    }
+
+    private var allTasks: [MaintenanceTask] {
+        categoryFilteredTasks.filter { task in
+            statusFilter == "All" || TaskEngine.status(for: task).rawValue == statusFilter
+        }
+    }
+
+    private var calendarTasks: [MaintenanceTask] {
+        categoryFilteredTasks.filter { task in
+            Calendar.current.isDate(task.dueDate, inSameDayAs: selectedDate) &&
+            (statusFilter == "All" || TaskEngine.status(for: task).rawValue == statusFilter)
+        }
     }
 
     var body: some View {
-        Form {
-            Section("Project") {
-                TextField("Project name", text: $title)
-                TextField("Description", text: $description, axis: .vertical)
-                Picker("Stage", selection: $stage) {
-                    ForEach(ProjectStage.allCases) { Text($0.rawValue).tag($0) }
-                }
-                Picker("Room / Area", selection: $selectedRoom) {
-                    Text("None").tag(nil as Room?)
-                    ForEach(HomeAreaType.allCases) { type in
-                        let matching = rooms.filter { $0.areaType == type }
-                        if !matching.isEmpty {
-                            Section(type.rawValue) {
-                                ForEach(matching) { room in
-                                    Text(room.name).tag(Optional(room))
-                                }
-                            }
-                        }
+        List {
+            Section {
+                Picker("Task view", selection: $section) {
+                    ForEach(TasksHubSection.allCases) { item in
+                        Text(item.rawValue).tag(item)
                     }
                 }
+                .pickerStyle(.segmented)
             }
 
-            Section("Cover Photo") {
-                if let data = coverPhotoData, let image = UIImage(data: data) {
-                    ExpandablePhoto(image: image, height: 220, fill: false, cornerRadius: 12)
-                }
-                PhotosPicker(selection: $selectedCoverPhoto, matching: .images) {
-                    Label(coverPhotoData == nil ? "Add Cover Photo" : "Change Cover Photo", systemImage: "photo")
-                }
-                if coverPhotoData != nil {
-                    Button("Remove Cover Photo", role: .destructive) { coverPhotoData = nil }
-                }
+            if section == .calendar {
+                calendarControls
+            } else {
+                listControls
             }
 
-            Section("Planning") {
-                TextField("Budget", text: $budgetText).keyboardType(.decimalPad)
-                Toggle("Target date", isOn: $hasTargetDate)
-                if hasTargetDate {
-                    DatePicker("Target", selection: $targetDate, displayedComponents: .date)
-                }
-                TextField("Notes", text: $notes, axis: .vertical)
-            }
+            switch section {
+            case .attention:
+                taskSection(
+                    title: "Needs Attention",
+                    tasks: attentionTasks,
+                    emptyTitle: "You're caught up",
+                    emptyMessage: "No overdue or current maintenance tasks."
+                )
 
-            if existing != nil {
-                Section {
-                    Button("Delete Project", role: .destructive) { showDelete = true }
-                }
+            case .upcoming:
+                taskSection(
+                    title: "Upcoming",
+                    tasks: upcomingTasks,
+                    emptyTitle: "Nothing coming up",
+                    emptyMessage: "No upcoming tasks match your search and filters."
+                )
+
+            case .all:
+                taskSection(
+                    title: "All Tasks",
+                    tasks: allTasks,
+                    emptyTitle: "No tasks found",
+                    emptyMessage: "No tasks match your search and filters."
+                )
+
+            case .calendar:
+                calendarSection
             }
         }
-        .navigationTitle(existing == nil ? "New Project" : "Edit Project")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Tasks")
+        .searchable(text: $searchText, prompt: "Search tasks")
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { save() }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-        .onAppear {
-            // Older projects stored only a room-name string. Resolve that legacy value
-            // to the real Room record the first time the edit form opens.
-            guard !didResolveLegacyRoom else { return }
-            didResolveLegacyRoom = true
-            if selectedRoom == nil, let legacyName = existing?.roomName, !legacyName.isEmpty {
-                selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyName) == .orderedSame }
-            }
-        }
-        .onChange(of: selectedCoverPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                coverPhotoData = try? await newValue.loadTransferable(type: Data.self)
-                selectedCoverPhoto = nil
-            }
-        }
-        .confirmationDialog("Delete this project?", isPresented: $showDelete, titleVisibility: .visible) {
-            Button("Delete Project", role: .destructive) {
-                if let existing {
-                    modelContext.delete(existing)
-                    try? modelContext.save()
-                    dismiss()
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showAdd = true } label: {
+                    Image(systemName: "plus")
                 }
+                .accessibilityLabel("Add Task")
             }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Project items linked to this project may also become unavailable.")
+        }
+        .sheet(isPresented: $showAdd) {
+            NavigationStack { TaskFormView() }
+        }
+        .sheet(item: $completionTask) { task in
+            NavigationStack { CompleteTaskView(task: task) }
+        }
+        .onChange(of: section) { _, newValue in
+            if newValue != .all && newValue != .calendar {
+                statusFilter = "All"
+            }
         }
     }
 
-    private func save() {
-        let project = existing ?? Project(title: title)
-        if existing == nil { modelContext.insert(project) }
-        project.title = title
-        project.projectDescription = description
-        project.stage = stage
-        project.room = selectedRoom
-        project.roomName = selectedRoom?.name ?? ""
-        project.budget = Double(budgetText)
-        project.targetDate = hasTargetDate ? targetDate : nil
-        project.notes = notes
-        project.coverPhotoData = coverPhotoData
-        try? modelContext.save()
-        dismiss()
+    private var listControls: some View {
+        Section("Filter") {
+            Picker("Category", selection: $categoryFilter) {
+                Text("All Categories").tag("All")
+                ForEach(TaskCategory.allCases) { category in
+                    Text(category.rawValue).tag(category.rawValue)
+                }
+            }
+
+            if section == .all {
+                Picker("Status", selection: $statusFilter) {
+                    Text("All Statuses").tag("All")
+                    ForEach(TaskDisplayStatus.allCases, id: \.rawValue) { status in
+                        Text(status.rawValue).tag(status.rawValue)
+                    }
+                }
+            }
+        }
+    }
+
+    private var calendarControls: some View {
+        Group {
+            Section {
+                DatePicker("Maintenance calendar", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+            }
+
+            Section("Filter") {
+                Picker("Category", selection: $categoryFilter) {
+                    Text("All Categories").tag("All")
+                    ForEach(TaskCategory.allCases) { category in
+                        Text(category.rawValue).tag(category.rawValue)
+                    }
+                }
+
+                Picker("Status", selection: $statusFilter) {
+                    Text("All Statuses").tag("All")
+                    ForEach(TaskDisplayStatus.allCases, id: \.rawValue) { status in
+                        Text(status.rawValue).tag(status.rawValue)
+                    }
+                }
+
+                Button("Today") {
+                    selectedDate = Date()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func taskSection(title: String, tasks: [MaintenanceTask], emptyTitle: String, emptyMessage: String) -> some View {
+        Section(title) {
+            if tasks.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(emptyTitle)
+                        .font(.headline)
+                    Text(emptyMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+            } else {
+                ForEach(tasks) { task in
+                    NavigationLink {
+                        TaskDetailView(task: task)
+                    } label: {
+                        TaskRowView(task: task) {
+                            completionTask = task
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var calendarSection: some View {
+        Section(selectedDate.formatted(date: .complete, time: .omitted)) {
+            if calendarTasks.isEmpty {
+                Text("No tasks on this date.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(calendarTasks) { task in
+                    NavigationLink {
+                        TaskDetailView(task: task)
+                    } label: {
+                        TaskRowView(task: task) {
+                            completionTask = task
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 }

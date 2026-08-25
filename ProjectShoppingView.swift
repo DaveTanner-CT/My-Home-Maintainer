@@ -1,228 +1,173 @@
 import SwiftUI
 import SwiftData
 
-struct HomeProfileView: View {
-    @Query private var homes: [Home]
-
-    var body: some View {
-        if let home = homes.first {
-            List {
-                Section("Home") {
-                    LabeledContent("Name", value: home.name)
-                    if !home.address.isEmpty { LabeledContent("Address", value: home.address) }
-                    if let year = home.yearBuilt { LabeledContent("Year built", value: String(year)) }
-                    if let date = home.purchaseDate { LabeledContent("Purchased", value: date.formatted(date: .abbreviated, time: .omitted)) }
-                    if let squareFeet = home.squareFeet { LabeledContent("Square feet", value: squareFeet.formatted()) }
-                }
-                if !home.notes.isEmpty { Section("Notes") { Text(home.notes) } }
-            }
-            .navigationTitle("Home Profile")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { HomeProfileFormView(home: home) } } }
-        } else {
-            ContentUnavailableView("No home profile", systemImage: "house", description: Text("A home profile will be created when the app is initialized."))
-        }
-    }
-}
-
-struct HomeProfileFormView: View {
-    @Environment(\.dismiss) private var dismiss
+struct ProjectShoppingView: View {
+    let project: Project
     @Environment(\.modelContext) private var modelContext
-    let home: Home
-    @State private var name: String
-    @State private var address: String
-    @State private var yearBuilt: String
-    @State private var squareFeet: String
-    @State private var hasPurchaseDate: Bool
-    @State private var purchaseDate: Date
-    @State private var notes: String
+    @Query private var allItems: [ProjectItem]
 
-    init(home: Home) {
-        self.home = home
-        _name = State(initialValue: home.name)
-        _address = State(initialValue: home.address)
-        _yearBuilt = State(initialValue: home.yearBuilt.map { String($0) } ?? "")
-        _squareFeet = State(initialValue: home.squareFeet.map { String($0) } ?? "")
-        _hasPurchaseDate = State(initialValue: home.purchaseDate != nil)
-        _purchaseDate = State(initialValue: home.purchaseDate ?? .now)
-        _notes = State(initialValue: home.notes)
+    @State private var statusFilter = "Need to Buy"
+    @State private var grouping = "Item / Decision"
+    @State private var showAddOption = false
+    @State private var addToGroup = ""
+    @State private var addToCategory = "Inspiration"
+
+    private let statusOptions = ["Need to Buy", "All", "Considering", "Favorite", "Purchased", "Installed"]
+    private let groupingOptions = ["Item / Decision", "Store", "Category"]
+
+    private var projectItems: [ProjectItem] {
+        allItems.filter { $0.project?.persistentModelID == project.persistentModelID && !$0.isIdeaOnly }
     }
 
-    var body: some View {
-        Form {
-            Section("Home") {
-                TextField("Home name", text: $name)
-                TextField("Address", text: $address)
-                TextField("Year built", text: $yearBuilt).keyboardType(.numberPad)
-                TextField("Square feet", text: $squareFeet).keyboardType(.numberPad)
+    private var items: [ProjectItem] {
+        projectItems.filter { item in
+            switch statusFilter {
+            case "Need to Buy": return item.status == .considering || item.status == .favorite
+            case "Considering": return item.status == .considering
+            case "Favorite": return item.status == .favorite
+            case "Purchased": return item.status == .purchased
+            case "Installed": return item.status == .installed
+            default: return item.status != .rejected
             }
-            Section("Purchase") {
-                Toggle("Record purchase date", isOn: $hasPurchaseDate)
-                if hasPurchaseDate { DatePicker("Purchase date", selection: $purchaseDate, displayedComponents: .date) }
-            }
-            Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
-        }
-        .navigationTitle("Edit Home")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
         }
     }
 
-    private func save() {
-        home.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        home.address = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        home.yearBuilt = Int(yearBuilt)
-        home.squareFeet = Int(squareFeet)
-        home.purchaseDate = hasPurchaseDate ? purchaseDate : nil
-        home.notes = notes
-        try? modelContext.save()
-        dismiss()
-    }
-}
-
-struct AppSettingsView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var tasks: [MaintenanceTask]
-    @AppStorage("notificationLeadEnabled") private var leadEnabled = true
-    @AppStorage("notificationDueEnabled") private var dueEnabled = true
-    @AppStorage("notificationOverdueEnabled") private var overdueEnabled = true
-    @AppStorage("notificationHour") private var notificationHour = 9
-    @State private var didReschedule = false
+    private var groups: [String] { Array(Set(items.map { groupName(for: $0) })).sorted() }
+    private var decisionGroups: [String] { Array(Set(projectItems.filter { $0.status != .rejected }.map(\.comparisonGroupName))).sorted() }
+    private var purchasedCount: Int { projectItems.filter { $0.status == .purchased }.count }
+    private var installedCount: Int { projectItems.filter { $0.status == .installed }.count }
 
     var body: some View {
         List {
-            Section("Home") {
-                NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
-                NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
+            Section("From idea to installed") {
+                workflowRow(number: "1", title: "Add options", detail: "Add every faucet, light, appliance, electronic, material, or other product you are considering.", icon: "plus.circle")
+                Button { addToGroup = ""; addToCategory = "Inspiration"; showAddOption = true } label: { Label("Add Shopping Option", systemImage: "plus") }
+
+                workflowRow(number: "2", title: "Compare", detail: "Options are grouped by what you are choosing, such as Kitchen Faucet—not just by broad category.", icon: "rectangle.split.3x1")
+                NavigationLink { ProjectComparisonView(project: project) } label: {
+                    Label("Compare Options", systemImage: "rectangle.split.3x1")
+                }
+
+                workflowRow(number: "3", title: "Choose & purchase", detail: "Favorite contenders, then choose the winner and record the actual purchase.", icon: "cart.badge.plus")
+
+                workflowRow(number: "4", title: "Install / save to home", detail: "Purchased items move into the permanent room record as a fixture, appliance/electronic/equipment, system, paint/finish, or history record.", icon: "house.and.flag")
+                NavigationLink { ProjectCompletionView(project: project) } label: {
+                    HStack { Label("Install / Save Purchased Items", systemImage: "square.and.arrow.down"); Spacer(); if purchasedCount > 0 { Text("\(purchasedCount)").foregroundStyle(.secondary) } }
+                }
+                if installedCount > 0 { LabeledContent("Installed / saved", value: "\(installedCount)") }
             }
-            Section("Notifications") {
-                Toggle("Lead-time reminders", isOn: $leadEnabled)
-                Toggle("Due-date reminders", isOn: $dueEnabled)
-                Toggle("Overdue reminders", isOn: $overdueEnabled)
-                Picker("Reminder time", selection: $notificationHour) {
-                    ForEach(6...21, id: \.self) { hour in
-                        Text(Calendar.current.date(from: DateComponents(hour: hour))?.formatted(date: .omitted, time: .shortened) ?? "\(hour):00").tag(hour)
+
+            Section("Shopping List") {
+                Picker("Show", selection: $statusFilter) {
+                    ForEach(statusOptions, id: \.self) { Text($0).tag($0) }
+                }
+                Picker("Group by", selection: $grouping) {
+                    ForEach(groupingOptions, id: \.self) { Text($0).tag($0) }
+                }
+            }
+
+            if items.isEmpty {
+                ContentUnavailableView("No matching shopping items", systemImage: "cart", description: Text("Add an option here or change the filter."))
+            } else {
+                ForEach(groups, id: \.self) { group in
+                    Section {
+                        ForEach(items.filter { groupName(for: $0) == group }) { item in
+                            VStack(alignment: .leading, spacing: 10) {
+                                NavigationLink { ProjectItemDetailView(project: project, item: item) } label: { shoppingRow(item) }
+                                if item.status == .considering || item.status == .favorite {
+                                    HStack(spacing: 16) {
+                                        Button { item.status = .favorite; save() } label: { Label(item.status == .favorite ? "Favorite" : "Favorite", systemImage: item.status == .favorite ? "star.fill" : "star") }
+                                            .buttonStyle(.borderless)
+                                        NavigationLink { ProjectPurchaseView(project: project, item: item) } label: { Label("Choose & Purchase", systemImage: "cart.badge.plus") }
+                                            .buttonStyle(.borderless)
+                                    }
+                                    .font(.caption)
+                                } else if item.status == .purchased {
+                                    Label("Purchased — ready to install/save", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
+                                } else if item.status == .installed {
+                                    Label("Installed / saved to home", systemImage: "house.circle.fill").font(.caption).foregroundStyle(.green)
+                                }
+                            }
+                            .padding(.vertical, 3)
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                if item.status != .installed {
+                                    Button(role: .destructive) { item.status = .rejected; save() } label: { Label("Reject", systemImage: "xmark") }
+                                }
+                            }
+                        }
+                        if grouping == "Item / Decision" {
+                            Button { addToGroup = group; addToCategory = categoryForGroup(group); showAddOption = true } label: { Label("Add Another Option for \(group)", systemImage: "plus.circle") }
+                        }
+                    } header: {
+                        HStack { Text(group); if grouping == "Item / Decision" { Spacer(); Text("\(items.filter { groupName(for: $0) == group }.count) options").font(.caption).foregroundStyle(.secondary) } }
                     }
                 }
-                Button("Apply Notification Settings") {
-                    Task {
-                        for task in tasks { await NotificationManager.shared.schedule(for: task) }
-                        await MainActor.run { didReschedule = true }
-                    }
-                }
             }
-            Section("About") {
-                LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.4")
-                Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+
+            Section("Project Spending") {
+                LabeledContent("Planned", value: plannedTotal.formatted(AppFormatting.currency))
+                LabeledContent("Purchased", value: purchasedTotal.formatted(AppFormatting.currency))
+                if let budget = project.budget { LabeledContent("Budget remaining", value: (budget - purchasedTotal).formatted(AppFormatting.currency)) }
             }
         }
-        .navigationTitle("Settings")
-        .alert("Notifications Updated", isPresented: $didReschedule) { Button("OK", role: .cancel) {} } message: { Text("Pending task reminders were refreshed using your current settings.") }
-    }
-}
-
-private struct MaintenancePreset: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let category: TaskCategory
-    let recurrence: RecurrenceRule
-    let leadDays: Int
-    let firstDueMonths: Int
-    let tags: Set<String>
-}
-
-struct RecommendedMaintenanceView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var tasks: [MaintenanceTask]
-    @State private var furnace = true
-    @State private var airConditioning = true
-    @State private var well = false
-    @State private var septic = false
-    @State private var sumpPump = false
-    @State private var generator = false
-    @State private var fireplace = false
-
-    private let presets: [MaintenancePreset] = [
-        .init(title: "Test smoke & CO alarms", description: "Test all smoke and carbon monoxide alarms.", category: .safety, recurrence: .monthly, leadDays: 0, firstDueMonths: 1, tags: ["basic"]),
-        .init(title: "Replace detector batteries", description: "Replace batteries in detectors that do not use sealed batteries.", category: .safety, recurrence: .sixMonths, leadDays: 14, firstDueMonths: 6, tags: ["basic"]),
-        .init(title: "Inspect fire extinguishers", description: "Check pressure, condition, access, and expiration/service information.", category: .safety, recurrence: .monthly, leadDays: 7, firstDueMonths: 1, tags: ["basic"]),
-        .init(title: "Replace HVAC filter", description: "Replace or clean the HVAC air filter.", category: .hvac, recurrence: .quarterly, leadDays: 7, firstDueMonths: 3, tags: ["furnace", "ac"]),
-        .init(title: "Schedule annual heating service", description: "Schedule professional heating-system inspection and service.", category: .hvac, recurrence: .annually, leadDays: 60, firstDueMonths: 12, tags: ["furnace"]),
-        .init(title: "Schedule annual AC service", description: "Schedule professional cooling-system inspection and service.", category: .hvac, recurrence: .annually, leadDays: 45, firstDueMonths: 12, tags: ["ac"]),
-        .init(title: "Test sump pump", description: "Test pump operation and inspect discharge path.", category: .plumbing, recurrence: .quarterly, leadDays: 7, firstDueMonths: 3, tags: ["sump"]),
-        .init(title: "Inspect well system", description: "Review pressure tank, visible plumbing, and water-system condition.", category: .plumbing, recurrence: .annually, leadDays: 30, firstDueMonths: 12, tags: ["well"]),
-        .init(title: "Schedule septic inspection", description: "Review septic maintenance needs and pumping history.", category: .plumbing, recurrence: .annually, leadDays: 60, firstDueMonths: 12, tags: ["septic"]),
-        .init(title: "Exercise generator", description: "Run generator and check fuel, oil, battery, and general operation.", category: .electrical, recurrence: .monthly, leadDays: 0, firstDueMonths: 1, tags: ["generator"]),
-        .init(title: "Inspect fireplace / chimney", description: "Inspect fireplace and schedule cleaning/service as appropriate.", category: .safety, recurrence: .annually, leadDays: 60, firstDueMonths: 12, tags: ["fireplace"]),
-        .init(title: "Clean dryer vent", description: "Clean dryer exhaust duct and exterior vent.", category: .appliances, recurrence: .annually, leadDays: 30, firstDueMonths: 12, tags: ["basic"]),
-        .init(title: "Clean gutters", description: "Clear gutters and verify downspout drainage.", category: .exterior, recurrence: .sixMonths, leadDays: 14, firstDueMonths: 6, tags: ["basic"]),
-        .init(title: "Inspect roof and exterior", description: "Look for damaged roofing, flashing, siding, caulk, and drainage issues.", category: .exterior, recurrence: .annually, leadDays: 30, firstDueMonths: 12, tags: ["basic"])
-    ]
-
-    private var enabledTags: Set<String> {
-        var tags: Set<String> = ["basic"]
-        if furnace { tags.insert("furnace") }
-        if airConditioning { tags.insert("ac") }
-        if well { tags.insert("well") }
-        if septic { tags.insert("septic") }
-        if sumpPump { tags.insert("sump") }
-        if generator { tags.insert("generator") }
-        if fireplace { tags.insert("fireplace") }
-        return tags
+        .navigationTitle("Shopping")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { addToGroup = ""; addToCategory = "Inspiration"; showAddOption = true } label: { Image(systemName: "plus") } } }
+        .sheet(isPresented: $showAddOption) { NavigationStack { ProjectItemFormView(project: project, initialComparisonGroup: addToGroup, initialCategory: addToCategory) } }
     }
 
-    private var recommended: [MaintenancePreset] { presets.filter { !$0.tags.isDisjoint(with: enabledTags) } }
+    @ViewBuilder
+    private func workflowRow(number: String, title: String, detail: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack { Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 30, height: 30); Text(number).font(.headline).foregroundStyle(Color.accentColor) }
+            VStack(alignment: .leading, spacing: 3) { Text(title).font(.headline); Text(detail).font(.footnote).foregroundStyle(.secondary) }
+            Spacer(); Image(systemName: icon).foregroundStyle(.secondary)
+        }
+    }
 
-    var body: some View {
-        List {
-            Section("Your Home") {
-                Toggle("Heating system", isOn: $furnace)
-                Toggle("Air conditioning", isOn: $airConditioning)
-                Toggle("Well", isOn: $well)
-                Toggle("Septic", isOn: $septic)
-                Toggle("Sump pump", isOn: $sumpPump)
-                Toggle("Generator", isOn: $generator)
-                Toggle("Fireplace / chimney", isOn: $fireplace)
-            }
-            Section("Suggested Tasks") {
-                ForEach(recommended) { preset in
-                    let alreadyAdded = tasks.contains { $0.title.caseInsensitiveCompare(preset.title) == .orderedSame }
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(preset.title).font(.headline)
-                            Text(preset.description).font(.caption).foregroundStyle(.secondary)
-                            Text(preset.recurrence.rawValue).font(.caption2).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if alreadyAdded {
-                            Label("Added", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
-                        } else {
-                            Button("Add") { add(preset) }.buttonStyle(.bordered)
-                        }
-                    }
-                    .padding(.vertical, 3)
-                }
-            }
-            Section {
-                Button("Add All Missing Recommendations") {
-                    for preset in recommended where !tasks.contains(where: { $0.title.caseInsensitiveCompare(preset.title) == .orderedSame }) { add(preset) }
-                }
+    @ViewBuilder
+    private func shoppingRow(_ item: ProjectItem) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: statusIcon(for: item)).foregroundStyle(statusColor(for: item)).font(.title3)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title).font(.headline)
+                Text([item.manufacturer, item.model].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+                Text("Qty \(item.quantity.formatted()) · \(item.estimatedTotal.formatted(AppFormatting.currency))").font(.caption).foregroundStyle(.secondary)
+                if !item.store.isEmpty && grouping != "Store" { Text(item.store).font(.caption) }
+                if !item.finishColor.isEmpty { Text(item.finishColor).font(.caption) }
             }
         }
-        .navigationTitle("Recommended Maintenance")
     }
 
-    private func add(_ preset: MaintenancePreset) {
-        guard !tasks.contains(where: { $0.title.caseInsensitiveCompare(preset.title) == .orderedSame }) else { return }
-        let due = Calendar.current.date(byAdding: .month, value: preset.firstDueMonths, to: Calendar.current.startOfDay(for: .now)) ?? .now
-        let task = MaintenanceTask(title: preset.title, taskDescription: preset.description, category: preset.category, dueDate: due, leadTimeDays: preset.leadDays, recurrence: preset.recurrence, recurrenceAnchor: .scheduledDate, priority: preset.category == .safety ? 3 : 2)
-        modelContext.insert(task)
-        try? modelContext.save()
-        Task { await NotificationManager.shared.schedule(for: task) }
+    private var plannedTotal: Double { projectItems.filter { $0.status != .rejected }.reduce(0) { $0 + $1.estimatedTotal } }
+    private var purchasedTotal: Double { projectItems.filter { $0.status == .purchased || $0.status == .installed }.reduce(0) { $0 + ($1.actualPurchaseCost ?? $1.estimatedTotal) } }
+
+    private func groupName(for item: ProjectItem) -> String {
+        if grouping == "Category" { return item.category.isEmpty ? "Uncategorized" : item.category }
+        if grouping == "Store" { return item.store.isEmpty ? "Store Not Set" : item.store }
+        return item.comparisonGroupName
+    }
+
+
+    private func categoryForGroup(_ group: String) -> String {
+        projectItems.first { $0.comparisonGroupName.caseInsensitiveCompare(group) == .orderedSame }?.category ?? "Inspiration"
+    }
+    private func save() { try? modelContext.save() }
+
+    private func statusColor(for item: ProjectItem) -> Color {
+        switch item.status {
+        case .purchased, .installed: return .green
+        case .favorite: return .orange
+        case .rejected: return .red
+        case .considering: return .secondary
+        }
+    }
+    private func statusIcon(for item: ProjectItem) -> String {
+        switch item.status {
+        case .purchased: return "checkmark.circle.fill"
+        case .installed: return "house.circle.fill"
+        case .favorite: return "star.fill"
+        case .rejected: return "xmark.circle"
+        case .considering: return "circle"
+        }
     }
 }
