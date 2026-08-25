@@ -76,3 +76,10 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Export now clearly offers compatible destinations/apps such as Google Drive, Save to Files, Mail, AirDrop, and Messages.
 - Google Drive guidance now recommends the Drive share extension first; Save to Files → Google Drive remains available when Apple's Files provider is working.
 - Backup and transfer files are written as temporary JSON files and removed after the Share sheet completes.
+
+## v0.14 — Maintenance Intelligence
+- Recommended Maintenance now derives suggestions from the home's actual systems, devices/equipment, fixtures, detectors, consumables, and exterior/property areas instead of manual feature toggles.
+- Recommendations explain why they appear and retain direct links to the relevant system/device/fixture/room when converted to tasks.
+- Added Review & Add (prefilled Task form) and Quick Add flows, plus Add All Missing Recommendations.
+- TaskFormView now supports richer prefilled task creation (description, category, recurrence, priority) without changing existing callers.
+- Safety baseline recommendations remain visible for every home; detector replacement and consumable dates can produce date-aware one-time recommendations.

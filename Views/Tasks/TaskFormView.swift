@@ -42,18 +42,22 @@ struct TaskFormView: View {
         initialFixture: Fixture? = nil,
         initialProject: Project? = nil,
         initialTitle: String = "",
+        initialDescription: String = "",
+        initialCategory: TaskCategory = .general,
         initialDueDate: Date = .now,
-        initialLeadTimeDays: Int = 0
+        initialLeadTimeDays: Int = 0,
+        initialRecurrence: RecurrenceRule = .oneTime,
+        initialPriority: Int = 1
     ) {
         self.existingTask = existingTask
         _title = State(initialValue: existingTask?.title ?? initialTitle)
-        _description = State(initialValue: existingTask?.taskDescription ?? "")
-        _category = State(initialValue: existingTask?.category ?? .general)
+        _description = State(initialValue: existingTask?.taskDescription ?? initialDescription)
+        _category = State(initialValue: existingTask?.category ?? initialCategory)
         _dueDate = State(initialValue: existingTask?.dueDate ?? initialDueDate)
         _leadTimeDays = State(initialValue: existingTask?.leadTimeDays ?? initialLeadTimeDays)
-        _recurrence = State(initialValue: existingTask?.recurrence ?? .oneTime)
+        _recurrence = State(initialValue: existingTask?.recurrence ?? initialRecurrence)
         _recurrenceAnchor = State(initialValue: existingTask?.recurrenceAnchor ?? .scheduledDate)
-        _priority = State(initialValue: existingTask?.priority ?? 1)
+        _priority = State(initialValue: existingTask?.priority ?? initialPriority)
         _notes = State(initialValue: existingTask?.notes ?? "")
         _instructions = State(initialValue: existingTask?.instructions ?? "")
         _contactName = State(initialValue: existingTask?.contactName ?? "")
