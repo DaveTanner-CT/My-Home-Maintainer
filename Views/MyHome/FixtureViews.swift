@@ -48,7 +48,7 @@ struct FixtureDetailView: View {
                 if !fixture.purchasedFrom.isEmpty { LabeledContent("Purchased from", value: fixture.purchasedFrom) }
                 if let warranty = fixture.warrantyExpiration { LabeledContent("Warranty", value: warranty.formatted(date: .abbreviated, time: .omitted)) }
                 if let vendor = fixture.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
-                if !fixture.productLink.isEmpty, let url = normalizedURL(fixture.productLink) { Link("Product / Replacement Link", destination: url) }
+                if !fixture.productLink.isEmpty, let url = fixtureNormalizedURL(fixture.productLink) { Link("Product / Replacement Link", destination: url) }
             }
             AttachmentSection(owner: .fixture(fixture))
             if !fixture.notes.isEmpty { Section("Notes") { Text(fixture.notes) } }
@@ -167,4 +167,12 @@ struct FixtureFormView: View {
         try? modelContext.save()
         dismiss()
     }
+}
+
+
+private func fixtureNormalizedURL(_ value: String) -> URL? {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    if let url = URL(string: trimmed), url.scheme != nil { return url }
+    return URL(string: "https://\(trimmed)")
 }
