@@ -13,29 +13,34 @@ struct CompleteTaskView: View {
     @State private var selectedVendor: Vendor?
     @State private var costText = ""
     @State private var notes = ""
+    @State private var eventType: HomeEventType = .maintenance
 
     var body: some View {
         Form {
             Section("Completion") {
                 DatePicker("Completion date", selection: $completionDate, displayedComponents: .date)
-                if task.vendor != nil {
-                    Toggle("Same vendor as task", isOn: $sameVendor)
-                }
+                Picker("History type", selection: $eventType) { ForEach(HomeEventType.allCases) { Text($0.rawValue).tag($0) } }
+                if task.vendor != nil { Toggle("Same vendor as task", isOn: $sameVendor) }
                 if !sameVendor || task.vendor == nil {
                     Picker("Vendor", selection: $selectedVendor) {
                         Text("None").tag(nil as Vendor?)
                         ForEach(vendors) { Text($0.businessName).tag(Optional($0)) }
                     }
                 }
-                TextField("Cost", text: $costText)
-                    .keyboardType(.decimalPad)
+                TextField("Cost", text: $costText).keyboardType(.decimalPad)
                 TextField("Completion notes", text: $notes, axis: .vertical)
             }
 
+            Section("Will be saved to Home History") {
+                if let fixture = task.fixture { LabeledContent("Fixture", value: fixture.name) }
+                if let appliance = task.appliance { LabeledContent("Device / Equipment", value: appliance.name) }
+                if let system = task.system { LabeledContent("System", value: system.name) }
+                if let room = resolvedRoom { LabeledContent("Room / Area", value: room.name) }
+                if let project = task.project { LabeledContent("Project", value: project.title) }
+            }
+
             if let next = TaskEngine.nextDueDate(for: task, completionDate: completionDate) {
-                Section("Next Occurrence") {
-                    LabeledContent("Next due", value: next.formatted(date: .long, time: .omitted))
-                }
+                Section("Next Occurrence") { LabeledContent("Next due", value: next.formatted(date: .long, time: .omitted)) }
             }
         }
         .navigationTitle("Complete Task")
@@ -46,9 +51,11 @@ struct CompleteTaskView: View {
         }
     }
 
+    private var resolvedRoom: Room? { task.room ?? task.fixture?.room ?? task.appliance?.room ?? task.system?.room ?? task.project?.room }
+
     private func complete() {
         let vendor = sameVendor ? task.vendor : selectedVendor
-        let relatedName = task.system?.name ?? task.appliance?.name ?? task.room?.name ?? task.project?.title ?? ""
+        let relatedName = task.fixture?.name ?? task.system?.name ?? task.appliance?.name ?? resolvedRoom?.name ?? task.project?.title ?? ""
         let record = MaintenanceRecord(
             date: completionDate,
             title: task.title,
@@ -56,7 +63,14 @@ struct CompleteTaskView: View {
             notes: notes,
             vendorName: vendor?.businessName ?? "",
             taskTitle: task.title,
-            relatedItemName: relatedName
+            relatedItemName: relatedName,
+            eventType: eventType,
+            room: resolvedRoom,
+            system: task.system,
+            appliance: task.appliance,
+            fixture: task.fixture,
+            project: task.project,
+            vendor: vendor
         )
         modelContext.insert(record)
 

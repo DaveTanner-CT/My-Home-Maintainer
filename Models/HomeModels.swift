@@ -82,8 +82,9 @@ final class HomeSystem {
     var website: String
     var vendor: Vendor?
     var room: Room?
+    var sourceProject: Project?
 
-    init(name: String, type: String, manufacturer: String = "", model: String = "", serialNumber: String = "", installationDate: Date? = nil, purchaseCost: Double? = nil, warrantyExpiration: Date? = nil, expectedServiceLifeYears: Int? = nil, location: String = "", notes: String = "", website: String = "", vendor: Vendor? = nil, room: Room? = nil) {
+    init(name: String, type: String, manufacturer: String = "", model: String = "", serialNumber: String = "", installationDate: Date? = nil, purchaseCost: Double? = nil, warrantyExpiration: Date? = nil, expectedServiceLifeYears: Int? = nil, location: String = "", notes: String = "", website: String = "", vendor: Vendor? = nil, room: Room? = nil, sourceProject: Project? = nil) {
         self.name = name
         self.type = type
         self.manufacturer = manufacturer
@@ -98,6 +99,7 @@ final class HomeSystem {
         self.website = website
         self.vendor = vendor
         self.room = room
+        self.sourceProject = sourceProject
     }
 
     var locationName: String { room?.name ?? location }
@@ -118,8 +120,9 @@ final class Appliance {
     var productRegistrationLink: String
     var notes: String
     var room: Room?
+    var sourceProject: Project?
 
-    init(name: String, category: String, manufacturer: String = "", model: String = "", serialNumber: String = "", purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, manufacturerWebsite: String = "", productRegistrationLink: String = "", notes: String = "", room: Room? = nil) {
+    init(name: String, category: String, manufacturer: String = "", model: String = "", serialNumber: String = "", purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, manufacturerWebsite: String = "", productRegistrationLink: String = "", notes: String = "", room: Room? = nil, sourceProject: Project? = nil) {
         self.name = name
         self.category = category
         self.manufacturer = manufacturer
@@ -133,6 +136,7 @@ final class Appliance {
         self.productRegistrationLink = productRegistrationLink
         self.notes = notes
         self.room = room
+        self.sourceProject = sourceProject
     }
 }
 
@@ -154,8 +158,9 @@ final class PaintFinish {
     var cost: Double?
     var notes: String
     var productLink: String
+    var sourceProject: Project?
 
-    init(roomName: String = "", room: Room? = nil, surface: String, brand: String = "", productLine: String = "", colorName: String = "", colorCode: String = "", sheen: String = "", store: String = "", purchaseDate: Date? = nil, quantity: Double? = nil, containerSize: String = "", cost: Double? = nil, notes: String = "", productLink: String = "") {
+    init(roomName: String = "", room: Room? = nil, surface: String, brand: String = "", productLine: String = "", colorName: String = "", colorCode: String = "", sheen: String = "", store: String = "", purchaseDate: Date? = nil, quantity: Double? = nil, containerSize: String = "", cost: Double? = nil, notes: String = "", productLink: String = "", sourceProject: Project? = nil) {
         self.roomName = room?.name ?? roomName
         self.room = room
         self.surface = surface
@@ -171,6 +176,7 @@ final class PaintFinish {
         self.cost = cost
         self.notes = notes
         self.productLink = productLink
+        self.sourceProject = sourceProject
     }
 
     var locationName: String {
@@ -196,8 +202,9 @@ final class Fixture {
     var notes: String
     var room: Room?
     var vendor: Vendor?
+    var sourceProject: Project?
 
-    init(name: String, category: String = "", manufacturer: String = "", model: String = "", partNumber: String = "", finishColor: String = "", installationDate: Date? = nil, purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, productLink: String = "", notes: String = "", room: Room? = nil, vendor: Vendor? = nil) {
+    init(name: String, category: String = "", manufacturer: String = "", model: String = "", partNumber: String = "", finishColor: String = "", installationDate: Date? = nil, purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, productLink: String = "", notes: String = "", room: Room? = nil, vendor: Vendor? = nil, sourceProject: Project? = nil) {
         self.name = name
         self.category = category
         self.manufacturer = manufacturer
@@ -213,5 +220,6 @@ final class Fixture {
         self.notes = notes
         self.room = room
         self.vendor = vendor
+        self.sourceProject = sourceProject
     }
 }

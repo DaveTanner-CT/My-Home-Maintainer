@@ -51,3 +51,28 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Project lifecycle is explicit: Plan -> Shop & Compare -> Purchase -> Install & Save -> Complete.
 - Installed project items become permanent home records that link back to the project and create installation history.
 - Home History is a unified typed timeline for maintenance, repairs, installations, purchases, replacements, inspections, and projects.
+
+
+## v0.12 — Home Transfer & safer data portability
+- Added Home Transfer for seller-to-buyer handoff inside Home Maintainer.
+- Transfer archives use stable archive IDs for relationships rather than names.
+- New-owner import includes a preview before any data is written.
+- Import is intentionally limited to a fresh/empty Home Maintainer data store to prevent accidental merging of two homes.
+- Transfers include rooms/areas, systems, appliances/electronics/equipment, fixtures, paint, projects/items, tasks, home history, vendors, detectors, consumables, and stored attachments.
+- Existing legacy JSON backup/export remains available separately.
+
+
+## v0.13
+- Home History is now searchable and filterable by event type, room/area, project, vendor, and year.
+- Home History shows filtered event counts and recorded spending, with connected context visible in the timeline.
+- Added direct Add History Event access from the Home History screen.
+- Fixed manual Home History saves so notes and legacy related-item text are retained and the context is explicitly saved.
+- Backup and Home Transfer screens now explain iOS Files destinations, including Google Drive and other enabled providers, and confirm successful saves.
+- Home Transfer filenames now include the home name and export date.
+
+
+## v0.13.1
+- Replaced direct SwiftUI file-exporter flow with the standard iOS Share sheet for backup and owner-transfer exports.
+- Export now clearly offers compatible destinations/apps such as Google Drive, Save to Files, Mail, AirDrop, and Messages.
+- Google Drive guidance now recommends the Drive share extension first; Save to Files → Google Drive remains available when Apple's Files provider is working.
+- Backup and transfer files are written as temporary JSON files and removed after the Share sheet completes.

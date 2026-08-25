@@ -30,31 +30,61 @@ struct FixturesListView: View {
 
 struct FixtureDetailView: View {
     let fixture: Fixture
+    @Query private var tasks: [MaintenanceTask]
+    @Query private var history: [MaintenanceRecord]
+    @State private var showAddTask = false
+
+    private var linkedTasks: [MaintenanceTask] {
+        tasks.filter { $0.fixture?.persistentModelID == fixture.persistentModelID }
+    }
+    private var linkedHistory: [MaintenanceRecord] {
+        history.filter {
+            $0.fixture?.persistentModelID == fixture.persistentModelID ||
+            ($0.fixture == nil && $0.relatedItemName.localizedCaseInsensitiveContains(fixture.name))
+        }.sorted { $0.date > $1.date }
+    }
 
     var body: some View {
         List {
             Section("Fixture") {
                 if !fixture.category.isEmpty { LabeledContent("Category", value: fixture.category) }
                 if let room = fixture.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+                if let project = fixture.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
                 if !fixture.manufacturer.isEmpty { LabeledContent("Manufacturer", value: fixture.manufacturer) }
                 if !fixture.model.isEmpty { LabeledContent("Model", value: fixture.model) }
                 if !fixture.partNumber.isEmpty { LabeledContent("Part number", value: fixture.partNumber) }
                 if !fixture.finishColor.isEmpty { LabeledContent("Finish / Color", value: fixture.finishColor) }
             }
-            Section("Purchase & Installation") {
+            Section("Purchase, Installation & Warranty") {
                 if let date = fixture.installationDate { LabeledContent("Installed", value: date.formatted(date: .abbreviated, time: .omitted)) }
                 if let date = fixture.purchaseDate { LabeledContent("Purchased", value: date.formatted(date: .abbreviated, time: .omitted)) }
                 if let price = fixture.purchasePrice { LabeledContent("Price", value: price.formatted(AppFormatting.currency)) }
                 if !fixture.purchasedFrom.isEmpty { LabeledContent("Purchased from", value: fixture.purchasedFrom) }
-                if let warranty = fixture.warrantyExpiration { LabeledContent("Warranty", value: warranty.formatted(date: .abbreviated, time: .omitted)) }
+                if let warranty = fixture.warrantyExpiration {
+                    WarrantyStatusView(expiration: warranty)
+                    LabeledContent("Warranty expires", value: warranty.formatted(date: .abbreviated, time: .omitted))
+                    NavigationLink {
+                        TaskFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject, initialTitle: "Review warranty: \(fixture.name)", initialDueDate: warranty, initialLeadTimeDays: 30)
+                    } label: { Label("Add Warranty Reminder", systemImage: "shield.badge.clock") }
+                }
                 if let vendor = fixture.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !fixture.productLink.isEmpty, let url = fixtureNormalizedURL(fixture.productLink) { Link("Product / Replacement Link", destination: url) }
+            }
+            Section("Connected Tasks") {
+                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+                ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+                Button { showAddTask = true } label: { Label("Add Task for This Fixture", systemImage: "plus") }
+            }
+            Section("Home History") {
+                if linkedHistory.isEmpty { Text("No maintenance or installation history yet").foregroundStyle(.secondary) }
+                ForEach(linkedHistory.prefix(6)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
             }
             AttachmentSection(owner: .fixture(fixture))
             if !fixture.notes.isEmpty { Section("Notes") { Text(fixture.notes) } }
         }
         .navigationTitle(fixture.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { FixtureFormView(existing: fixture) } } }
+        .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject) } }
     }
 }
 
@@ -63,6 +93,7 @@ struct FixtureFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.name) private var rooms: [Room]
     @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
+    @Query(sort: \Project.title) private var projects: [Project]
 
     let existing: Fixture?
     @State private var name: String
@@ -73,6 +104,7 @@ struct FixtureFormView: View {
     @State private var finishColor: String
     @State private var selectedRoom: Room?
     @State private var selectedVendor: Vendor?
+    @State private var selectedProject: Project?
     @State private var hasInstallDate: Bool
     @State private var installDate: Date
     @State private var hasPurchaseDate: Bool
@@ -95,6 +127,7 @@ struct FixtureFormView: View {
         _finishColor = State(initialValue: existing?.finishColor ?? "")
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
         _selectedVendor = State(initialValue: existing?.vendor)
+        _selectedProject = State(initialValue: existing?.sourceProject)
         _hasInstallDate = State(initialValue: existing?.installationDate != nil)
         _installDate = State(initialValue: existing?.installationDate ?? .now)
         _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil)
@@ -128,6 +161,7 @@ struct FixtureFormView: View {
                 Toggle("Warranty expiration", isOn: $hasWarrantyDate)
                 if hasWarrantyDate { DatePicker("Warranty", selection: $warrantyDate, displayedComponents: .date) }
                 Picker("Vendor", selection: $selectedVendor) { Text("None").tag(nil as Vendor?); ForEach(vendors) { Text($0.businessName).tag(Optional($0)) } }
+                Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
             }
             Section("Reference") {
                 TextField("Product / replacement link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never)
@@ -157,6 +191,7 @@ struct FixtureFormView: View {
         record.finishColor = finishColor
         record.room = selectedRoom
         record.vendor = selectedVendor
+        record.sourceProject = selectedProject
         record.installationDate = hasInstallDate ? installDate : nil
         record.purchaseDate = hasPurchaseDate ? purchaseDate : nil
         record.purchasePrice = Double(price)

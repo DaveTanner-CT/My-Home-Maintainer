@@ -74,3 +74,28 @@ enum HomeAreaType: String, CaseIterable, Identifiable {
         }
     }
 }
+
+enum HomeEventType: String, CaseIterable, Identifiable {
+    case maintenance = "Maintenance"
+    case repair = "Repair"
+    case installation = "Installation"
+    case purchase = "Purchase"
+    case replacement = "Replacement"
+    case inspection = "Inspection"
+    case project = "Project"
+    case other = "Other"
+
+    var id: String { rawValue }
+    var iconName: String {
+        switch self {
+        case .maintenance: return "wrench.and.screwdriver"
+        case .repair: return "hammer"
+        case .installation: return "square.and.arrow.down"
+        case .purchase: return "cart"
+        case .replacement: return "arrow.triangle.2.circlepath"
+        case .inspection: return "magnifyingglass"
+        case .project: return "checkmark.seal"
+        case .other: return "clock.arrow.circlepath"
+        }
+    }
+}

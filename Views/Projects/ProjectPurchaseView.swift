@@ -57,6 +57,8 @@ struct ProjectPurchaseView: View {
 
     private func savePurchase() {
         item.status = .purchased
+        item.installedDate = nil
+        if project.stage == .idea || project.stage == .planning { project.stage = .shopping }
         item.purchaseDate = purchaseDate
         item.actualPurchaseCost = Double(actualCostText)
         item.store = store

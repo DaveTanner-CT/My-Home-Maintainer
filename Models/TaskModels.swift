@@ -22,10 +22,11 @@ final class MaintenanceTask {
     var room: Room?
     var system: HomeSystem?
     var appliance: Appliance?
+    var fixture: Fixture?
     var project: Project?
     var vendor: Vendor?
 
-    init(title: String, taskDescription: String = "", category: TaskCategory = .general, dueDate: Date, leadTimeDays: Int = 0, recurrence: RecurrenceRule = .oneTime, recurrenceAnchor: RecurrenceAnchor = .scheduledDate, priority: Int = 1, notes: String = "", instructions: String = "", contactName: String = "", phone: String = "", email: String = "", website: String = "", room: Room? = nil, system: HomeSystem? = nil, appliance: Appliance? = nil, project: Project? = nil, vendor: Vendor? = nil) {
+    init(title: String, taskDescription: String = "", category: TaskCategory = .general, dueDate: Date, leadTimeDays: Int = 0, recurrence: RecurrenceRule = .oneTime, recurrenceAnchor: RecurrenceAnchor = .scheduledDate, priority: Int = 1, notes: String = "", instructions: String = "", contactName: String = "", phone: String = "", email: String = "", website: String = "", room: Room? = nil, system: HomeSystem? = nil, appliance: Appliance? = nil, fixture: Fixture? = nil, project: Project? = nil, vendor: Vendor? = nil) {
         self.title = title
         self.taskDescription = taskDescription
         self.categoryRaw = category.rawValue
@@ -45,6 +46,7 @@ final class MaintenanceTask {
         self.room = room
         self.system = system
         self.appliance = appliance
+        self.fixture = fixture
         self.project = project
         self.vendor = vendor
     }
@@ -74,8 +76,16 @@ final class MaintenanceRecord {
     var vendorName: String
     var taskTitle: String
     var relatedItemName: String
+    // Optional for records created before Home History gained typed events and direct links.
+    var eventTypeRaw: String?
+    var room: Room?
+    var system: HomeSystem?
+    var appliance: Appliance?
+    var fixture: Fixture?
+    var project: Project?
+    var vendor: Vendor?
 
-    init(date: Date = .now, title: String, cost: Double? = nil, notes: String = "", vendorName: String = "", taskTitle: String = "", relatedItemName: String = "") {
+    init(date: Date = .now, title: String, cost: Double? = nil, notes: String = "", vendorName: String = "", taskTitle: String = "", relatedItemName: String = "", eventType: HomeEventType = .maintenance, room: Room? = nil, system: HomeSystem? = nil, appliance: Appliance? = nil, fixture: Fixture? = nil, project: Project? = nil, vendor: Vendor? = nil) {
         self.date = date
         self.title = title
         self.cost = cost
@@ -83,5 +93,17 @@ final class MaintenanceRecord {
         self.vendorName = vendorName
         self.taskTitle = taskTitle
         self.relatedItemName = relatedItemName
+        self.eventTypeRaw = eventType.rawValue
+        self.room = room
+        self.system = system
+        self.appliance = appliance
+        self.fixture = fixture
+        self.project = project
+        self.vendor = vendor
+    }
+
+    var eventType: HomeEventType {
+        get { HomeEventType(rawValue: eventTypeRaw ?? "") ?? .maintenance }
+        set { eventTypeRaw = newValue.rawValue }
     }
 }

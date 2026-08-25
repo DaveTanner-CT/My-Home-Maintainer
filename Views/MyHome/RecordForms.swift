@@ -63,6 +63,7 @@ struct SystemFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
     @Query(sort: \Room.name) private var rooms: [Room]
+    @Query(sort: \Project.title) private var projects: [Project]
     let existing: HomeSystem?
     @State private var name: String; @State private var type: String; @State private var manufacturer: String
     @State private var model: String; @State private var serial: String; @State private var location: String
@@ -70,7 +71,7 @@ struct SystemFormView: View {
     @State private var hasInstallDate: Bool; @State private var installDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date
     @State private var purchaseCost: String; @State private var serviceLife: Int
-    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var showDelete = false
+    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var selectedProject: Project?; @State private var showDelete = false
 
     init(existing: HomeSystem? = nil, initialRoom: Room? = nil) {
         self.existing = existing
@@ -84,6 +85,7 @@ struct SystemFormView: View {
         _serviceLife = State(initialValue: existing?.expectedServiceLifeYears ?? 0)
         _selectedVendor = State(initialValue: existing?.vendor)
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedProject = State(initialValue: existing?.sourceProject)
     }
 
     var body: some View {
@@ -100,6 +102,7 @@ struct SystemFormView: View {
                 Toggle("Warranty expiration", isOn: $hasWarrantyDate); if hasWarrantyDate { DatePicker("Warranty", selection: $warrantyDate, displayedComponents: .date) }
                 Stepper("Expected service life: \(serviceLife == 0 ? "Not set" : "\(serviceLife) years")", value: $serviceLife, in: 0...75)
                 Picker("Vendor", selection: $selectedVendor) { Text("None").tag(nil as Vendor?); ForEach(vendors) { Text($0.businessName).tag(Optional($0)) } }
+                Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
             }
             Section("Reference") { TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never); TextField("Notes", text: $notes, axis: .vertical) }
             if existing != nil { Section { Button("Delete System", role: .destructive) { showDelete = true } } }
@@ -115,7 +118,7 @@ struct SystemFormView: View {
         record.name = name; record.type = type; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial
         record.room = selectedRoom; record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
         record.purchaseCost = Double(purchaseCost); record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
-        record.expectedServiceLifeYears = serviceLife == 0 ? nil : serviceLife; record.vendor = selectedVendor
+        record.expectedServiceLifeYears = serviceLife == 0 ? nil : serviceLife; record.vendor = selectedVendor; record.sourceProject = selectedProject
         try? modelContext.save(); dismiss()
     }
     @ToolbarContentBuilder private func editToolbar(save: @escaping () -> Void) -> some ToolbarContent {
@@ -127,11 +130,12 @@ struct SystemFormView: View {
 struct ApplianceFormView: View {
     @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.name) private var rooms: [Room]
+    @Query(sort: \Project.title) private var projects: [Project]
     let existing: Appliance?
     @State private var name: String; @State private var category: String; @State private var manufacturer: String; @State private var model: String; @State private var serial: String
     @State private var purchasedFrom: String; @State private var price: String; @State private var hasPurchaseDate: Bool; @State private var purchaseDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date; @State private var manufacturerWebsite: String; @State private var registrationLink: String
-    @State private var notes: String; @State private var selectedRoom: Room?; @State private var showDelete = false
+    @State private var notes: String; @State private var selectedRoom: Room?; @State private var selectedProject: Project?; @State private var showDelete = false
     private let standardCategories = ["Appliance", "Electronics", "Home Technology", "Outdoor Equipment", "Tool", "Other"]
 
     init(existing: Appliance? = nil, initialRoom: Room? = nil) {
@@ -141,7 +145,7 @@ struct ApplianceFormView: View {
         _price = State(initialValue: existing?.purchasePrice.map { String($0) } ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
         _hasWarrantyDate = State(initialValue: existing?.warrantyExpiration != nil); _warrantyDate = State(initialValue: existing?.warrantyExpiration ?? .now)
         _manufacturerWebsite = State(initialValue: existing?.manufacturerWebsite ?? ""); _registrationLink = State(initialValue: existing?.productRegistrationLink ?? "")
-        _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room ?? initialRoom); _selectedProject = State(initialValue: existing?.sourceProject)
     }
     var body: some View {
         Form {
@@ -151,7 +155,8 @@ struct ApplianceFormView: View {
                     ForEach(categoryOptions, id: \.self) { Text($0).tag($0) }
                 }
                 TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); TextField("Serial number", text: $serial)
-                Picker("Room", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
+                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
+                Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
             }
             Section("Purchase & Warranty") {
                 Toggle("Purchase date", isOn: $hasPurchaseDate); if hasPurchaseDate { DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date) }
@@ -177,7 +182,7 @@ struct ApplianceFormView: View {
         let record = existing ?? Appliance(name: name, category: category); if existing == nil { modelContext.insert(record) }
         record.name = name; record.category = category; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial; record.room = selectedRoom
         record.purchaseDate = hasPurchaseDate ? purchaseDate : nil; record.purchasePrice = Double(price); record.purchasedFrom = purchasedFrom
-        record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil; record.manufacturerWebsite = manufacturerWebsite; record.productRegistrationLink = registrationLink; record.notes = notes
+        record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil; record.manufacturerWebsite = manufacturerWebsite; record.productRegistrationLink = registrationLink; record.notes = notes; record.sourceProject = selectedProject
         try? modelContext.save(); dismiss()
     }
 }
@@ -186,11 +191,13 @@ struct PaintFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.name) private var rooms: [Room]
+    @Query(sort: \Project.title) private var projects: [Project]
 
     let existing: PaintFinish?
     let initialRoom: Room?
 
     @State private var selectedRoom: Room?
+    @State private var selectedProject: Project?
     @State private var surface: String
     @State private var brand: String
     @State private var productLine: String
@@ -211,6 +218,7 @@ struct PaintFormView: View {
         self.existing = existing
         self.initialRoom = initialRoom
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedProject = State(initialValue: existing?.sourceProject)
         _surface = State(initialValue: existing?.surface ?? "Walls")
         _brand = State(initialValue: existing?.brand ?? "")
         _productLine = State(initialValue: existing?.productLine ?? "")
@@ -234,6 +242,7 @@ struct PaintFormView: View {
                     Text("Choose room / area").tag(nil as Room?)
                     ForEach(rooms) { Text($0.name).tag(Optional($0)) }
                 }
+                Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
                 Picker("Surface", selection: $surface) {
                     ForEach(["Walls","Ceiling","Trim","Doors","Cabinets","Built-ins","Flooring / Finish","Exterior Siding","Exterior Trim","Deck / Stain"], id: \.self) { Text($0).tag($0) }
                 }
@@ -295,6 +304,7 @@ struct PaintFormView: View {
         record.cost = Double(cost)
         record.productLink = productLink
         record.notes = notes
+        record.sourceProject = selectedProject
         try? modelContext.save()
         dismiss()
     }
@@ -363,19 +373,104 @@ struct ConsumableFormView: View {
 }
 
 struct MaintenanceRecordFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
+    @Query(sort: \HomeSystem.name) private var systems: [HomeSystem]
+    @Query(sort: \Appliance.name) private var appliances: [Appliance]
+    @Query(sort: \Fixture.name) private var fixtures: [Fixture]
+    @Query(sort: \Project.title) private var projects: [Project]
+    @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
+
     let existing: MaintenanceRecord?
-    @State private var date: Date; @State private var title: String; @State private var cost: String; @State private var vendorName: String; @State private var taskTitle: String; @State private var relatedItemName: String; @State private var notes: String; @State private var showDelete = false
-    init(existing: MaintenanceRecord? = nil) { self.existing = existing; _date = State(initialValue: existing?.date ?? .now); _title = State(initialValue: existing?.title ?? ""); _cost = State(initialValue: existing?.cost.map { String($0) } ?? ""); _vendorName = State(initialValue: existing?.vendorName ?? ""); _taskTitle = State(initialValue: existing?.taskTitle ?? ""); _relatedItemName = State(initialValue: existing?.relatedItemName ?? ""); _notes = State(initialValue: existing?.notes ?? "") }
+    @State private var date: Date
+    @State private var title: String
+    @State private var cost: String
+    @State private var eventType: HomeEventType
+    @State private var vendorName: String
+    @State private var taskTitle: String
+    @State private var relatedItemName: String
+    @State private var notes: String
+    @State private var selectedRoom: Room?
+    @State private var selectedSystem: HomeSystem?
+    @State private var selectedAppliance: Appliance?
+    @State private var selectedFixture: Fixture?
+    @State private var selectedProject: Project?
+    @State private var selectedVendor: Vendor?
+    @State private var showDelete = false
+
+    init(existing: MaintenanceRecord? = nil) {
+        self.existing = existing
+        _date = State(initialValue: existing?.date ?? .now)
+        _title = State(initialValue: existing?.title ?? "")
+        _cost = State(initialValue: existing?.cost.map { String($0) } ?? "")
+        _eventType = State(initialValue: existing?.eventType ?? .maintenance)
+        _vendorName = State(initialValue: existing?.vendorName ?? "")
+        _taskTitle = State(initialValue: existing?.taskTitle ?? "")
+        _relatedItemName = State(initialValue: existing?.relatedItemName ?? "")
+        _notes = State(initialValue: existing?.notes ?? "")
+        _selectedRoom = State(initialValue: existing?.room)
+        _selectedSystem = State(initialValue: existing?.system)
+        _selectedAppliance = State(initialValue: existing?.appliance)
+        _selectedFixture = State(initialValue: existing?.fixture)
+        _selectedProject = State(initialValue: existing?.project)
+        _selectedVendor = State(initialValue: existing?.vendor)
+    }
+
     var body: some View {
         Form {
-            Section("Maintenance Record") { TextField("Title", text: $title); DatePicker("Date", selection: $date, displayedComponents: .date); TextField("Cost", text: $cost).keyboardType(.decimalPad) }
-            Section("Related") { TextField("Vendor", text: $vendorName); TextField("Task", text: $taskTitle); TextField("System / appliance / project", text: $relatedItemName) }
+            Section("Home History Event") {
+                TextField("Title", text: $title)
+                Picker("Type", selection: $eventType) { ForEach(HomeEventType.allCases) { Text($0.rawValue).tag($0) } }
+                DatePicker("Date", selection: $date, displayedComponents: .date)
+                TextField("Cost", text: $cost).keyboardType(.decimalPad)
+            }
+            Section("Connected Records") {
+                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
+                Picker("Fixture", selection: $selectedFixture) { Text("None").tag(nil as Fixture?); ForEach(fixtures) { Text($0.name).tag(Optional($0)) } }
+                Picker("Device / Equipment", selection: $selectedAppliance) { Text("None").tag(nil as Appliance?); ForEach(appliances) { Text($0.name).tag(Optional($0)) } }
+                Picker("System", selection: $selectedSystem) { Text("None").tag(nil as HomeSystem?); ForEach(systems) { Text($0.name).tag(Optional($0)) } }
+                Picker("Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
+                Picker("Vendor", selection: $selectedVendor) { Text("None").tag(nil as Vendor?); ForEach(vendors) { Text($0.businessName).tag(Optional($0)) } }
+                TextField("Related item (legacy / optional)", text: $relatedItemName)
+                TextField("Task (optional)", text: $taskTitle)
+            }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
             if existing != nil { Section { Button("Delete Record", role: .destructive) { showDelete = true } } }
-        }.navigationTitle(existing == nil ? "Add Maintenance" : "Edit Maintenance")
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.isEmpty) } }
-        .confirmationDialog("Delete this maintenance record?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+        }
+        .navigationTitle(existing == nil ? "Add Home History" : "Edit Home History")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+        }
+        .onChange(of: selectedFixture) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
+        .onChange(of: selectedAppliance) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
+        .onChange(of: selectedSystem) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
+        .onChange(of: selectedProject) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
+        .confirmationDialog("Delete this history record?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }
+            Button("Cancel", role: .cancel) { }
+        }
     }
-    private func save() { let r = existing ?? MaintenanceRecord(title: title); if existing == nil { modelContext.insert(r) }; r.date = date; r.title = title; r.cost = Double(cost); r.vendorName = vendorName; r.taskTitle = taskTitle; r.relatedItemName = relatedItemName; r.notes = notes; try? modelContext.save(); dismiss() }
+
+    private func save() {
+        let r = existing ?? MaintenanceRecord(title: title)
+        if existing == nil { modelContext.insert(r) }
+        r.date = date
+        r.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        r.cost = Double(cost)
+        r.eventType = eventType
+        r.room = selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room
+        r.fixture = selectedFixture
+        r.appliance = selectedAppliance
+        r.system = selectedSystem
+        r.project = selectedProject
+        r.vendor = selectedVendor
+        r.vendorName = selectedVendor?.businessName ?? vendorName
+        r.taskTitle = taskTitle
+        r.relatedItemName = selectedFixture?.name ?? selectedAppliance?.name ?? selectedSystem?.name ?? selectedProject?.title ?? relatedItemName
+        r.notes = notes
+        try? modelContext.save()
+        dismiss()
+    }
 }

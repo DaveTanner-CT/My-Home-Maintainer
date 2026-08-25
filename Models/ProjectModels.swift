@@ -54,12 +54,13 @@ final class ProjectItem {
     var quantity: Double
     var actualPurchaseCost: Double?
     var purchaseDate: Date?
+    var installedDate: Date?
     var notes: String
     var statusRaw: String
     var photoData: Data?
     var isIdeaOnly: Bool
 
-    init(project: Project? = nil, title: String, category: String = "Inspiration", comparisonGroup: String? = nil, manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
+    init(project: Project? = nil, title: String, category: String = "Inspiration", comparisonGroup: String? = nil, manufacturer: String = "", model: String = "", sku: String = "", finishColor: String = "", dimensions: String = "", store: String = "", website: String = "", unitCost: Double? = nil, quantity: Double = 1, actualPurchaseCost: Double? = nil, purchaseDate: Date? = nil, installedDate: Date? = nil, notes: String = "", status: ProjectItemStatus = .considering, photoData: Data? = nil, isIdeaOnly: Bool = false) {
         self.project = project
         self.title = title
         self.category = category
@@ -75,6 +76,7 @@ final class ProjectItem {
         self.quantity = quantity
         self.actualPurchaseCost = actualPurchaseCost
         self.purchaseDate = purchaseDate
+        self.installedDate = installedDate
         self.notes = notes
         self.statusRaw = status.rawValue
         self.photoData = photoData
