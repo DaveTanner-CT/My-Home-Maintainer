@@ -57,13 +57,13 @@ enum HomeExportService {
 
         return HomeArchive(
             exportedAt: .now,
-            appVersion: "0.6",
+            appVersion: "0.7",
             homes: homes.map { .init(name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) },
             rooms: rooms.map { .init(name: $0.name, notes: $0.notes, areaType: $0.areaType.rawValue, isFavorite: $0.isFavorite) },
             vendors: vendors.map { .init(businessName: $0.businessName, contactName: $0.contactName, category: $0.category, phone: $0.phone, email: $0.email, website: $0.website, address: $0.address, notes: $0.notes, isFavorite: $0.isFavorite) },
             systems: systems.map { .init(name: $0.name, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, location: $0.location, notes: $0.notes, website: $0.website, vendorName: $0.vendor?.businessName ?? "", installationDate: $0.installationDate, warrantyExpiration: $0.warrantyExpiration, purchaseCost: $0.purchaseCost, expectedServiceLifeYears: $0.expectedServiceLifeYears) },
             appliances: appliances.map { .init(name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, purchasedFrom: $0.purchasedFrom, manufacturerWebsite: $0.manufacturerWebsite, productRegistrationLink: $0.productRegistrationLink, notes: $0.notes, roomName: $0.room?.name ?? "", purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice) },
-            paint: paints.map { .init(roomName: $0.roomName, surface: $0.surface, brand: $0.brand, productLine: $0.productLine, colorName: $0.colorName, colorCode: $0.colorCode, sheen: $0.sheen, store: $0.store, containerSize: $0.containerSize, notes: $0.notes, productLink: $0.productLink, purchaseDate: $0.purchaseDate, quantity: $0.quantity, cost: $0.cost) },
+            paint: paints.map { .init(roomName: $0.locationName, surface: $0.surface, brand: $0.brand, productLine: $0.productLine, colorName: $0.colorName, colorCode: $0.colorCode, sheen: $0.sheen, store: $0.store, containerSize: $0.containerSize, notes: $0.notes, productLink: $0.productLink, purchaseDate: $0.purchaseDate, quantity: $0.quantity, cost: $0.cost) },
             tasks: tasks.map { .init(title: $0.title, taskDescription: $0.taskDescription, category: $0.category.rawValue, recurrence: $0.recurrence.rawValue, recurrenceAnchor: $0.recurrenceAnchor.rawValue, notes: $0.notes, instructions: $0.instructions, contactName: $0.contactName, phone: $0.phone, email: $0.email, website: $0.website, roomName: $0.room?.name ?? "", systemName: $0.system?.name ?? "", applianceName: $0.appliance?.name ?? "", projectName: $0.project?.title ?? "", vendorName: $0.vendor?.businessName ?? "", dueDate: $0.dueDate, completedDate: $0.completedDate, leadTimeDays: $0.leadTimeDays, priority: $0.priority, isCompleted: $0.isCompleted) },
             maintenanceRecords: records.map { .init(date: $0.date, title: $0.title, notes: $0.notes, vendorName: $0.vendorName, taskTitle: $0.taskTitle, relatedItemName: $0.relatedItemName, cost: $0.cost) },
             detectors: detectors.map { .init(location: $0.location, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, batteryType: $0.batteryType, notes: $0.notes, manufactureDate: $0.manufactureDate, installationDate: $0.installationDate, replacementDate: $0.replacementDate, isHardwired: $0.isHardwired) },
@@ -91,7 +91,7 @@ enum HomeExportService {
         if let value = attachment.vendor { return ("Vendor", value.businessName) }
         if let value = attachment.system { return ("Home System", value.name) }
         if let value = attachment.appliance { return ("Appliance", value.name) }
-        if let value = attachment.paint { return ("Paint / Finish", "\(value.roomName) - \(value.surface)") }
+        if let value = attachment.paint { return ("Paint / Finish", "\(value.locationName) - \(value.surface)") }
         if let value = attachment.project { return ("Project", value.title) }
         if let value = attachment.projectItem { return ("Project Item", value.title) }
         if let value = attachment.maintenanceRecord { return ("Maintenance Record", value.title) }

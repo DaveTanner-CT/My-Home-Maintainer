@@ -82,12 +82,12 @@ struct GlobalSearchView: View {
             }
         }
 
-        let matchingPaints = paints.filter { contains(q, [$0.roomName, $0.surface, $0.brand, $0.colorName, $0.colorCode, $0.sheen, $0.store, $0.notes]) }
+        let matchingPaints = paints.filter { contains(q, [$0.locationName, $0.surface, $0.brand, $0.colorName, $0.colorCode, $0.sheen, $0.store, $0.notes]) }
         if !matchingPaints.isEmpty {
             Section("Paint & Finishes") {
                 ForEach(matchingPaints) { paint in
                     NavigationLink { PaintDetailView(paint: paint) } label: {
-                        SearchResultRow(icon: "paintbrush", title: [paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " "), subtitle: "\(paint.roomName) · \(paint.surface)")
+                        SearchResultRow(icon: "paintbrush", title: [paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " "), subtitle: "\(paint.locationName) · \(paint.surface)")
                     }
                 }
             }

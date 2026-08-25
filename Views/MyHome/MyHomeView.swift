@@ -145,6 +145,7 @@ struct RoomsListView: View {
 }
 
 struct RoomDetailView: View {
+    @Environment(\.modelContext) private var modelContext
     let room: Room
     @Query private var appliances: [Appliance]
     @Query private var tasks: [MaintenanceTask]
@@ -152,10 +153,18 @@ struct RoomDetailView: View {
     @Query private var projects: [Project]
     @Query private var systems: [HomeSystem]
     @State private var showAddProject = false
+    @State private var showAddPaint = false
+    @State private var showAddAppliance = false
+    @State private var showAddTask = false
 
     private var roomAppliances: [Appliance] { appliances.filter { $0.room?.persistentModelID == room.persistentModelID } }
     private var roomTasks: [MaintenanceTask] { tasks.filter { $0.room?.persistentModelID == room.persistentModelID } }
-    private var roomPaints: [PaintFinish] { paints.filter { $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame } }
+    private var roomPaints: [PaintFinish] {
+        paints.filter {
+            $0.room?.persistentModelID == room.persistentModelID ||
+            ($0.room == nil && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
+        }
+    }
     private var roomProjects: [Project] {
         projects.filter {
             $0.room?.persistentModelID == room.persistentModelID ||
@@ -204,6 +213,9 @@ struct RoomDetailView: View {
                         }
                     }
                 }
+                Button { showAddPaint = true } label: {
+                    Label("Add Paint / Finish", systemImage: "plus")
+                }
             }
 
             if !roomSystems.isEmpty {
@@ -215,14 +227,20 @@ struct RoomDetailView: View {
             }
 
             Section("Appliances & Equipment") {
-                if roomAppliances.isEmpty { Text("No appliances").foregroundStyle(.secondary) }
+                if roomAppliances.isEmpty { Text("No appliances or equipment").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
+                Button { showAddAppliance = true } label: {
+                    Label("Add Appliance / Equipment", systemImage: "plus")
+                }
             }
 
             Section("Tasks") {
                 if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
+                }
+                Button { showAddTask = true } label: {
+                    Label("Add Task for This Area", systemImage: "plus")
                 }
             }
 
@@ -234,9 +252,21 @@ struct RoomDetailView: View {
                 NavigationLink("Edit") { RoomFormView(existing: room) }
             }
         }
-        .sheet(isPresented: $showAddProject) {
-            NavigationStack { ProjectFormView(initialRoom: room) }
+        .sheet(isPresented: $showAddProject) { NavigationStack { ProjectFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddPaint) { NavigationStack { PaintFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddAppliance) { NavigationStack { ApplianceFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: room) } }
+        .onAppear { connectLegacyPaintRecords() }
+    }
+
+    private func connectLegacyPaintRecords() {
+        var changed = false
+        for paint in roomPaints where paint.room == nil {
+            paint.room = room
+            paint.roomName = room.name
+            changed = true
         }
+        if changed { try? modelContext.save() }
     }
 }
 
@@ -344,7 +374,7 @@ struct PaintListView: View {
     var body: some View {
         List {
             if paints.isEmpty { ContentUnavailableView("No paint records", systemImage: "paintbrush", description: Text("Save paint colors so you never have to guess which color was used.")) }
-            ForEach(paints) { paint in NavigationLink { PaintDetailView(paint: paint) } label: { VStack(alignment: .leading, spacing: 4) { Text("\(paint.roomName) · \(paint.surface)").font(.headline); Text([paint.brand, paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " · ")); if !paint.sheen.isEmpty || !paint.store.isEmpty { Text([paint.sheen, paint.store].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()) } }
+            ForEach(paints) { paint in NavigationLink { PaintDetailView(paint: paint) } label: { VStack(alignment: .leading, spacing: 4) { Text("\(paint.locationName) · \(paint.surface)").font(.headline); Text([paint.brand, paint.colorName, paint.colorCode].filter { !$0.isEmpty }.joined(separator: " · ")); if !paint.sheen.isEmpty || !paint.store.isEmpty { Text([paint.sheen, paint.store].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()) } }
         }.navigationTitle("Paint & Finishes")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }
         .sheet(isPresented: $showAdd) { NavigationStack { PaintFormView() } }
@@ -357,7 +387,14 @@ struct PaintDetailView: View {
     @State private var showDuplicate = false
     var body: some View {
         List {
-            Section("Location") { LabeledContent("Room / Area", value: paint.roomName); LabeledContent("Surface", value: paint.surface) }
+            Section("Location") {
+                if let room = paint.room {
+                    NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) }
+                } else {
+                    LabeledContent("Room / Area", value: paint.roomName)
+                }
+                LabeledContent("Surface", value: paint.surface)
+            }
             Section("Paint / Finish") { if !paint.brand.isEmpty { LabeledContent("Brand", value: paint.brand) }; if !paint.productLine.isEmpty { LabeledContent("Product line", value: paint.productLine) }; LabeledContent("Color", value: paint.colorName); if !paint.colorCode.isEmpty { LabeledContent("Color code", value: paint.colorCode) }; if !paint.sheen.isEmpty { LabeledContent("Sheen", value: paint.sheen) } }
             Section("Purchase") { if !paint.store.isEmpty { LabeledContent("Store", value: paint.store) }; if let date = paint.purchaseDate { LabeledContent("Purchased", value: date.formatted(date: .abbreviated, time: .omitted)) }; if let q = paint.quantity { LabeledContent("Quantity", value: q.formatted()) }; if !paint.containerSize.isEmpty { LabeledContent("Container", value: paint.containerSize) }; if let cost = paint.cost { LabeledContent("Cost", value: cost.formatted(AppFormatting.currency)) }; if !paint.productLink.isEmpty, let url = normalizedURL(paint.productLink) { Link("Open Product Link", destination: url) } }
             AttachmentSection(owner: .paint(paint))
@@ -370,9 +407,44 @@ struct PaintDetailView: View {
 }
 
 struct PaintDuplicateFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext; @Query(sort: \Room.name) private var rooms: [Room]
-    let source: PaintFinish; @State private var roomName = ""
-    var body: some View { Form { Section("Duplicate To") { Picker("Room", selection: $roomName) { Text("Choose room").tag(""); ForEach(rooms) { Text($0.name).tag($0.name) } }; LabeledContent("Color", value: [source.colorName, source.colorCode].filter { !$0.isEmpty }.joined(separator: " · ")); LabeledContent("Surface", value: source.surface) } }.navigationTitle("Duplicate Paint").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { let copy = PaintFinish(roomName: roomName, surface: source.surface, brand: source.brand, productLine: source.productLine, colorName: source.colorName, colorCode: source.colorCode, sheen: source.sheen, store: source.store, purchaseDate: source.purchaseDate, quantity: source.quantity, containerSize: source.containerSize, cost: source.cost, notes: source.notes, productLink: source.productLink); modelContext.insert(copy); try? modelContext.save(); dismiss() }.disabled(roomName.isEmpty) } } }
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
+    let source: PaintFinish
+    @State private var selectedRoom: Room?
+
+    init(source: PaintFinish) {
+        self.source = source
+        _selectedRoom = State(initialValue: source.room)
+    }
+
+    var body: some View {
+        Form {
+            Section("Duplicate To") {
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("Choose room / area").tag(nil as Room?)
+                    ForEach(rooms) { Text($0.name).tag(Optional($0)) }
+                }
+                LabeledContent("Color", value: [source.colorName, source.colorCode].filter { !$0.isEmpty }.joined(separator: " · "))
+                LabeledContent("Surface", value: source.surface)
+            }
+        }
+        .navigationTitle("Duplicate Paint")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { save() }.disabled(selectedRoom == nil)
+            }
+        }
+    }
+
+    private func save() {
+        guard let room = selectedRoom else { return }
+        let copy = PaintFinish(room: room, surface: source.surface, brand: source.brand, productLine: source.productLine, colorName: source.colorName, colorCode: source.colorCode, sheen: source.sheen, store: source.store, purchaseDate: source.purchaseDate, quantity: source.quantity, containerSize: source.containerSize, cost: source.cost, notes: source.notes, productLink: source.productLink)
+        modelContext.insert(copy)
+        try? modelContext.save()
+        dismiss()
+    }
 }
 
 struct VendorsListView: View {

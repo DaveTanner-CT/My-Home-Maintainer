@@ -11,6 +11,7 @@ struct TaskFormView: View {
     @Query(sort: \Project.title) private var projects: [Project]
 
     let existingTask: MaintenanceTask?
+    let initialRoom: Room?
 
     @State private var title = ""
     @State private var description = ""
@@ -32,7 +33,11 @@ struct TaskFormView: View {
     @State private var selectedAppliance: Appliance?
     @State private var selectedProject: Project?
 
-    init(existingTask: MaintenanceTask? = nil) { self.existingTask = existingTask }
+    init(existingTask: MaintenanceTask? = nil, initialRoom: Room? = nil) {
+        self.existingTask = existingTask
+        self.initialRoom = initialRoom
+        _selectedRoom = State(initialValue: existingTask?.room ?? initialRoom)
+    }
 
     var body: some View {
         Form {

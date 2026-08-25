@@ -129,14 +129,14 @@ struct ApplianceFormView: View {
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date; @State private var manufacturerWebsite: String; @State private var registrationLink: String
     @State private var notes: String; @State private var selectedRoom: Room?; @State private var showDelete = false
 
-    init(existing: Appliance? = nil) {
+    init(existing: Appliance? = nil, initialRoom: Room? = nil) {
         self.existing = existing
         _name = State(initialValue: existing?.name ?? ""); _category = State(initialValue: existing?.category ?? ""); _manufacturer = State(initialValue: existing?.manufacturer ?? "")
         _model = State(initialValue: existing?.model ?? ""); _serial = State(initialValue: existing?.serialNumber ?? ""); _purchasedFrom = State(initialValue: existing?.purchasedFrom ?? "")
         _price = State(initialValue: existing?.purchasePrice.map { String($0) } ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
         _hasWarrantyDate = State(initialValue: existing?.warrantyExpiration != nil); _warrantyDate = State(initialValue: existing?.warrantyExpiration ?? .now)
         _manufacturerWebsite = State(initialValue: existing?.manufacturerWebsite ?? ""); _registrationLink = State(initialValue: existing?.productRegistrationLink ?? "")
-        _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room)
+        _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
     }
     var body: some View {
         Form {
@@ -170,36 +170,120 @@ struct ApplianceFormView: View {
 }
 
 struct PaintFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext; @Query(sort: \Room.name) private var rooms: [Room]
-    let existing: PaintFinish?
-    @State private var roomName: String; @State private var surface: String; @State private var brand: String; @State private var productLine: String; @State private var colorName: String
-    @State private var colorCode: String; @State private var sheen: String; @State private var store: String; @State private var cost: String; @State private var quantity: String; @State private var containerSize: String
-    @State private var hasPurchaseDate: Bool; @State private var purchaseDate: Date; @State private var productLink: String; @State private var notes: String; @State private var showDelete = false
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
 
-    init(existing: PaintFinish? = nil) {
-        self.existing = existing; _roomName = State(initialValue: existing?.roomName ?? ""); _surface = State(initialValue: existing?.surface ?? "Walls"); _brand = State(initialValue: existing?.brand ?? "")
-        _productLine = State(initialValue: existing?.productLine ?? ""); _colorName = State(initialValue: existing?.colorName ?? ""); _colorCode = State(initialValue: existing?.colorCode ?? "")
-        _sheen = State(initialValue: existing?.sheen ?? ""); _store = State(initialValue: existing?.store ?? ""); _cost = State(initialValue: existing?.cost.map { String($0) } ?? "")
-        _quantity = State(initialValue: existing?.quantity.map { String($0) } ?? ""); _containerSize = State(initialValue: existing?.containerSize ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil)
-        _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now); _productLink = State(initialValue: existing?.productLink ?? ""); _notes = State(initialValue: existing?.notes ?? "")
+    let existing: PaintFinish?
+    let initialRoom: Room?
+
+    @State private var selectedRoom: Room?
+    @State private var surface: String
+    @State private var brand: String
+    @State private var productLine: String
+    @State private var colorName: String
+    @State private var colorCode: String
+    @State private var sheen: String
+    @State private var store: String
+    @State private var cost: String
+    @State private var quantity: String
+    @State private var containerSize: String
+    @State private var hasPurchaseDate: Bool
+    @State private var purchaseDate: Date
+    @State private var productLink: String
+    @State private var notes: String
+    @State private var showDelete = false
+
+    init(existing: PaintFinish? = nil, initialRoom: Room? = nil) {
+        self.existing = existing
+        self.initialRoom = initialRoom
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _surface = State(initialValue: existing?.surface ?? "Walls")
+        _brand = State(initialValue: existing?.brand ?? "")
+        _productLine = State(initialValue: existing?.productLine ?? "")
+        _colorName = State(initialValue: existing?.colorName ?? "")
+        _colorCode = State(initialValue: existing?.colorCode ?? "")
+        _sheen = State(initialValue: existing?.sheen ?? "")
+        _store = State(initialValue: existing?.store ?? "")
+        _cost = State(initialValue: existing?.cost.map { String($0) } ?? "")
+        _quantity = State(initialValue: existing?.quantity.map { String($0) } ?? "")
+        _containerSize = State(initialValue: existing?.containerSize ?? "")
+        _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil)
+        _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
+        _productLink = State(initialValue: existing?.productLink ?? "")
+        _notes = State(initialValue: existing?.notes ?? "")
     }
+
     var body: some View {
         Form {
-            Section("Location") { Picker("Room", selection: $roomName) { Text("Choose room").tag(""); ForEach(rooms) { Text($0.name).tag($0.name) } }; Picker("Surface", selection: $surface) { ForEach(["Walls","Ceiling","Trim","Doors","Cabinets","Built-ins","Exterior Siding","Exterior Trim","Deck / Stain"], id: \.self) { Text($0).tag($0) } } }
-            Section("Paint / Finish") { TextField("Brand", text: $brand); TextField("Product line", text: $productLine); TextField("Color name", text: $colorName); TextField("Color code", text: $colorCode); TextField("Sheen / finish", text: $sheen) }
-            Section("Purchase") { TextField("Purchased at", text: $store); Toggle("Purchase date", isOn: $hasPurchaseDate); if hasPurchaseDate { DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date) }; TextField("Quantity", text: $quantity).keyboardType(.decimalPad); TextField("Container size", text: $containerSize); TextField("Cost", text: $cost).keyboardType(.decimalPad); TextField("Product link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never) }
+            Section("Location") {
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("Choose room / area").tag(nil as Room?)
+                    ForEach(rooms) { Text($0.name).tag(Optional($0)) }
+                }
+                Picker("Surface", selection: $surface) {
+                    ForEach(["Walls","Ceiling","Trim","Doors","Cabinets","Built-ins","Flooring / Finish","Exterior Siding","Exterior Trim","Deck / Stain"], id: \.self) { Text($0).tag($0) }
+                }
+            }
+            Section("Paint / Finish") {
+                TextField("Brand", text: $brand)
+                TextField("Product line", text: $productLine)
+                TextField("Color name", text: $colorName)
+                TextField("Color code", text: $colorCode)
+                TextField("Sheen / finish", text: $sheen)
+            }
+            Section("Purchase") {
+                TextField("Purchased at", text: $store)
+                Toggle("Purchase date", isOn: $hasPurchaseDate)
+                if hasPurchaseDate { DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date) }
+                TextField("Quantity", text: $quantity).keyboardType(.decimalPad)
+                TextField("Container size", text: $containerSize)
+                TextField("Cost", text: $cost).keyboardType(.decimalPad)
+                TextField("Product link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never)
+            }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
             if existing != nil { Section { Button("Delete Paint Record", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Paint" : "Edit Paint")
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(roomName.isEmpty || colorName.isEmpty) } }
-        .confirmationDialog("Delete this paint record?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(selectedRoom == nil || colorName.isEmpty) }
+        }
+        .onAppear { resolveLegacyRoomIfNeeded() }
+        .confirmationDialog("Delete this paint record?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
     }
+
+    private func resolveLegacyRoomIfNeeded() {
+        guard selectedRoom == nil, let existing, !existing.roomName.isEmpty else { return }
+        selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(existing.roomName) == .orderedSame }
+    }
+
     private func save() {
-        let record = existing ?? PaintFinish(roomName: roomName, surface: surface); if existing == nil { modelContext.insert(record) }
-        record.roomName = roomName; record.surface = surface; record.brand = brand; record.productLine = productLine; record.colorName = colorName; record.colorCode = colorCode; record.sheen = sheen; record.store = store
-        record.purchaseDate = hasPurchaseDate ? purchaseDate : nil; record.quantity = Double(quantity); record.containerSize = containerSize; record.cost = Double(cost); record.productLink = productLink; record.notes = notes
-        try? modelContext.save(); dismiss()
+        guard let room = selectedRoom else { return }
+        let record = existing ?? PaintFinish(room: room, surface: surface)
+        if existing == nil { modelContext.insert(record) }
+        record.room = room
+        record.roomName = room.name
+        record.surface = surface
+        record.brand = brand
+        record.productLine = productLine
+        record.colorName = colorName
+        record.colorCode = colorCode
+        record.sheen = sheen
+        record.store = store
+        record.purchaseDate = hasPurchaseDate ? purchaseDate : nil
+        record.quantity = Double(quantity)
+        record.containerSize = containerSize
+        record.cost = Double(cost)
+        record.productLink = productLink
+        record.notes = notes
+        try? modelContext.save()
+        dismiss()
     }
 }
 

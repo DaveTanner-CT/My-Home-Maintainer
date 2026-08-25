@@ -134,7 +134,9 @@ final class Appliance {
 
 @Model
 final class PaintFinish {
+    // roomName is retained for compatibility with paint records created before linked rooms/areas.
     var roomName: String
+    var room: Room?
     var surface: String
     var brand: String
     var productLine: String
@@ -149,8 +151,9 @@ final class PaintFinish {
     var notes: String
     var productLink: String
 
-    init(roomName: String, surface: String, brand: String = "", productLine: String = "", colorName: String = "", colorCode: String = "", sheen: String = "", store: String = "", purchaseDate: Date? = nil, quantity: Double? = nil, containerSize: String = "", cost: Double? = nil, notes: String = "", productLink: String = "") {
-        self.roomName = roomName
+    init(roomName: String = "", room: Room? = nil, surface: String, brand: String = "", productLine: String = "", colorName: String = "", colorCode: String = "", sheen: String = "", store: String = "", purchaseDate: Date? = nil, quantity: Double? = nil, containerSize: String = "", cost: Double? = nil, notes: String = "", productLink: String = "") {
+        self.roomName = room?.name ?? roomName
+        self.room = room
         self.surface = surface
         self.brand = brand
         self.productLine = productLine
@@ -164,5 +167,9 @@ final class PaintFinish {
         self.cost = cost
         self.notes = notes
         self.productLink = productLink
+    }
+
+    var locationName: String {
+        room?.name ?? roomName
     }
 }
