@@ -160,10 +160,9 @@ private struct SummaryCard: View {
 
 private struct DashboardShortcut: View {
     let title: String
+    let subtitle: String
     let icon: String
     let destination: AnyView
-
-    let subtitle: String
 
     var body: some View {
         NavigationLink {

@@ -51,7 +51,7 @@ struct MyHomeView: View {
         .navigationTitle("My Home")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                if let home = homes.first {
+                if homes.first != nil {
                     NavigationLink { HomeProfileView() } label: { Image(systemName: "house") }
                         .accessibilityLabel("Home Profile")
                 }

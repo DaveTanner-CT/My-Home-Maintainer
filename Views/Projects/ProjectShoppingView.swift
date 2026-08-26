@@ -39,7 +39,7 @@ struct ProjectShoppingView: View {
 
     var body: some View {
         List {
-            Section("Shopping Progress") {
+            Section {
                 Button { addToGroup = ""; addToCategory = "Inspiration"; showAddOption = true } label: {
                     progressRow(number: "1", title: "Add Options", detail: "Start with everything you are considering.", value: "\(projectItems.filter { $0.status != .rejected }.count)", icon: "plus.circle")
                 }
@@ -53,6 +53,8 @@ struct ProjectShoppingView: View {
                 NavigationLink { ProjectCompletionView(project: project) } label: {
                     progressRow(number: "4", title: "Install & Save", detail: purchasedCount == 0 ? "Purchased items will appear here when ready." : "\(purchasedCount) purchased item\(purchasedCount == 1 ? "" : "s") ready for the home record.", value: "\(installedCount)", icon: "house.and.flag")
                 }
+            } header: {
+                Text("Shopping Progress")
             } footer: {
                 Text("Think in terms of what you are choosing — for example, Kitchen Faucet. Add several options to that decision, compare them, purchase one, then save the installed item to the permanent home record.")
             }
