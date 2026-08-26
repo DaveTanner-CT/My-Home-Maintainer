@@ -39,22 +39,22 @@ struct ProjectShoppingView: View {
 
     var body: some View {
         List {
-            Section("From idea to installed") {
-                workflowRow(number: "1", title: "Add options", detail: "Add every faucet, light, appliance, electronic, material, or other product you are considering.", icon: "plus.circle")
-                Button { addToGroup = ""; addToCategory = "Inspiration"; showAddOption = true } label: { Label("Add Shopping Option", systemImage: "plus") }
+            Section("Shopping Progress") {
+                Button { addToGroup = ""; addToCategory = "Inspiration"; showAddOption = true } label: {
+                    progressRow(number: "1", title: "Add Options", detail: "Start with everything you are considering.", value: "\(projectItems.filter { $0.status != .rejected }.count)", icon: "plus.circle")
+                }
 
-                workflowRow(number: "2", title: "Compare", detail: "Options are grouped by what you are choosing, such as Kitchen Faucet—not just by broad category.", icon: "rectangle.split.3x1")
                 NavigationLink { ProjectComparisonView(project: project) } label: {
-                    Label("Compare Options", systemImage: "rectangle.split.3x1")
+                    progressRow(number: "2", title: "Compare", detail: "Compare options by buying decision.", value: "\(decisionGroups.count)", icon: "rectangle.split.3x1")
                 }
 
-                workflowRow(number: "3", title: "Choose & purchase", detail: "Favorite contenders, then choose the winner and record the actual purchase.", icon: "cart.badge.plus")
+                progressRow(number: "3", title: "Choose & Purchase", detail: "Choose a winner from the list below and record the purchase.", value: "\(purchasedCount)", icon: "cart.badge.plus")
 
-                workflowRow(number: "4", title: "Install / save to home", detail: "Purchased items move into the permanent room record as a fixture, appliance/electronic/equipment, system, paint/finish, or history record.", icon: "house.and.flag")
                 NavigationLink { ProjectCompletionView(project: project) } label: {
-                    HStack { Label("Install / Save Purchased Items", systemImage: "square.and.arrow.down"); Spacer(); if purchasedCount > 0 { Text("\(purchasedCount)").foregroundStyle(.secondary) } }
+                    progressRow(number: "4", title: "Install & Save", detail: purchasedCount == 0 ? "Purchased items will appear here when ready." : "\(purchasedCount) purchased item\(purchasedCount == 1 ? "" : "s") ready for the home record.", value: "\(installedCount)", icon: "house.and.flag")
                 }
-                if installedCount > 0 { LabeledContent("Installed / saved", value: "\(installedCount)") }
+            } footer: {
+                Text("Think in terms of what you are choosing — for example, Kitchen Faucet. Add several options to that decision, compare them, purchase one, then save the installed item to the permanent home record.")
             }
 
             Section("Shopping List") {
@@ -116,11 +116,21 @@ struct ProjectShoppingView: View {
     }
 
     @ViewBuilder
-    private func workflowRow(number: String, title: String, detail: String, icon: String) -> some View {
+    private func progressRow(number: String, title: String, detail: String, value: String, icon: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            ZStack { Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 30, height: 30); Text(number).font(.headline).foregroundStyle(Color.accentColor) }
-            VStack(alignment: .leading, spacing: 3) { Text(title).font(.headline); Text(detail).font(.footnote).foregroundStyle(.secondary) }
-            Spacer(); Image(systemName: icon).foregroundStyle(.secondary)
+            ZStack {
+                Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 30, height: 30)
+                Text(number).font(.headline).foregroundStyle(Color.accentColor)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline)
+                Text(detail).font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(spacing: 3) {
+                Text(value).font(.headline)
+                Image(systemName: icon).font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 

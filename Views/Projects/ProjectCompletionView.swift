@@ -40,7 +40,7 @@ struct ProjectCompletionView: View {
                             if let date = item.purchaseDate { Text(date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary) }
                         }
                         Menu {
-                            Button { addAppliance(item) } label: { Label("Appliance / Electronics / Equipment", systemImage: "refrigerator") }
+                            Button { addAppliance(item) } label: { Label("Device / Equipment", systemImage: "refrigerator") }
                             Button { addFixture(item) } label: { Label("Fixture", systemImage: "lightbulb") }
                             Button { addSystem(item) } label: { Label("Home System", systemImage: "wrench.and.screwdriver") }
                             Button { addPaint(item) } label: { Label("Paint / Finish", systemImage: "paintbrush") }

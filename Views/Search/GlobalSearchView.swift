@@ -63,7 +63,7 @@ struct GlobalSearchView: View {
 
         let matchingAppliances = appliances.filter { contains(q, [$0.name, $0.category, $0.manufacturer, $0.model, $0.serialNumber, $0.purchasedFrom, $0.notes]) }
         if !matchingAppliances.isEmpty {
-            Section("Appliances, Electronics & Equipment") {
+            Section("Devices & Equipment") {
                 ForEach(matchingAppliances) { item in
                     NavigationLink { ApplianceDetailView(appliance: item) } label: {
                         SearchResultRow(icon: "refrigerator", title: item.name, subtitle: item.manufacturer)
@@ -176,7 +176,7 @@ struct GlobalSearchView: View {
 
         let matchingRecords = records.filter { contains(q, [$0.title, $0.vendorName, $0.taskTitle, $0.relatedItemName, $0.notes]) }
         if !matchingRecords.isEmpty {
-            Section("Maintenance History") {
+            Section("Home History") {
                 ForEach(matchingRecords) { record in
                     NavigationLink { MaintenanceRecordDetailView(record: record) } label: {
                         SearchResultRow(icon: "clock.arrow.circlepath", title: record.title, subtitle: record.date.formatted(date: .abbreviated, time: .omitted))

@@ -92,14 +92,11 @@ struct AppSettingsView: View {
 
     var body: some View {
         List {
-            Section("Home") {
+            Section("Home Setup") {
                 NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
-                NavigationLink { HomeInsightsView() } label: { Label("Home Insights", systemImage: "chart.bar.xaxis") }
-                NavigationLink { HomeHistoryView() } label: { Label("Home History", systemImage: "clock.arrow.circlepath") }
-                NavigationLink { WarrantyCenterView() } label: { Label("Warranty Center", systemImage: "shield") }
-                NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
-                NavigationLink { SeasonalMaintenanceView() } label: { Label("Seasonal Planning", systemImage: "calendar.badge.clock") }
-                NavigationLink { HomeOutlookView() } label: { Label("Home Outlook", systemImage: "chart.line.uptrend.xyaxis") }
+                Text("Home records, maintenance planning, warranties, and history now live under the My Home tab so Settings stays focused on app setup.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             Section("Data & Transfer") {
                 NavigationLink { HomeTransferView() } label: { Label("Home Transfer", systemImage: "house.and.flag") }
@@ -123,7 +120,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.14")
+                LabeledContent("Build", value: "0.16")
                 Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

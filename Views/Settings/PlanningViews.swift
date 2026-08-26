@@ -135,7 +135,7 @@ struct ReplacementForecastView: View {
         }
         for appliance in appliances {
             if let date = appliance.purchaseDate {
-                result.append(.init(id: "a-\(appliance.persistentModelID)", name: appliance.name, kind: "Appliance / Electronics / Equipment", location: appliance.room?.name ?? "", installed: date, years: applianceLife("\(appliance.category) \(appliance.name)"), detailDestination: AnyView(ApplianceDetailView(appliance: appliance))))
+                result.append(.init(id: "a-\(appliance.persistentModelID)", name: appliance.name, kind: "Device / Equipment", location: appliance.room?.name ?? "", installed: date, years: applianceLife("\(appliance.category) \(appliance.name)"), detailDestination: AnyView(ApplianceDetailView(appliance: appliance))))
             }
         }
         for fixture in fixtures {

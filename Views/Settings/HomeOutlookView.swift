@@ -238,7 +238,7 @@ struct HomeOutlookView: View {
                     Section("Home Systems") {
                         Text("Uses the installation date and the service-life years saved on the system record.")
                     }
-                    Section("Appliances, Electronics & Equipment") {
+                    Section("Devices & Equipment") {
                         Text("Uses the recorded purchase date with a typical-life assumption based on the item category. Technology such as routers generally receives a shorter planning window than major appliances or tools.")
                     }
                     Section("Fixtures") {

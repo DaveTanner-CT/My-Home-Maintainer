@@ -82,12 +82,12 @@ struct ProjectDetailView: View {
             }
 
             if hasPermanentRecords {
-                Section("Permanent Home Records") {
+                Section("Installed in My Home") {
                     ForEach(linkedFixtures) { item in NavigationLink { FixtureDetailView(fixture: item) } label: { Label(item.name, systemImage: "lightbulb") } }
                     ForEach(linkedAppliances) { item in NavigationLink { ApplianceDetailView(appliance: item) } label: { Label(item.name, systemImage: "refrigerator") } }
                     ForEach(linkedSystems) { item in NavigationLink { SystemDetailView(system: item) } label: { Label(item.name, systemImage: "wrench.and.screwdriver") } }
                     ForEach(linkedPaints) { item in NavigationLink { PaintDetailView(paint: item) } label: { Label("\(item.surface): \(item.colorName)", systemImage: "paintbrush") } }
-                    Text("These records were installed from this project and now carry their own room, warranty, task, document, and maintenance connections.")
+                    Text("These items now live in the permanent home record. Open one to manage its room, warranty, tasks, documents, and history.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
@@ -147,7 +147,7 @@ struct ProjectDetailView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink("Edit") { ProjectFormView(existing: project) }
                 Menu {
-                    Button { showAddItem = true } label: { Label("Idea / Product", systemImage: "lightbulb") }
+                    Button { showAddItem = true } label: { Label("Idea / Shopping Option", systemImage: "lightbulb") }
                     Button { showAddMeasurement = true } label: { Label("Measurement", systemImage: "ruler") }
                 } label: {
                     Image(systemName: "plus")

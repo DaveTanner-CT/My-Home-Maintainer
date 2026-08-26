@@ -89,18 +89,26 @@ struct HomeDashboardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
 
-                sectionTitle("Quick Access")
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    QuickLink(title: "Home Systems", icon: "wrench.and.screwdriver", destination: AnyView(SystemsListView()))
-                    QuickLink(title: "Rooms", icon: "door.left.hand.open", destination: AnyView(RoomsListView()))
-                    QuickLink(title: "Devices & Equipment", icon: "refrigerator", destination: AnyView(AppliancesListView()))
-                    QuickLink(title: "Paint & Finishes", icon: "paintbrush", destination: AnyView(PaintListView()))
-                    QuickLink(title: "Projects", icon: "hammer", destination: AnyView(ProjectsView()))
-                    QuickLink(title: "Vendors", icon: "person.crop.circle.badge.checkmark", destination: AnyView(VendorsListView()))
-                    QuickLink(title: "Home Insights", icon: "chart.bar.xaxis", destination: AnyView(HomeInsightsView()))
-                    QuickLink(title: "Warranty Center", icon: "shield", destination: AnyView(WarrantyCenterView()))
-                    QuickLink(title: "Seasonal Planning", icon: "calendar.badge.clock", destination: AnyView(SeasonalMaintenanceView()))
-                    QuickLink(title: "Home Outlook", icon: "chart.line.uptrend.xyaxis", destination: AnyView(HomeOutlookView()))
+                sectionTitle("Shortcuts")
+                VStack(spacing: 10) {
+                    DashboardShortcut(
+                        title: "Rooms & Areas",
+                        subtitle: "Start with a place in your home.",
+                        icon: "door.left.hand.open",
+                        destination: AnyView(RoomsListView())
+                    )
+                    DashboardShortcut(
+                        title: "Home Care",
+                        subtitle: "Maintenance, warranties, safety, and planning.",
+                        icon: "heart.text.clipboard",
+                        destination: AnyView(HomeCareView())
+                    )
+                    DashboardShortcut(
+                        title: "Home History",
+                        subtitle: "See repairs, installs, purchases, and projects over time.",
+                        icon: "clock.arrow.circlepath",
+                        destination: AnyView(HomeHistoryView())
+                    )
                 }
             }
             .padding()
@@ -150,22 +158,33 @@ private struct SummaryCard: View {
     }
 }
 
-private struct QuickLink: View {
+private struct DashboardShortcut: View {
     let title: String
     let icon: String
     let destination: AnyView
+
+    let subtitle: String
 
     var body: some View {
         NavigationLink {
             destination
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .frame(width: 28)
+                    .frame(width: 30)
                     .font(.title3)
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
             .padding(14)
             .background(.background)

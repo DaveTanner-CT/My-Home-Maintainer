@@ -4,34 +4,80 @@ import SwiftData
 struct MyHomeView: View {
     @Query private var records: [MaintenanceRecord]
     @Query private var homes: [Home]
-    @State private var showAddMaintenance = false
+    @State private var showAddHistory = false
 
     var body: some View {
         List {
-            Section("Home") {
-                NavigationLink { HomeProfileView() } label: {
-                    Label(homes.first?.name ?? "Home Profile", systemImage: "house")
+            Section("Start with a Place") {
+                NavigationLink { RoomsListView() } label: {
+                    hubRow(
+                        title: "Rooms & Areas",
+                        subtitle: "See everything connected to a room, exterior area, or part of the property.",
+                        icon: "door.left.hand.open"
+                    )
                 }
-                NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
             }
-            Section("Home Records") {
-                NavigationLink { RoomsListView() } label: { Label("Rooms & Areas", systemImage: "door.left.hand.open") }
-                NavigationLink { SystemsListView() } label: { Label("Home Systems", systemImage: "wrench.and.screwdriver") }
-                NavigationLink { AppliancesListView() } label: { Label("Appliances, Electronics & Equipment", systemImage: "refrigerator") }
-                NavigationLink { FixturesListView() } label: { Label("Fixtures", systemImage: "lightbulb") }
-                NavigationLink { PaintListView() } label: { Label("Paint & Finishes", systemImage: "paintbrush") }
-                NavigationLink { DetectorsListView() } label: { Label("Smoke & CO Detectors", systemImage: "sensor.tag.radiowaves.forward") }
-                NavigationLink { ConsumablesListView() } label: { Label("Filters & Consumables", systemImage: "shippingbox") }
-                NavigationLink { VendorsListView() } label: { Label("Vendors", systemImage: "person.2") }
+
+            Section("Equipment & Finishes") {
+                NavigationLink { SystemsListView() } label: {
+                    hubRow(title: "Home Systems", subtitle: "HVAC, plumbing, water, generators, and other built-in systems.", icon: "wrench.and.screwdriver")
+                }
+                NavigationLink { AppliancesListView() } label: {
+                    hubRow(title: "Devices & Equipment", subtitle: "Appliances, electronics, home technology, tools, and outdoor equipment.", icon: "refrigerator")
+                }
+                NavigationLink { FixturesListView() } label: {
+                    hubRow(title: "Fixtures", subtitle: "Faucets, lighting, fans, hardware, and installed components.", icon: "lightbulb")
+                }
+                NavigationLink { PaintListView() } label: {
+                    hubRow(title: "Paint & Finishes", subtitle: "Colors, surfaces, finishes, purchase details, and product references.", icon: "paintbrush")
+                }
             }
-            Section("History") {
-                NavigationLink { HomeHistoryView() } label: { Label("Home History", systemImage: "clock.arrow.circlepath") }
-                LabeledContent("Recorded events", value: "\(records.count)")
-                Button { showAddMaintenance = true } label: { Label("Add Home History Event", systemImage: "plus.circle") }
+
+            Section("Care & Planning") {
+                NavigationLink { HomeCareView() } label: {
+                    hubRow(title: "Home Care", subtitle: "Maintenance recommendations, seasonal work, warranties, safety, and replacement planning.", icon: "heart.text.clipboard")
+                }
+            }
+
+            Section("Records & People") {
+                NavigationLink { HomeHistoryView() } label: {
+                    hubRow(title: "Home History", subtitle: "Repairs, purchases, installations, replacements, inspections, and completed projects.", icon: "clock.arrow.circlepath")
+                }
+                NavigationLink { VendorsListView() } label: {
+                    hubRow(title: "Vendors", subtitle: "Keep the people and companies who have worked on your home connected to the record.", icon: "person.2")
+                }
             }
         }
         .navigationTitle("My Home")
-        .sheet(isPresented: $showAddMaintenance) { NavigationStack { MaintenanceRecordFormView() } }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if let home = homes.first {
+                    NavigationLink { HomeProfileView() } label: { Image(systemName: "house") }
+                        .accessibilityLabel("Home Profile")
+                }
+                Menu {
+                    Button { showAddHistory = true } label: { Label("Home History Event", systemImage: "clock.badge.plus") }
+                    NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView() } }
+    }
+
+    @ViewBuilder
+    private func hubRow(title: String, subtitle: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .frame(width: 28)
+                .foregroundStyle(Color.accentColor)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 3)
     }
 }
 
@@ -216,6 +262,9 @@ struct RoomDetailView: View {
                 LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
                 if warrantyAlerts > 0 { Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark").foregroundStyle(.orange) }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
+                Text("Use + above to add a project, task, system, device, fixture, or finish already connected to this area.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Projects") {
@@ -233,9 +282,6 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddProject = true } label: {
-                    Label("Add Project for This Area", systemImage: "plus")
-                }
             }
 
             Section("Paint & Finishes") {
@@ -248,38 +294,27 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddPaint = true } label: {
-                    Label("Add Paint / Finish", systemImage: "plus")
-                }
             }
 
             Section("Home Systems") {
                 if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
                 ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
-                Button { showAddSystem = true } label: { Label("Add Home System", systemImage: "plus") }
             }
 
-            Section("Appliances, Electronics & Equipment") {
+            Section("Devices & Equipment") {
                 if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
-                Button { showAddAppliance = true } label: {
-                    Label("Add Device / Equipment", systemImage: "plus")
-                }
             }
 
             Section("Fixtures") {
                 if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
                 ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
-                Button { showAddFixture = true } label: { Label("Add Fixture", systemImage: "plus") }
             }
 
             Section("Tasks") {
                 if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
-                }
-                Button { showAddTask = true } label: {
-                    Label("Add Task for This Area", systemImage: "plus")
                 }
             }
 
@@ -293,8 +328,20 @@ struct RoomDetailView: View {
         }
         .navigationTitle(room.name)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink("Edit") { RoomFormView(existing: room) }
+                Menu {
+                    Button { showAddProject = true } label: { Label("Project", systemImage: "hammer") }
+                    Button { showAddTask = true } label: { Label("Task", systemImage: "checkmark.circle") }
+                    Divider()
+                    Button { showAddSystem = true } label: { Label("Home System", systemImage: "wrench.and.screwdriver") }
+                    Button { showAddAppliance = true } label: { Label("Device / Equipment", systemImage: "refrigerator") }
+                    Button { showAddFixture = true } label: { Label("Fixture", systemImage: "lightbulb") }
+                    Button { showAddPaint = true } label: { Label("Paint / Finish", systemImage: "paintbrush") }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add to This Area")
             }
         }
         .sheet(isPresented: $showAddProject) { NavigationStack { ProjectFormView(initialRoom: room) } }
@@ -371,7 +418,7 @@ struct SystemDetailView: View {
                 if !system.website.isEmpty, let url = normalizedURL(system.website) { Link(destination: url) { Label("Open Website", systemImage: "safari") } }
             }
             Section("Tasks") { if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }; ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }; Button { showAddTask = true } label: { Label("Add Task for This System", systemImage: "plus") } }
-            Section("Maintenance History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
+            Section("Home History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
             AttachmentSection(owner: .system(system))
             if !system.notes.isEmpty { Section("Notes") { Text(system.notes) } }
         }.navigationTitle(system.name)
@@ -403,7 +450,7 @@ struct ApplianceDetailView: View {
     private var linkedHistory: [MaintenanceRecord] { history.filter { $0.relatedItemName.localizedCaseInsensitiveContains(appliance.name) } }
     var body: some View {
         List {
-            Section("Appliance / Electronics / Equipment") {
+            Section("Device / Equipment") {
                 if !appliance.category.isEmpty { LabeledContent("Category", value: appliance.category) }
                 if !appliance.manufacturer.isEmpty { LabeledContent("Manufacturer", value: appliance.manufacturer) }
                 if !appliance.model.isEmpty { LabeledContent("Model", value: appliance.model) }
@@ -424,7 +471,7 @@ struct ApplianceDetailView: View {
                 if !appliance.productRegistrationLink.isEmpty, let url = normalizedURL(appliance.productRegistrationLink) { Link("Product Registration", destination: url) }
             }
             Section("Tasks") { if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }; ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }; Button { showAddTask = true } label: { Label("Add Task for This Device", systemImage: "plus") } }
-            Section("Maintenance History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
+            Section("Home History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
             AttachmentSection(owner: .appliance(appliance))
             if !appliance.notes.isEmpty { Section("Notes") { Text(appliance.notes) } }
         }.navigationTitle(appliance.name)
@@ -582,7 +629,7 @@ struct VendorRow: View { let vendor: Vendor; var body: some View { VStack(alignm
 struct MaintenanceHistoryView: View {
     @Query(sort: \MaintenanceRecord.date, order: .reverse) private var records: [MaintenanceRecord]
     @State private var showAdd = false
-    var body: some View { List { if records.isEmpty { ContentUnavailableView("No maintenance history", systemImage: "clock.arrow.circlepath", description: Text("Completed tasks and manually entered work will appear here.")) }; ForEach(records) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }.navigationTitle("Maintenance History").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { MaintenanceRecordFormView() } } }
+    var body: some View { List { if records.isEmpty { ContentUnavailableView("No home history", systemImage: "clock.arrow.circlepath", description: Text("Completed tasks and manually entered work will appear here.")) }; ForEach(records) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }.navigationTitle("Home History").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { MaintenanceRecordFormView() } } }
 }
 
 struct MaintenanceRecordRow: View { let record: MaintenanceRecord; var body: some View { VStack(alignment: .leading, spacing: 4) { Text(record.title).font(.headline); Text(record.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary); if !record.vendorName.isEmpty { Text(record.vendorName).font(.subheadline) }; if let cost = record.cost { Text(cost.formatted(AppFormatting.currency)).font(.subheadline.weight(.semibold)) } }.padding(.vertical, 2) } }
