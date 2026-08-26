@@ -64,6 +64,7 @@ struct RecommendedMaintenanceView: View {
     @Query(sort: \Fixture.name) private var fixtures: [Fixture]
     @Query private var detectors: [Detector]
     @Query private var consumables: [Consumable]
+    @State private var showHomeSignals = false
 
     private var recommendations: [SmartMaintenanceRecommendation] {
         var result: [SmartMaintenanceRecommendation] = []
@@ -292,27 +293,18 @@ struct RecommendedMaintenanceView: View {
     var body: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Based on your actual home", systemImage: "sparkles")
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Personalized to this home", systemImage: "sparkles")
                         .font(.headline)
-                    Text("Home Maintainer now reads your recorded systems, devices, fixtures, safety equipment, consumables, and exterior areas to suggest maintenance that fits this home. Add or edit an item in My Home and these recommendations update automatically.")
+                    Text("These suggestions are generated from the systems, devices, fixtures, safety equipment, consumables, and exterior areas you have recorded.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
 
                 NavigationLink { MyHomeView() } label: {
                     Label("Review My Home Inventory", systemImage: "house")
                 }
-            }
-
-            Section("Home Signals") {
-                signalRow("Home Systems", systems.count, "gearshape.2")
-                signalRow("Devices / Equipment", appliances.count, "washer")
-                signalRow("Fixtures", fixtures.count, "wrench.and.screwdriver")
-                signalRow("Exterior / Property Areas", rooms.filter { $0.areaType == .exterior }.count, "leaf")
-                signalRow("Safety Detectors", detectors.count, "sensor")
-                signalRow("Consumables", consumables.count, "shippingbox")
             }
 
             Section("Recommended for This Home") {
@@ -332,6 +324,64 @@ struct RecommendedMaintenanceView: View {
                     }
                 } footer: {
                     Text("This uses the suggested dates shown above. Open an individual recommendation instead if you want to review or change its schedule first.")
+                }
+            }
+
+            Section {
+                DisclosureGroup(isExpanded: $showHomeSignals) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        signalLink(
+                            title: "Home Systems",
+                            count: systems.count,
+                            icon: "gearshape.2",
+                            explanation: "Used to identify service, filter, inspection, and replacement needs."
+                        ) { SystemsListView() }
+                        Divider().padding(.leading, 36)
+                        signalLink(
+                            title: "Devices & Equipment",
+                            count: appliances.count,
+                            icon: "washer",
+                            explanation: "Used to suggest care for appliances, electronics, tools, and equipment."
+                        ) { AppliancesListView() }
+                        Divider().padding(.leading, 36)
+                        signalLink(
+                            title: "Fixtures",
+                            count: fixtures.count,
+                            icon: "wrench.and.screwdriver",
+                            explanation: fixtures.isEmpty
+                                ? "None recorded. Add faucets, toilets, lighting, and other fixtures for room-specific maintenance and warranty tracking."
+                                : "Used for room-specific maintenance, warranty tracking, and plumbing/fixture inspections."
+                        ) { FixturesListView() }
+                        Divider().padding(.leading, 36)
+                        signalLink(
+                            title: "Exterior / Property Areas",
+                            count: rooms.filter { $0.areaType == .exterior }.count,
+                            icon: "leaf",
+                            explanation: "Used to identify seasonal inspections for roofs, drainage, decks, patios, and other exterior spaces."
+                        ) { RoomsListView() }
+                        Divider().padding(.leading, 36)
+                        signalLink(
+                            title: "Safety Detectors",
+                            count: detectors.count,
+                            icon: "sensor",
+                            explanation: "Used to track testing, batteries, and replacement dates."
+                        ) { DetectorsListView() }
+                        Divider().padding(.leading, 36)
+                        signalLink(
+                            title: "Consumables",
+                            count: consumables.count,
+                            icon: "shippingbox",
+                            explanation: "Used for filters, cartridges, batteries, and other replaceable items with recurring dates."
+                        ) { ConsumablesListView() }
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label("Why am I seeing these?", systemImage: "info.circle")
+                            .font(.headline)
+                        Text("See what Home Maintainer found in your inventory and how each type of record affects these recommendations.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -395,12 +445,36 @@ struct RecommendedMaintenanceView: View {
     }
 
     @ViewBuilder
-    private func signalRow(_ title: String, _ count: Int, _ icon: String) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-            Spacer()
-            Text(String(count)).foregroundStyle(.secondary)
+    private func signalLink<Destination: View>(
+        title: String,
+        count: Int,
+        icon: String,
+        explanation: String,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink(destination: destination()) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon)
+                    .frame(width: 24)
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text("\(count) recorded")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(explanation)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 9)
         }
+        .buttonStyle(.plain)
     }
 
     private func add(_ recommendation: SmartMaintenanceRecommendation) {

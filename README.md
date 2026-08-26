@@ -104,6 +104,15 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Standardized visible naming so electronics/appliances/tools are presented consistently as Devices & Equipment, while their detailed type/category remains available inside each record.
 
 
+
+## v0.18.1 — Recommended Maintenance clarity
+
+- Keeps all v0.18 workflow-hardening and transfer-integrity changes.
+- Moves actual recommendations ahead of inventory diagnostics.
+- Replaces the unexplained Home Signals count list with a collapsed “Why am I seeing these?” section.
+- Explains how each inventory type affects recommendations and makes each row a shortcut to the relevant My Home records.
+- Shortens the introductory copy so personalized maintenance appears sooner on screen.
+
 ## v0.18 — Workflow hardening
 - Transfer import now checks every data category before deciding a store is empty.
 - Transfer packages receive an integrity check before preview/import; broken relationship IDs are rejected before data is written.

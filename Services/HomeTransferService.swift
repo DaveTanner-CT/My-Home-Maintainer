@@ -310,7 +310,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.18", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.18.1", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(id: roomIDs[$0.persistentModelID]!, name: $0.name, notes: $0.notes, areaType: $0.areaType.rawValue, isFavorite: $0.isFavorite) },
             vendors: vendors.map { .init(id: vendorIDs[$0.persistentModelID]!, businessName: $0.businessName, contactName: $0.contactName, category: $0.category, phone: $0.phone, email: $0.email, website: $0.website, address: $0.address, notes: $0.notes, isFavorite: $0.isFavorite) },
             systems: systems.map { .init(id: systemIDs[$0.persistentModelID]!, name: $0.name, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, location: $0.location, notes: $0.notes, website: $0.website, installationDate: $0.installationDate, warrantyExpiration: $0.warrantyExpiration, purchaseCost: $0.purchaseCost, expectedServiceLifeYears: $0.expectedServiceLifeYears, roomID: rid($0.room, roomIDs), vendorID: rid($0.vendor, vendorIDs), sourceProjectID: rid($0.sourceProject, projectIDs)) },
