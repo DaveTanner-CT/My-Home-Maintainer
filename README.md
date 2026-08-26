@@ -120,3 +120,11 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Task completion validates cost input and reports save failures instead of silently dismissing.
 - Project completion asks for confirmation before closing.
 - Backup copy is clearly distinguished from the supported stable-ID Home Transfer import path.
+
+## v0.19 — Home History stories
+
+- Preserves all v0.18.1 workflow-hardening and Recommended Maintenance clarity changes.
+- Groups the Home History timeline by month and year for easier scanning.
+- Adds Home Stories: connected timelines for rooms/areas, fixtures, devices/equipment, systems, projects, and vendors.
+- Each story summarizes event count, recorded spending, and the years covered.
+- Keeps all existing Home History search/filter/add/edit behavior and direct links to connected records.
