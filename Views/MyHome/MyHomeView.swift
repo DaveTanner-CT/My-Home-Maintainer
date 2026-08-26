@@ -8,6 +8,16 @@ struct MyHomeView: View {
 
     var body: some View {
         List {
+            Section("Set Up & Review") {
+                NavigationLink { HomeSetupView() } label: {
+                    hubRow(
+                        title: "Home Setup",
+                        subtitle: "See what is connected, what may be missing, and the most useful next records to add.",
+                        icon: "checklist.checked"
+                    )
+                }
+            }
+
             Section("Start with a Place") {
                 NavigationLink { RoomsListView() } label: {
                     hubRow(

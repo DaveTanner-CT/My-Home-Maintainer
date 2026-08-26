@@ -93,8 +93,9 @@ struct AppSettingsView: View {
     var body: some View {
         List {
             Section("Home Setup") {
+                NavigationLink { HomeSetupView() } label: { Label("Home Setup", systemImage: "checklist.checked") }
                 NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
-                Text("Home records, maintenance planning, warranties, and history now live under the My Home tab so Settings stays focused on app setup.")
+                Text("Use Home Setup to review the structure and quality of your home record. Maintenance planning, warranties, and history live under My Home.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -120,7 +121,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.16")
+                LabeledContent("Build", value: "0.17")
                 Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

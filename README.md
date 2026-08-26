@@ -92,7 +92,7 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Lets a forecasted replacement become a linked planning project in one tap, carrying its Room/Area and known baseline budget.
 - Replaced the dashboard/settings Replacement Forecast shortcut with Home Outlook while preserving the existing detailed forecast implementation.
 
-## v0.16.1 — UX simplification pass
+## v0.17 — UX simplification pass
 - Reduced dashboard shortcuts to three high-value entry points: Rooms & Areas, Home Care, and Home History.
 - Reorganized My Home around how people think: places, equipment & finishes, care & planning, and records & people.
 - Added Home Care as a focused hub for maintenance, seasonal planning, warranties, replacement outlook, detectors, and consumables.
