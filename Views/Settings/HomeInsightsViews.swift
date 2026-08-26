@@ -217,7 +217,7 @@ struct DataExportView: View {
             }
 
             Section("About this export") {
-                Text("Use this backup archive for safekeeping. For moving a home to another owner, use Home Transfer, which preserves relationships with stable transfer IDs and supports import into a fresh app.")
+                Text("This JSON backup is a readable safety/export copy. The supported restore/import path is Home Transfer, which preserves relationships with stable transfer IDs and validates the package before importing it into a fresh app.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

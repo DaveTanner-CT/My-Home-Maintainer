@@ -6,12 +6,18 @@ struct HomeTransferView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var homes: [Home]
     @Query private var rooms: [Room]
+    @Query private var vendors: [Vendor]
     @Query private var systems: [HomeSystem]
     @Query private var appliances: [Appliance]
     @Query private var fixtures: [Fixture]
+    @Query private var paints: [PaintFinish]
     @Query private var projects: [Project]
+    @Query private var projectItems: [ProjectItem]
+    @Query private var measurements: [ProjectMeasurement]
     @Query private var tasks: [MaintenanceTask]
     @Query private var history: [MaintenanceRecord]
+    @Query private var detectors: [Detector]
+    @Query private var consumables: [Consumable]
     @Query private var attachments: [HomeAttachment]
 
     @State private var shareItem: ExportShareItem?
@@ -21,9 +27,10 @@ struct HomeTransferView: View {
     @State private var message: String?
     @State private var importSucceeded = false
     @State private var exportSucceeded = false
+    @State private var showImportConfirmation = false
 
     private var isEmpty: Bool {
-        homes.isEmpty && rooms.isEmpty && systems.isEmpty && appliances.isEmpty && fixtures.isEmpty && projects.isEmpty && tasks.isEmpty && history.isEmpty
+        homes.isEmpty && rooms.isEmpty && vendors.isEmpty && systems.isEmpty && appliances.isEmpty && fixtures.isEmpty && paints.isEmpty && projects.isEmpty && projectItems.isEmpty && measurements.isEmpty && tasks.isEmpty && history.isEmpty && detectors.isEmpty && consumables.isEmpty && attachments.isEmpty
     }
 
     var body: some View {
@@ -85,13 +92,21 @@ struct HomeTransferView: View {
                     LabeledContent("Home", value: p.homeName)
                     if !p.address.isEmpty { LabeledContent("Address", value: p.address) }
                     LabeledContent("Created", value: p.exportedAt.formatted(date: .abbreviated, time: .shortened))
+                    LabeledContent("Package", value: p.packageType)
+                    Label("Integrity check passed", systemImage: "checkmark.shield.fill").foregroundStyle(.green)
+                    let warnings = pendingArchive.map { HomeTransferService.validationWarnings(for: $0) } ?? []
+                    if !warnings.isEmpty {
+                        ForEach(warnings, id: \.self) { warning in
+                            Label(warning, systemImage: "exclamationmark.triangle").font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
                     LabeledContent("Rooms & Areas", value: "\(p.rooms)")
                     LabeledContent("Home Assets", value: "\(p.assets)")
                     LabeledContent("Projects", value: "\(p.projects)")
                     LabeledContent("Tasks", value: "\(p.tasks)")
                     LabeledContent("History Events", value: "\(p.history)")
                     LabeledContent("Files", value: "\(p.attachments)")
-                    Button("Import This Home") { importPending() }
+                    Button("Import This Home") { showImportConfirmation = true }
                         .disabled(!isEmpty || pendingArchive == nil)
                 }
             }
@@ -122,6 +137,12 @@ struct HomeTransferView: View {
                 } catch { message = error.localizedDescription }
             case .failure(let error): message = error.localizedDescription
             }
+        }
+        .confirmationDialog("Import this home?", isPresented: $showImportConfirmation, titleVisibility: .visible) {
+            Button("Import Home", role: .destructive) { importPending() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will create the complete transferred home record in this fresh installation. The import cannot be merged with another home later.")
         }
         .alert(importSucceeded ? "Home Imported" : (exportSucceeded ? "Transfer Saved" : "Home Transfer"), isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil; exportSucceeded = false } })) {
             Button("OK", role: .cancel) { message = nil }

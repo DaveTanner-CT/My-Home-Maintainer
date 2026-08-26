@@ -11,6 +11,7 @@ struct ProjectCompletionView: View {
     @Query private var paints: [PaintFinish]
     @Query private var history: [MaintenanceRecord]
     @State private var completedMessage = false
+    @State private var showCloseConfirmation = false
 
     private var projectItems: [ProjectItem] {
         allItems.filter { $0.project?.persistentModelID == project.persistentModelID && !$0.isIdeaOnly }
@@ -63,7 +64,7 @@ struct ProjectCompletionView: View {
                 if project.stage == .completed {
                     Label("Project completed and preserved in Home History", systemImage: "checkmark.seal.fill").foregroundStyle(.green)
                 } else {
-                    Button { closeProject() } label: { Label("Mark Project Completed", systemImage: "checkmark.seal") }
+                    Button { showCloseConfirmation = true } label: { Label("Mark Project Completed", systemImage: "checkmark.seal") }
                         .disabled(!canCloseProject)
                     if !canCloseProject {
                         Text("Install or save the \(purchased.count) purchased item\(purchased.count == 1 ? "" : "s") above before closing the project. This prevents researched purchases from becoming disconnected from the permanent home record.")
@@ -73,6 +74,12 @@ struct ProjectCompletionView: View {
             }
         }
         .navigationTitle("Install & Finish")
+        .confirmationDialog("Complete this project?", isPresented: $showCloseConfirmation, titleVisibility: .visible) {
+            Button("Mark Completed") { closeProject() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("The project will be preserved in Home History. You can still open and edit the project later.")
+        }
         .alert("Project Completed", isPresented: $completedMessage) { Button("OK", role: .cancel) {} } message: { Text("The project is now part of Home History, and installed items remain linked back to this project.") }
     }
 

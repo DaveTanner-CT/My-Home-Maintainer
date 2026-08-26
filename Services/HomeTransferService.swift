@@ -69,6 +69,7 @@ enum HomeTransferService {
         decoder.dateDecodingStrategy = .iso8601
         let archive = try decoder.decode(HomeTransferArchive.self, from: data)
         guard archive.formatVersion == 1 else { throw TransferError.unsupportedVersion }
+        try validateForImport(archive)
         return archive
     }
 
@@ -87,21 +88,94 @@ enum HomeTransferService {
         )
     }
 
+    static func validationWarnings(for archive: HomeTransferArchive) -> [String] {
+        var warnings: [String] = []
+        if archive.home == nil { warnings.append("The package does not contain a home profile.") }
+        if archive.rooms.isEmpty { warnings.append("No rooms or areas are included.") }
+        if archive.attachments.contains(where: { !$0.ownerType.isEmpty && $0.ownerID == nil }) {
+            warnings.append("At least one attachment has no connected owner and will import as an unassigned file.")
+        }
+        return warnings
+    }
+
+    static func validateForImport(_ archive: HomeTransferArchive) throws {
+        func requireUnique(_ ids: [String], label: String) throws {
+            if Set(ids).count != ids.count { throw TransferError.invalidArchive("Duplicate IDs were found in \(label).") }
+            if ids.contains(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                throw TransferError.invalidArchive("A blank ID was found in \(label).")
+            }
+        }
+        try requireUnique(archive.rooms.map(\.id), label: "rooms")
+        try requireUnique(archive.vendors.map(\.id), label: "vendors")
+        try requireUnique(archive.projects.map(\.id), label: "projects")
+        try requireUnique(archive.systems.map(\.id), label: "systems")
+        try requireUnique(archive.appliances.map(\.id), label: "devices and equipment")
+        try requireUnique(archive.fixtures.map(\.id), label: "fixtures")
+        try requireUnique(archive.paints.map(\.id), label: "paint and finishes")
+        try requireUnique(archive.projectItems.map(\.id), label: "project items")
+        try requireUnique(archive.tasks.map(\.id), label: "tasks")
+        try requireUnique(archive.history.map(\.id), label: "history")
+        try requireUnique(archive.attachments.map(\.id), label: "attachments")
+
+        let roomIDs = Set(archive.rooms.map(\.id))
+        let vendorIDs = Set(archive.vendors.map(\.id))
+        let projectIDs = Set(archive.projects.map(\.id))
+        let systemIDs = Set(archive.systems.map(\.id))
+        let applianceIDs = Set(archive.appliances.map(\.id))
+        let fixtureIDs = Set(archive.fixtures.map(\.id))
+        let paintIDs = Set(archive.paints.map(\.id))
+        let itemIDs = Set(archive.projectItems.map(\.id))
+        let taskIDs = Set(archive.tasks.map(\.id))
+        let historyIDs = Set(archive.history.map(\.id))
+        let detectorIDs = Set(archive.detectors.map(\.id))
+        let consumableIDs = Set(archive.consumables.map(\.id))
+
+        func valid(_ id: String?, in set: Set<String>) -> Bool { id == nil || set.contains(id!) }
+        guard archive.systems.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.vendorID, in: vendorIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A home-system relationship points to a missing record.") }
+        guard archive.appliances.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A device or equipment relationship points to a missing record.") }
+        guard archive.fixtures.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.vendorID, in: vendorIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A fixture relationship points to a missing record.") }
+        guard archive.paints.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A paint relationship points to a missing record.") }
+        guard archive.projects.allSatisfy({ valid($0.roomID, in: roomIDs) }) else { throw TransferError.invalidArchive("A project points to a missing room or area.") }
+        guard archive.projectItems.allSatisfy({ projectIDs.contains($0.projectID) }) else { throw TransferError.invalidArchive("A project item points to a missing project.") }
+        guard archive.measurements.allSatisfy({ projectIDs.contains($0.projectID) }) else { throw TransferError.invalidArchive("A measurement points to a missing project.") }
+        guard archive.tasks.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.systemID, in: systemIDs) && valid($0.applianceID, in: applianceIDs) && valid($0.fixtureID, in: fixtureIDs) && valid($0.projectID, in: projectIDs) && valid($0.vendorID, in: vendorIDs) }) else { throw TransferError.invalidArchive("A task relationship points to a missing record.") }
+        guard archive.history.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.systemID, in: systemIDs) && valid($0.applianceID, in: applianceIDs) && valid($0.fixtureID, in: fixtureIDs) && valid($0.projectID, in: projectIDs) && valid($0.vendorID, in: vendorIDs) }) else { throw TransferError.invalidArchive("A history relationship points to a missing record.") }
+
+        let owners: [String: Set<String>] = [
+            "room": roomIDs, "vendor": vendorIDs, "system": systemIDs, "appliance": applianceIDs,
+            "fixture": fixtureIDs, "paint": paintIDs, "project": projectIDs, "projectItem": itemIDs,
+            "task": taskIDs, "history": historyIDs, "detector": detectorIDs, "consumable": consumableIDs
+        ]
+        for attachment in archive.attachments where !attachment.ownerType.isEmpty {
+            guard let ownerID = attachment.ownerID, let allowed = owners[attachment.ownerType], allowed.contains(ownerID) else {
+                throw TransferError.invalidArchive("An attachment points to a missing or unsupported owner.")
+            }
+        }
+    }
+
     static func isStoreEmpty(context: ModelContext) throws -> Bool {
         let counts = [
             try context.fetchCount(FetchDescriptor<Home>()),
             try context.fetchCount(FetchDescriptor<Room>()),
+            try context.fetchCount(FetchDescriptor<Vendor>()),
             try context.fetchCount(FetchDescriptor<HomeSystem>()),
             try context.fetchCount(FetchDescriptor<Appliance>()),
             try context.fetchCount(FetchDescriptor<Fixture>()),
+            try context.fetchCount(FetchDescriptor<PaintFinish>()),
             try context.fetchCount(FetchDescriptor<Project>()),
+            try context.fetchCount(FetchDescriptor<ProjectItem>()),
+            try context.fetchCount(FetchDescriptor<ProjectMeasurement>()),
             try context.fetchCount(FetchDescriptor<MaintenanceTask>()),
-            try context.fetchCount(FetchDescriptor<MaintenanceRecord>())
+            try context.fetchCount(FetchDescriptor<MaintenanceRecord>()),
+            try context.fetchCount(FetchDescriptor<Detector>()),
+            try context.fetchCount(FetchDescriptor<Consumable>()),
+            try context.fetchCount(FetchDescriptor<HomeAttachment>())
         ]
         return counts.allSatisfy { $0 == 0 }
     }
 
     static func importIntoEmptyStore(_ archive: HomeTransferArchive, context: ModelContext) throws {
+        try validateForImport(archive)
         guard try isStoreEmpty(context: context) else { throw TransferError.storeNotEmpty }
 
         var rooms: [String: Room] = [:]
@@ -236,7 +310,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.12", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.18", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(id: roomIDs[$0.persistentModelID]!, name: $0.name, notes: $0.notes, areaType: $0.areaType.rawValue, isFavorite: $0.isFavorite) },
             vendors: vendors.map { .init(id: vendorIDs[$0.persistentModelID]!, businessName: $0.businessName, contactName: $0.contactName, category: $0.category, phone: $0.phone, email: $0.email, website: $0.website, address: $0.address, notes: $0.notes, isFavorite: $0.isFavorite) },
             systems: systems.map { .init(id: systemIDs[$0.persistentModelID]!, name: $0.name, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, location: $0.location, notes: $0.notes, website: $0.website, installationDate: $0.installationDate, warrantyExpiration: $0.warrantyExpiration, purchaseCost: $0.purchaseCost, expectedServiceLifeYears: $0.expectedServiceLifeYears, roomID: rid($0.room, roomIDs), vendorID: rid($0.vendor, vendorIDs), sourceProjectID: rid($0.sourceProject, projectIDs)) },
@@ -258,10 +332,12 @@ enum HomeTransferService {
 enum TransferError: LocalizedError {
     case unsupportedVersion
     case storeNotEmpty
+    case invalidArchive(String)
     var errorDescription: String? {
         switch self {
         case .unsupportedVersion: return "This transfer package was created by an unsupported archive format."
         case .storeNotEmpty: return "For safety, a home transfer can only be imported into a fresh Home Maintainer data store."
+        case .invalidArchive(let detail): return "This transfer package did not pass its integrity check. \(detail)"
         }
     }
 }

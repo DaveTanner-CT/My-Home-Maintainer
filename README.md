@@ -102,3 +102,12 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Moved task filters into a toolbar menu to reduce visual clutter.
 - Standardized user-facing terminology around Devices & Equipment, Installed in My Home, Home Care, and Home History.
 - Standardized visible naming so electronics/appliances/tools are presented consistently as Devices & Equipment, while their detailed type/category remains available inside each record.
+
+
+## v0.18 — Workflow hardening
+- Transfer import now checks every data category before deciding a store is empty.
+- Transfer packages receive an integrity check before preview/import; broken relationship IDs are rejected before data is written.
+- Import requires an explicit final confirmation.
+- Task completion validates cost input and reports save failures instead of silently dismissing.
+- Project completion asks for confirmation before closing.
+- Backup copy is clearly distinguished from the supported stable-ID Home Transfer import path.
