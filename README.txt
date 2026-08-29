@@ -36,3 +36,11 @@ Important:
 - Photo descriptions can be edited through View / Edit Description.
 - Photos can be deleted; the Drive file is moved to trash and the DesignRecords row is removed.
 - The six dimension columns are added automatically the first time room dimensions are saved. Running PDS_initializeDataModel() also adds them safely.
+
+
+2026-08-29 Room UI refinement:
+- Room dimensions now use a Feet / Meters selector with decimal Length, Width, and Ceiling Height fields.
+- The selected unit is saved per room. Existing dimensions remain compatible.
+- Room photos now appear directly under Area/Dimensions as clickable thumbnails only.
+- Photo filenames/titles/descriptions are not shown in the room grid; details remain available in the photo viewer/editor.
+- Thumbnail grid is 3 columns on wider screens and 2 columns on narrower screens.

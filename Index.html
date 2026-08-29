@@ -981,78 +981,60 @@
       >×</button>
     </div>
 
-    <section class="room-detail-section room-dimensions-section">
-      <div class="section-heading compact-heading">
+    <section class="room-detail-section room-area-section">
+      <div class="section-heading compact-heading room-area-heading">
         <div>
-          <p class="eyebrow">ROOM SIZE</p>
-          <h3>Dimensions</h3>
+          <p class="eyebrow">AREA</p>
+          <h3>Room Dimensions</h3>
         </div>
-        <div id="roomSquareFootage" class="room-square-footage">—</div>
+        <div class="room-area-heading-actions">
+          <label class="room-unit-picker" for="roomDimensionUnit">
+            <span>Units</span>
+            <select id="roomDimensionUnit" onchange="changeRoomDimensionUnit()">
+              <option value="feet">Feet</option>
+              <option value="meters">Meters</option>
+            </select>
+          </label>
+          <div id="roomSquareFootage" class="room-square-footage">—</div>
+        </div>
       </div>
 
       <form id="roomDimensionsForm" onsubmit="submitRoomDimensions(event)">
-        <div class="room-dimension-grid">
-          <div class="dimension-group">
-            <strong>Length</strong>
-            <div class="dimension-inputs">
-              <label class="field dimension-field">
-                <span>Feet</span>
-                <input id="roomLengthFeet" type="number" min="0" step="1" inputmode="numeric">
-              </label>
-              <label class="field dimension-field">
-                <span>Inches</span>
-                <input id="roomLengthInches" type="number" min="0" max="11.99" step="0.01" inputmode="decimal">
-              </label>
-            </div>
-          </div>
+        <div class="room-dimension-grid compact-dimension-grid">
+          <label class="field dimension-field dimension-single-field">
+            <span>Length (<span id="roomLengthUnitLabel">ft</span>)</span>
+            <input id="roomLengthValue" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+          </label>
 
-          <div class="dimension-group">
-            <strong>Width</strong>
-            <div class="dimension-inputs">
-              <label class="field dimension-field">
-                <span>Feet</span>
-                <input id="roomWidthFeet" type="number" min="0" step="1" inputmode="numeric">
-              </label>
-              <label class="field dimension-field">
-                <span>Inches</span>
-                <input id="roomWidthInches" type="number" min="0" max="11.99" step="0.01" inputmode="decimal">
-              </label>
-            </div>
-          </div>
+          <label class="field dimension-field dimension-single-field">
+            <span>Width (<span id="roomWidthUnitLabel">ft</span>)</span>
+            <input id="roomWidthValue" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+          </label>
 
-          <div class="dimension-group">
-            <strong>Ceiling Height</strong>
-            <div class="dimension-inputs">
-              <label class="field dimension-field">
-                <span>Feet</span>
-                <input id="roomCeilingFeet" type="number" min="0" step="1" inputmode="numeric">
-              </label>
-              <label class="field dimension-field">
-                <span>Inches</span>
-                <input id="roomCeilingInches" type="number" min="0" max="11.99" step="0.01" inputmode="decimal">
-              </label>
-            </div>
-          </div>
+          <label class="field dimension-field dimension-single-field">
+            <span>Ceiling Height (<span id="roomCeilingUnitLabel">ft</span>)</span>
+            <input id="roomCeilingValue" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+          </label>
         </div>
 
         <div class="room-dimension-actions">
-          <span class="field-help">Square footage is calculated from length × width.</span>
+          <span id="roomDimensionHelp" class="field-help">Area is calculated from length × width.</span>
           <button id="saveRoomDimensionsButton" type="submit" class="secondary-button">Save Dimensions</button>
         </div>
       </form>
-    </section>
 
-    <section class="room-detail-section">
-      <div class="section-heading compact-heading">
-        <div>
-          <p class="eyebrow">ROOM REFERENCE</p>
-          <h3>Photos</h3>
+      <div class="room-photo-subsection">
+        <div class="section-heading compact-heading room-photo-heading">
+          <div>
+            <p class="eyebrow">ROOM PHOTOS</p>
+            <h3>Photos</h3>
+          </div>
+          <button type="button" class="primary-button" onclick="openRoomPhotoModal()">+ Add Photos</button>
         </div>
-        <button type="button" class="primary-button" onclick="openRoomPhotoModal()">+ Add Photos</button>
-      </div>
 
-      <div id="roomPhotoGallery" class="room-photo-gallery">
-        <div class="room-photo-empty">Loading photos…</div>
+        <div id="roomPhotoGallery" class="room-photo-gallery">
+          <div class="room-photo-empty">Loading photos…</div>
+        </div>
       </div>
     </section>
   </div>

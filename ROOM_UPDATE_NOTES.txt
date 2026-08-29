@@ -42,3 +42,11 @@ DATA COLUMNS ADDED TO ROOMS
 
 APP VERSION
 - Updated from 0.3.0 to 0.3.1
+
+
+2026-08-29 Room UI refinement:
+- Room dimensions now use a Feet / Meters selector with decimal Length, Width, and Ceiling Height fields.
+- The selected unit is saved per room. Existing dimensions remain compatible.
+- Room photos now appear directly under Area/Dimensions as clickable thumbnails only.
+- Photo filenames/titles/descriptions are not shown in the room grid; details remain available in the photo viewer/editor.
+- Thumbnail grid is 3 columns on wider screens and 2 columns on narrower screens.

@@ -3111,14 +3111,12 @@ function renderRoomDetail() {
   setText('roomDetailName', room.roomName || 'Room');
   setText('roomDetailType', room.roomType || 'Project area');
 
-  setInputValue('roomLengthFeet', room.lengthFeet);
-  setInputValue('roomLengthInches', room.lengthInches);
-  setInputValue('roomWidthFeet', room.widthFeet);
-  setInputValue('roomWidthInches', room.widthInches);
-  setInputValue('roomCeilingFeet', room.ceilingHeightFeet);
-  setInputValue('roomCeilingInches', room.ceilingHeightInches);
+  const unitSelect = document.getElementById('roomDimensionUnit');
+  if (unitSelect) unitSelect.value = room.dimensionUnit === 'meters' ? 'meters' : 'feet';
 
-  updateRoomSquareFootage();
+  populateRoomDimensionInputs(room);
+  updateRoomDimensionLabels();
+  updateRoomArea();
   renderRoomPhotoGallery();
 }
 
@@ -3128,34 +3126,83 @@ function setInputValue(id, inputValue) {
   el.value = inputValue === '' || inputValue === null || typeof inputValue === 'undefined' ? '' : inputValue;
 }
 
-function dimensionInFeet(feetId, inchesId) {
-  const feetRaw = document.getElementById(feetId)?.value;
-  const inchesRaw = document.getElementById(inchesId)?.value;
-  const feet = feetRaw === '' ? 0 : Number(feetRaw);
-  const inches = inchesRaw === '' ? 0 : Number(inchesRaw);
-  if (!Number.isFinite(feet) || !Number.isFinite(inches)) return 0;
-  return feet + (inches / 12);
+function roomStoredFeet(feet, inches) {
+  const f = Number(feet || 0);
+  const i = Number(inches || 0);
+  return (Number.isFinite(f) ? f : 0) + ((Number.isFinite(i) ? i : 0) / 12);
 }
 
-function updateRoomSquareFootage() {
-  const length = dimensionInFeet('roomLengthFeet', 'roomLengthInches');
-  const width = dimensionInFeet('roomWidthFeet', 'roomWidthInches');
+function displayDimensionFromFeet(feetValue, unit) {
+  if (!(feetValue > 0)) return '';
+  const converted = unit === 'meters' ? feetValue * 0.3048 : feetValue;
+  return String(Math.round(converted * 100) / 100);
+}
+
+function populateRoomDimensionInputs(room) {
+  const unit = document.getElementById('roomDimensionUnit')?.value || 'feet';
+  setInputValue('roomLengthValue', displayDimensionFromFeet(roomStoredFeet(room.lengthFeet, room.lengthInches), unit));
+  setInputValue('roomWidthValue', displayDimensionFromFeet(roomStoredFeet(room.widthFeet, room.widthInches), unit));
+  setInputValue('roomCeilingValue', displayDimensionFromFeet(roomStoredFeet(room.ceilingHeightFeet, room.ceilingHeightInches), unit));
+}
+
+function updateRoomDimensionLabels() {
+  const unit = document.getElementById('roomDimensionUnit')?.value || 'feet';
+  const shortUnit = unit === 'meters' ? 'm' : 'ft';
+  setText('roomLengthUnitLabel', shortUnit);
+  setText('roomWidthUnitLabel', shortUnit);
+  setText('roomCeilingUnitLabel', shortUnit);
+  setText('roomDimensionHelp', `Area is calculated from length × width in ${unit === 'meters' ? 'square meters' : 'square feet'}.`);
+}
+
+function changeRoomDimensionUnit() {
+  const room = appState.currentRoomDetail?.room || {};
+  populateRoomDimensionInputs(room);
+  updateRoomDimensionLabels();
+  updateRoomArea();
+}
+
+function roomDimensionValue(id) {
+  const raw = document.getElementById(id)?.value;
+  if (raw === '' || raw === null || typeof raw === 'undefined') return 0;
+  const number = Number(raw);
+  return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
+function updateRoomArea() {
+  const length = roomDimensionValue('roomLengthValue');
+  const width = roomDimensionValue('roomWidthValue');
+  const unit = document.getElementById('roomDimensionUnit')?.value || 'feet';
   const output = document.getElementById('roomSquareFootage');
   if (!output) return;
 
   if (length > 0 && width > 0) {
-    const sqft = length * width;
-    output.textContent = `${sqft.toFixed(sqft >= 100 ? 0 : 1)} sq ft`;
+    const area = length * width;
+    const rounded = area >= 100 ? area.toFixed(0) : area.toFixed(1);
+    output.textContent = unit === 'meters' ? `${rounded} m²` : `${rounded} sq ft`;
   } else {
     output.textContent = '—';
   }
 }
 
-['roomLengthFeet','roomLengthInches','roomWidthFeet','roomWidthInches'].forEach(id => {
+['roomLengthValue','roomWidthValue'].forEach(id => {
   document.addEventListener('input', event => {
-    if (event.target && event.target.id === id) updateRoomSquareFootage();
+    if (event.target && event.target.id === id) updateRoomArea();
   });
 });
+
+function decimalFeetToParts(value, unit) {
+  if (value === '' || value === null || typeof value === 'undefined') return { feet: '', inches: '' };
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) throw new Error('Room dimensions must be positive numbers.');
+  const totalFeet = unit === 'meters' ? n / 0.3048 : n;
+  let feet = Math.floor(totalFeet);
+  let inches = Math.round((totalFeet - feet) * 12 * 100) / 100;
+  if (inches >= 12) {
+    feet += 1;
+    inches = 0;
+  }
+  return { feet, inches };
+}
 
 async function submitRoomDimensions(event) {
   event.preventDefault();
@@ -3165,14 +3212,20 @@ async function submitRoomDimensions(event) {
   setButtonBusy(button, true, 'Saving…');
 
   try {
+    const unit = document.getElementById('roomDimensionUnit')?.value === 'meters' ? 'meters' : 'feet';
+    const length = decimalFeetToParts(value('roomLengthValue'), unit);
+    const width = decimalFeetToParts(value('roomWidthValue'), unit);
+    const ceiling = decimalFeetToParts(value('roomCeilingValue'), unit);
+
     const updatedRoom = await serverCall('PDS_updateRoomDimensions', {
       roomId: appState.currentRoomId,
-      lengthFeet: value('roomLengthFeet'),
-      lengthInches: value('roomLengthInches'),
-      widthFeet: value('roomWidthFeet'),
-      widthInches: value('roomWidthInches'),
-      ceilingHeightFeet: value('roomCeilingFeet'),
-      ceilingHeightInches: value('roomCeilingInches')
+      dimensionUnit: unit,
+      lengthFeet: length.feet,
+      lengthInches: length.inches,
+      widthFeet: width.feet,
+      widthInches: width.inches,
+      ceilingHeightFeet: ceiling.feet,
+      ceilingHeightInches: ceiling.inches
     });
 
     if (appState.currentRoomDetail) appState.currentRoomDetail.room = updatedRoom;
@@ -3180,7 +3233,9 @@ async function submitRoomDimensions(event) {
     const roomInProject = (appState.currentProjectData?.rooms || []).find(item => String(item.roomId) === String(updatedRoom.roomId));
     if (roomInProject) Object.assign(roomInProject, updatedRoom);
 
-    updateRoomSquareFootage();
+    populateRoomDimensionInputs(updatedRoom);
+    updateRoomDimensionLabels();
+    updateRoomArea();
     showToast('Room dimensions saved');
   } catch (error) {
     showToast(getErrorMessage(error), true);
@@ -3205,22 +3260,16 @@ function renderRoomPhotoGallery() {
   }
 
   gallery.innerHTML = photos.map(photo => `
-    <article class="room-photo-card">
-      <button
-        type="button"
-        class="room-photo-thumb"
-        onclick="openDesignRecordViewer('${escapeHtml(photo.designRecordId)}')"
-        aria-label="Open ${escapeHtml(photo.title || 'room photo')}"
-      >
-        ${photo.thumbnailUrl ? `<img src="${escapeHtml(photo.thumbnailUrl)}" alt="${escapeHtml(photo.title || '')}" loading="lazy">` : '<span class="room-photo-placeholder">📷</span>'}
-        <span class="room-photo-enlarge">Enlarge</span>
-      </button>
-      <div class="room-photo-caption">
-        <strong>${escapeHtml(photo.title || 'Room Photo')}</strong>
-        <p>${photo.description ? escapeHtml(photo.description) : '<span class="room-photo-no-caption">No description added.</span>'}</p>
-        <button type="button" class="text-button" onclick="openDesignRecordViewer('${escapeHtml(photo.designRecordId)}')">View / Edit Description</button>
-      </div>
-    </article>
+    <button
+      type="button"
+      class="room-photo-thumb room-photo-grid-item"
+      onclick="openDesignRecordViewer('${escapeHtml(photo.designRecordId)}')"
+      aria-label="Open room photo${photo.description ? ': ' + escapeHtml(photo.description) : ''}"
+      title="${escapeHtml(photo.description || 'Open photo')}"
+    >
+      ${photo.thumbnailUrl ? `<img src="${escapeHtml(photo.thumbnailUrl)}" alt="${escapeHtml(photo.description || 'Room photo')}" loading="lazy">` : '<span class="room-photo-placeholder">📷</span>'}
+      <span class="room-photo-enlarge">Enlarge</span>
+    </button>
   `).join('');
 }
 

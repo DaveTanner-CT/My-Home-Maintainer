@@ -11,7 +11,7 @@ function PDS_createRoom(roomData) {
     RoomType: String(roomData.roomType || '').trim(), SortOrder: roomCount + 1,
     Notes: String(roomData.notes || '').trim(),
     LengthFeet: '', LengthInches: '', WidthFeet: '', WidthInches: '',
-    CeilingHeightFeet: '', CeilingHeightInches: '',
+    CeilingHeightFeet: '', CeilingHeightInches: '', DimensionUnit: 'feet',
     CreatedDate: now, LastUpdatedDate: now
   };
   PDS_appendRecord_(PDS.SHEETS.ROOMS, record);
@@ -68,6 +68,7 @@ function PDS_updateRoomDimensions(data) {
     WidthInches: cleanInches(data.widthInches),
     CeilingHeightFeet: cleanWhole(data.ceilingHeightFeet),
     CeilingHeightInches: cleanInches(data.ceilingHeightInches),
+    DimensionUnit: String(data.dimensionUnit || 'feet') === 'meters' ? 'meters' : 'feet',
     LastUpdatedDate: new Date()
   };
 
@@ -79,7 +80,7 @@ function PDS_updateRoomDimensions(data) {
 function PDS_ensureRoomDimensionColumns_() {
   const sheet = PDS_getSheet_(PDS.SHEETS.ROOMS);
   const existing = PDS_getHeaders_(PDS.SHEETS.ROOMS);
-  const required = ['LengthFeet','LengthInches','WidthFeet','WidthInches','CeilingHeightFeet','CeilingHeightInches'];
+  const required = ['LengthFeet','LengthInches','WidthFeet','WidthInches','CeilingHeightFeet','CeilingHeightInches','DimensionUnit'];
   const missing = required.filter(header => !existing.includes(header));
   if (missing.length) {
     sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
@@ -101,6 +102,7 @@ function PDS_serializeRoom_(room) {
     widthFeet: num(room.WidthFeet),
     widthInches: num(room.WidthInches),
     ceilingHeightFeet: num(room.CeilingHeightFeet),
-    ceilingHeightInches: num(room.CeilingHeightInches)
+    ceilingHeightInches: num(room.CeilingHeightInches),
+    dimensionUnit: String(room.DimensionUnit || 'feet') === 'meters' ? 'meters' : 'feet'
   };
 }
