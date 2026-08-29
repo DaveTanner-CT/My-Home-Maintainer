@@ -1,0 +1,5074 @@
+<script>
+
+let appState = {
+
+  configured: false,
+
+  currentPage: 'dashboard',
+
+  currentProjectId: '',
+  currentProjectData: null,
+  currentProjectTab: 'overview',
+
+  designWorkspace: null,
+
+  selectedDesignRecordId: '',
+  selectedDesignRecord: null,
+  selectedDesignAsset: null,
+
+  clients: [],
+  projects: [],
+  dashboard: {}
+};
+
+let sketchState = {
+
+  tool: 'pen',
+
+  strokes: [],
+
+  redoStack: [],
+
+  activeStroke: null,
+
+  drawing: false,
+
+  pointerId: null,
+
+  logicalWidth: 0,
+
+  logicalHeight: 0,
+
+  background: 'blank'
+};
+
+document.addEventListener(
+  'DOMContentLoaded',
+  () => {
+    wireMobileMenu();
+    loadApplication();
+  }
+);
+
+
+function wireMobileMenu() {
+  const button =
+    document.getElementById(
+      'mobileMenuButton'
+    );
+
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener(
+    'click',
+    () => {
+      document
+        .getElementById('sidebar')
+        .classList
+        .toggle('open');
+    }
+  );
+}
+
+
+/* -----------------------------
+   SERVER HELPER
+   ----------------------------- */
+
+function serverCall(
+  functionName,
+  ...args
+) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const runner =
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject);
+
+      runner[functionName](...args);
+    }
+  );
+}
+
+
+/* -----------------------------
+   APPLICATION LOAD
+   ----------------------------- */
+
+async function loadApplication() {
+
+  try {
+
+    const data =
+      await serverCall(
+        'PDS_getAppBootstrapData'
+      );
+
+
+    hide('loadingState');
+
+
+    if (!data || !data.configured) {
+
+      show('configurationState');
+
+      return;
+    }
+
+
+    appState.configured = true;
+
+
+    /*
+     * Normalize all incoming data.
+     *
+     * This prevents one malformed or missing
+     * collection from stopping the app startup.
+     */
+    appState.dashboard =
+      data.dashboard &&
+      typeof data.dashboard === 'object'
+        ? data.dashboard
+        : {};
+
+
+    appState.clients =
+      Array.isArray(data.clients)
+        ? data.clients.filter(Boolean)
+        : [];
+
+
+    appState.projects =
+      Array.isArray(data.projects)
+        ? data.projects.filter(Boolean)
+        : [];
+
+
+    /*
+     * IMPORTANT:
+     *
+     * Render the main application FIRST.
+     * Optional controls should never prevent
+     * the dashboard from loading.
+     */
+    renderDashboard();
+
+    navigateTo('dashboard');
+
+
+    /*
+     * Populate secondary controls after
+     * the main application is visible.
+     */
+    try {
+
+      populateClientSelect();
+
+      populateProjectClientFilter();
+
+    } catch (controlError) {
+
+      console.error(
+        'Client control initialization failed:',
+        controlError
+      );
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      'Application startup failed:',
+      error
+    );
+
+    handleAppError(error);
+  }
+}
+
+
+/* -----------------------------
+   NAVIGATION
+   ----------------------------- */
+
+function navigateTo(page) {
+
+  document
+    .querySelectorAll('.page')
+    .forEach(element => {
+      element.classList.add('hidden');
+    });
+
+
+  document
+    .querySelectorAll('.nav-item')
+    .forEach(element => {
+      element.classList.remove('active');
+    });
+
+
+  const target =
+    document.getElementById(
+      'page-' + page
+    );
+
+  if (target) {
+    target.classList.remove('hidden');
+  }
+
+
+  const nav =
+    document.querySelector(
+      `.nav-item[data-page="${page}"]`
+    );
+
+  if (nav) {
+    nav.classList.add('active');
+  }
+
+
+  appState.currentPage = page;
+
+
+  if (page === 'clients') {
+    renderClients();
+  }
+
+
+  if (page === 'projects') {
+    renderProjectsPage();
+  }
+
+
+  if (page === 'design') {
+    renderDesignHub();
+  }
+
+
+  document
+    .getElementById('sidebar')
+    .classList
+    .remove('open');
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+
+/* -----------------------------
+   DASHBOARD
+   ----------------------------- */
+
+function renderDashboard() {
+
+  setText(
+    'clientCount',
+    appState.dashboard.totalClients || 0
+  );
+
+  setText(
+    'activeProjectCount',
+    appState.dashboard.activeProjects || 0
+  );
+
+  setText(
+    'projectCount',
+    appState.dashboard.totalProjects || 0
+  );
+
+  renderProjectCards(
+    'dashboardProjectGrid',
+    appState.dashboard.recentProjects || []
+  );
+
+
+  if (
+    (appState.dashboard.recentProjects || [])
+      .length
+  ) {
+    hide('dashboardEmptyProjects');
+
+  } else {
+    show('dashboardEmptyProjects');
+  }
+}
+
+
+/* -----------------------------
+   CLIENTS
+   ----------------------------- */
+
+function renderClients() {
+
+  const grid =
+    document.getElementById(
+      'clientGrid'
+    );
+
+  if (!grid) {
+    return;
+  }
+
+
+  const search =
+    String(
+      document
+        .getElementById('clientSearch')
+        ?.value || ''
+    )
+      .trim()
+      .toLowerCase();
+
+
+  const clients =
+    appState.clients.filter(client => {
+
+      const haystack =
+        [
+          client.name,
+          client.email,
+          client.phone,
+          client.propertyAddress
+        ]
+          .join(' ')
+          .toLowerCase();
+
+      return !search ||
+        haystack.includes(search);
+    });
+
+
+  grid.innerHTML = '';
+
+
+  if (!clients.length) {
+
+    grid.innerHTML = `
+      <div class="project-empty-panel">
+        No matching clients found.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  clients.forEach(client => {
+
+    const card =
+      document.createElement(
+        'article'
+      );
+
+    card.className =
+      'client-card';
+
+
+    const initials =
+      getInitials(
+        client.name
+      );
+
+
+    card.innerHTML = `
+      <div class="client-initials">
+        ${escapeHtml(initials)}
+      </div>
+
+      <h3>
+        ${escapeHtml(client.name)}
+      </h3>
+
+      <div class="client-contact">
+
+        ${
+          client.email
+            ? `<div>${escapeHtml(client.email)}</div>`
+            : ''
+        }
+
+        ${
+          client.phone
+            ? `<div>${escapeHtml(client.phone)}</div>`
+            : ''
+        }
+
+        ${
+          client.propertyAddress
+            ? `<div>${escapeHtml(client.propertyAddress)}</div>`
+            : ''
+        }
+
+      </div>
+
+      <div class="client-project-counts">
+
+        <div>
+          <strong>
+            ${Number(client.activeProjects || 0)}
+          </strong>
+          Active
+        </div>
+
+        <div>
+          <strong>
+            ${Number(client.totalProjects || 0)}
+          </strong>
+          Total Projects
+        </div>
+
+      </div>
+
+      <div class="client-card-actions">
+
+        <button
+          type="button"
+          class="secondary-button compact-button"
+          data-action="view-projects"
+        >
+          View Projects
+        </button>
+
+        <button
+          type="button"
+          class="primary-button compact-button"
+          data-action="new-project"
+        >
+          + New Project
+        </button>
+
+      </div>
+    `;
+
+
+    card
+      .querySelector(
+        '[data-action="view-projects"]'
+      )
+      .addEventListener(
+        'click',
+        () => {
+          openProjectsForClient(
+            client.clientId
+          );
+        }
+      );
+
+
+    card
+      .querySelector(
+        '[data-action="new-project"]'
+      )
+      .addEventListener(
+        'click',
+        () => {
+          openNewProjectModal(
+            client.clientId
+          );
+        }
+      );
+
+
+    grid.appendChild(card);
+  });
+}
+
+
+/* -----------------------------
+   PROJECTS
+   ----------------------------- */
+
+function renderProjectsPage() {
+
+  const search =
+    String(
+      document
+        .getElementById(
+          'projectSearch'
+        )
+        ?.value || ''
+    )
+      .trim()
+      .toLowerCase();
+
+
+  const status =
+    document
+      .getElementById(
+        'projectStatusFilter'
+      )
+      ?.value || '';
+
+
+  const clientId =
+    document
+      .getElementById(
+        'projectClientFilter'
+      )
+      ?.value || '';
+
+
+  const projects =
+    appState.projects.filter(
+      project => {
+
+        const haystack =
+          [
+            project.projectName,
+            project.clientName,
+            project.projectId,
+            project.propertyAddress,
+            project.scopeSummary
+          ]
+            .join(' ')
+            .toLowerCase();
+
+
+        const searchMatch =
+          !search ||
+          haystack.includes(search);
+
+
+        const statusMatch =
+          !status ||
+          project.status === status;
+
+
+        const clientMatch =
+          !clientId ||
+          String(project.clientId) ===
+            String(clientId);
+
+
+        return (
+          searchMatch &&
+          statusMatch &&
+          clientMatch
+        );
+      }
+    );
+
+
+  renderProjectCards(
+    'projectsPageGrid',
+    projects
+  );
+}
+
+
+function renderDesignHub() {
+
+  const grid =
+    document.getElementById(
+      'designHubGrid'
+    );
+
+  if (!grid) {
+    return;
+  }
+
+  const search =
+    String(
+      document
+        .getElementById(
+          'designProjectSearch'
+        )
+        ?.value || ''
+    )
+      .trim()
+      .toLowerCase();
+
+  const projects =
+    (Array.isArray(appState.projects)
+      ? appState.projects
+      : []
+    )
+      .filter(project => {
+
+        const status =
+          String(
+            project.status || ''
+          );
+
+        if (
+          status === 'Complete' ||
+          status === 'Archived'
+        ) {
+          return false;
+        }
+
+        const haystack =
+          [
+            project.projectName,
+            project.clientName,
+            project.projectId,
+            project.propertyAddress,
+            project.scopeSummary
+          ]
+            .join(' ')
+            .toLowerCase();
+
+        return (
+          !search ||
+          haystack.includes(search)
+        );
+      });
+
+  grid.innerHTML = '';
+
+  if (!projects.length) {
+
+    grid.innerHTML = `
+      <div class="design-hub-empty">
+        <div class="empty-icon">✦</div>
+        <h3>No active design projects</h3>
+        <p>Active projects will appear here automatically.</p>
+      </div>
+    `;
+
+    return;
+  }
+
+  projects.forEach(project => {
+
+    const card =
+      document.createElement(
+        'article'
+      );
+
+    card.className =
+      'design-hub-card';
+
+    card.innerHTML = `
+      <div class="design-hub-card-image">
+        <div class="design-hub-image-placeholder">✦</div>
+      </div>
+
+      <div class="design-hub-card-body">
+        <div class="project-status">
+          ${escapeHtml(
+            project.status ||
+            'New Inquiry'
+          )}
+        </div>
+
+        <h3>
+          ${escapeHtml(
+            project.projectName ||
+            'Untitled Project'
+          )}
+        </h3>
+
+        <div class="design-hub-client">
+          ${escapeHtml(
+            project.clientName || ''
+          )}
+        </div>
+
+        ${
+          project.propertyAddress
+            ? `
+              <div class="design-hub-address">
+                ${escapeHtml(
+                  project.propertyAddress
+                )}
+              </div>
+            `
+            : ''
+        }
+
+        <div class="design-hub-card-footer">
+          <span>
+            ${escapeHtml(
+              project.projectId || ''
+            )}
+          </span>
+
+          <button
+            type="button"
+            class="primary-button compact-button"
+            data-open-design
+          >
+            Open Design
+          </button>
+        </div>
+      </div>
+    `;
+
+    card
+      .querySelector(
+        '[data-open-design]'
+      )
+      .addEventListener(
+        'click',
+        () => {
+          openProjectDesign(
+            project.projectId
+          );
+        }
+      );
+
+    grid.appendChild(card);
+  });
+}
+
+
+async function openProjectDesign(
+  projectId
+) {
+
+  try {
+
+    await openProject(projectId);
+
+    await switchProjectTab(
+      'design'
+    );
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+  }
+}
+
+
+function renderProjectCards(
+  elementId,
+  projects
+) {
+  projects =
+    Array.isArray(projects)
+      ? projects.filter(Boolean)
+      : [];
+  const grid =
+    document.getElementById(
+      elementId
+    );
+
+  if (!grid) {
+    return;
+  }
+
+
+  grid.innerHTML = '';
+
+
+  if (!projects.length) {
+
+    grid.innerHTML = `
+      <div class="project-empty-panel">
+        No projects found.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  projects.forEach(project => {
+
+    const card =
+      document.createElement(
+        'article'
+      );
+
+    card.className =
+      'project-card';
+
+
+    card.onclick =
+      () => openProject(
+        project.projectId
+      );
+
+
+    card.innerHTML = `
+
+      <div>
+        <div class="project-status">
+          ${escapeHtml(
+            project.status ||
+            'New Inquiry'
+          )}
+        </div>
+
+        <h3>
+          ${escapeHtml(
+            project.projectName ||
+            'Untitled Project'
+          )}
+        </h3>
+
+        <div class="project-client">
+          ${escapeHtml(
+            project.clientName || ''
+          )}
+        </div>
+
+        <div class="project-id">
+          ${escapeHtml(
+            project.projectId || ''
+          )}
+        </div>
+      </div>
+
+
+      <div class="project-card-footer">
+
+        <span>
+          ${
+            project.targetCompletionDate
+              ? 'Target ' +
+                escapeHtml(
+                  project.targetCompletionDate
+                )
+              : 'No target date'
+          }
+        </span>
+
+        <span>Open →</span>
+
+      </div>
+    `;
+
+
+    grid.appendChild(card);
+  });
+}
+
+
+/* -----------------------------
+   PROJECT DETAIL
+   ----------------------------- */
+
+async function openProject(projectId) {
+
+  try {
+
+    appState.currentProjectId =
+      projectId;
+
+
+    navigateTo(
+      'project-detail'
+    );
+
+
+    const container =
+      document.getElementById(
+        'projectDetailContent'
+      );
+
+
+    container.innerHTML = `
+      <div class="loading-state">
+        <div class="loading-mark">✦</div>
+        Loading project…
+      </div>
+    `;
+
+
+    const data =
+      await serverCall(
+        'PDS_getProjectDetail',
+        projectId
+      );
+
+
+    renderProjectDetail(data);
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+  }
+}
+
+function renderProjectBreadcrumbs(
+  tabName = 'overview'
+) {
+
+  const container =
+    document.getElementById(
+      'projectBreadcrumbs'
+    );
+
+
+  if (!container) {
+    return;
+  }
+
+
+  const data =
+    appState.currentProjectData || {};
+
+
+  const project =
+    data.project || {};
+
+
+  const client =
+    data.client || {};
+
+
+  const clientName =
+    client.DisplayName ||
+    client.name ||
+    'Client';
+
+
+  const clientId =
+    client.ClientID ||
+    client.clientId ||
+    project.clientId ||
+    '';
+
+
+  const tabLabels = {
+    overview: 'Overview',
+    design: 'Design',
+    estimate: 'Estimate',
+    expenses: 'Expenses',
+    invoices: 'Invoices',
+    files: 'Files'
+  };
+
+
+  const tabLabel =
+    tabLabels[tabName] ||
+    'Overview';
+
+
+  container.innerHTML = `
+
+    <button
+      type="button"
+      class="breadcrumb-link"
+      onclick="navigateTo('projects')"
+    >
+      Projects
+    </button>
+
+
+    <span class="breadcrumb-separator">
+      ›
+    </span>
+
+
+    <button
+      type="button"
+      class="breadcrumb-link"
+      ${
+        clientId
+          ? `onclick="openProjectsForClient('${escapeHtml(clientId)}')"`
+          : ''
+      }
+    >
+      ${escapeHtml(clientName)}
+    </button>
+
+
+    <span class="breadcrumb-separator">
+      ›
+    </span>
+
+
+    <button
+      type="button"
+      class="breadcrumb-link breadcrumb-project"
+      onclick="switchProjectTab('overview')"
+    >
+      ${escapeHtml(
+        project.projectName ||
+        'Project'
+      )}
+    </button>
+
+
+    <span class="breadcrumb-separator">
+      ›
+    </span>
+
+
+    <span class="breadcrumb-current">
+      ${escapeHtml(tabLabel)}
+    </span>
+  `;
+}
+
+function renderProjectDetail(data) {
+
+  appState.currentProjectData =
+    data;
+
+appState.currentProjectTab =
+  'overview';
+
+
+renderProjectBreadcrumbs(
+  'overview'
+);
+
+  const container =
+    document.getElementById(
+      'projectDetailContent'
+    );
+
+
+  const project =
+    data.project || {};
+
+
+  const client =
+    data.client || {};
+
+
+  container.innerHTML = `
+
+    <header class="project-detail-header">
+
+      <p class="eyebrow">
+        ${escapeHtml(
+          project.projectId || ''
+        )}
+      </p>
+
+      <h1>
+        ${escapeHtml(
+          project.projectName || ''
+        )}
+      </h1>
+
+      <div class="project-detail-meta">
+
+        <span>
+          ${escapeHtml(
+            client.DisplayName || ''
+          )}
+        </span>
+
+        <span>•</span>
+
+        <span>
+          ${escapeHtml(
+            project.status || ''
+          )}
+        </span>
+
+        ${
+          project.targetCompletionDate
+            ? `
+              <span>•</span>
+
+              <span>
+                Target ${escapeHtml(
+                  project.targetCompletionDate
+                )}
+              </span>
+            `
+            : ''
+        }
+
+      </div>
+
+    </header>
+
+
+    <div class="project-tabs">
+
+      <button
+        class="project-tab active"
+        data-project-tab="overview"
+        onclick="switchProjectTab('overview')"
+      >
+        Overview
+      </button>
+
+      <button
+        class="project-tab"
+        data-project-tab="design"
+        onclick="switchProjectTab('design')"
+      >
+        Design
+      </button>
+
+      <button
+        class="project-tab"
+        onclick="showToast('Estimating is coming next.')"
+      >
+        Estimate
+      </button>
+
+      <button
+        class="project-tab"
+        onclick="showToast('Expenses are coming in the financial module.')"
+      >
+        Expenses
+      </button>
+
+      <button
+        class="project-tab"
+        onclick="showToast('Invoices are coming in the financial module.')"
+      >
+        Invoices
+      </button>
+
+      <button
+        class="project-tab"
+        onclick="showToast('Project files will be connected here shortly.')"
+      >
+        Files
+      </button>
+
+    </div>
+
+
+    <div id="projectTabContent"></div>
+  `;
+
+
+  renderProjectOverviewTab();
+}
+
+function setActiveProjectTab(
+  tabName
+) {
+
+  document
+    .querySelectorAll(
+      '[data-project-tab]'
+    )
+    .forEach(button => {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.projectTab ===
+          tabName
+      );
+    });
+}
+
+
+
+async function switchProjectTab(
+  tabName
+) {
+
+  appState.currentProjectTab =
+    tabName;
+
+
+  setActiveProjectTab(
+    tabName
+  );
+
+
+  renderProjectBreadcrumbs(
+    tabName
+  );
+
+
+  if (tabName === 'overview') {
+
+    renderProjectOverviewTab();
+
+    return;
+  }
+
+
+  if (tabName === 'design') {
+
+    await loadDesignWorkspace();
+
+    return;
+  }
+}
+
+
+function renderProjectOverviewTab() {
+
+  const data =
+    appState.currentProjectData;
+
+
+  if (!data) {
+    return;
+  }
+
+
+  const container =
+    document.getElementById(
+      'projectTabContent'
+    );
+
+
+  const project =
+    data.project || {};
+
+
+  const client =
+    data.client || {};
+
+
+  const rooms =
+    data.rooms || [];
+
+
+  const activities =
+    data.activities || [];
+
+
+  container.innerHTML = `
+
+    <div class="project-detail-layout">
+
+
+      <div class="info-stack">
+
+<section class="detail-panel">
+
+  <div class="section-heading">
+
+    <div>
+
+      <p class="eyebrow">
+        VISUAL DESIGN
+      </p>
+
+      <h2>
+        Photos & Sketches
+      </h2>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="secondary-button"
+      onclick="switchProjectTab('design')"
+    >
+      View All Design
+    </button>
+
+  </div>
+
+
+  <div
+    id="projectVisualPreviewGrid"
+    class="project-visual-grid"
+  >
+
+    <div class="visual-preview-loading">
+      Loading design…
+    </div>
+
+  </div>
+
+</section>
+
+        <section class="detail-panel">
+
+          <div class="section-heading">
+
+            <div>
+
+              <p class="eyebrow">
+                PROJECT AREAS
+              </p>
+
+              <h2>
+                Rooms
+              </h2>
+
+            </div>
+
+
+            <button
+              class="primary-button"
+              onclick="openNewRoomModal()"
+            >
+              + Add Room
+            </button>
+
+          </div>
+
+
+          ${
+            rooms.length
+              ? `
+                <div class="room-grid">
+
+                  ${rooms.map(room => `
+
+                    <article class="room-card">
+
+                      <h4>
+                        ${escapeHtml(
+                          room.roomName
+                        )}
+                      </h4>
+
+                      <p>
+                        ${escapeHtml(
+                          room.roomType ||
+                          'Project area'
+                        )}
+                      </p>
+
+                      ${
+                        room.notes
+                          ? `
+                            <p style="margin-top:10px;">
+                              ${escapeHtml(
+                                room.notes
+                              )}
+                            </p>
+                          `
+                          : ''
+                      }
+
+                    </article>
+
+                  `).join('')}
+
+                </div>
+              `
+              : `
+                <div class="project-empty-panel">
+
+                  <strong>
+                    No rooms have been added yet.
+                  </strong>
+
+                  <p>
+                    Organize photos, sketches,
+                    products, and estimates by room.
+                  </p>
+
+                  <button
+                    class="primary-button"
+                    onclick="openNewRoomModal()"
+                  >
+                    Add First Room
+                  </button>
+
+                </div>
+              `
+             }
+
+        </section>
+
+
+        <section class="detail-panel">
+
+          <p class="eyebrow">
+            SCOPE
+          </p>
+
+          <h2>
+            Project Overview
+          </h2>
+
+          <div
+            style="
+              margin-top:20px;
+              line-height:1.7;
+            "
+          >
+
+            ${
+              project.scopeSummary
+                ? escapeHtml(
+                    project.scopeSummary
+                  )
+                : `
+                  <span style="
+                    color:var(--pds-muted);
+                  ">
+                    No scope summary has been added yet.
+                  </span>
+                `
+            }
+
+          </div>
+
+        </section>
+
+      </div>
+
+
+      <div class="info-stack">
+
+
+        <section class="detail-panel">
+
+          <p class="eyebrow">
+            CLIENT
+          </p>
+
+          <h2>
+            ${escapeHtml(
+              client.DisplayName || ''
+            )}
+          </h2>
+
+          <div
+            class="info-stack"
+            style="margin-top:22px;"
+          >
+
+            ${
+              client.Email
+                ? `
+                  <div>
+
+                    <span class="info-label">
+                      Email
+                    </span>
+
+                    <div class="info-value">
+                      ${escapeHtml(
+                        client.Email
+                      )}
+                    </div>
+
+                  </div>
+                `
+                : ''
+            }
+
+
+            ${
+              client.Phone
+                ? `
+                  <div>
+
+                    <span class="info-label">
+                      Phone
+                    </span>
+
+                    <div class="info-value">
+                      ${escapeHtml(
+                        client.Phone
+                      )}
+                    </div>
+
+                  </div>
+                `
+                : ''
+            }
+
+
+            ${
+              project.propertyAddress
+                ? `
+                  <div>
+
+                    <span class="info-label">
+                      Property
+                    </span>
+
+                    <div class="info-value">
+                      ${escapeHtml(
+                        project.propertyAddress
+                      )}
+                    </div>
+
+                  </div>
+                `
+                : ''
+            }
+
+          </div>
+
+        </section>
+
+
+        <section class="detail-panel">
+
+          <p class="eyebrow">
+            HISTORY
+          </p>
+
+          <h2>
+            Recent Activity
+          </h2>
+
+          ${
+            activities.length
+              ? `
+                <div class="activity-list">
+
+                  ${activities.map(item => `
+
+                    <div class="activity-item">
+
+                      <div class="activity-description">
+                        ${escapeHtml(
+                          item.description
+                        )}
+                      </div>
+
+                      <div class="activity-date">
+                        ${escapeHtml(
+                          item.timestamp
+                        )}
+                      </div>
+
+                    </div>
+
+                  `).join('')}
+
+                </div>
+              `
+              : `
+                <div class="project-empty-panel">
+                  Activity will appear here.
+                </div>
+              `
+          }
+
+        </section>
+
+      </div>
+
+    </div>
+  `;
+  loadProjectVisualPreview();
+}
+
+async function loadProjectVisualPreview() {
+
+  const projectId =
+    appState.currentProjectId;
+
+
+  if (!projectId) {
+    return;
+  }
+
+
+  try {
+
+    const data =
+      await serverCall(
+        'PDS_getDesignWorkspace',
+        projectId
+      );
+
+
+    /*
+     * Make sure the user has not
+     * navigated to another project
+     * while this loaded.
+     */
+    if (
+      String(projectId) !==
+      String(
+        appState.currentProjectId
+      )
+    ) {
+      return;
+    }
+
+
+    appState.designWorkspace =
+      data;
+
+
+    renderProjectVisualPreview();
+
+  } catch (error) {
+
+    const grid =
+      document.getElementById(
+        'projectVisualPreviewGrid'
+      );
+
+
+    if (grid) {
+
+      grid.innerHTML = `
+        <div class="design-empty-state">
+          Design preview unavailable.
+        </div>
+      `;
+    }
+  }
+}
+
+
+
+function isVisualDesignRecord(
+  record
+) {
+
+  return [
+    'Site Photo',
+    'Annotated Photo',
+    'Sketch'
+  ].includes(
+    String(
+      record.recordType || ''
+    )
+  );
+}
+
+
+
+function renderProjectVisualPreview() {
+
+  const grid =
+    document.getElementById(
+      'projectVisualPreviewGrid'
+    );
+
+
+  if (!grid) {
+    return;
+  }
+
+
+  const records =
+    (
+      appState
+        .designWorkspace
+        ?.records || []
+    )
+      .filter(
+        isVisualDesignRecord
+      )
+      .slice(
+        0,
+        6
+      );
+
+
+  grid.innerHTML = '';
+
+
+  if (!records.length) {
+
+    grid.innerHTML = `
+
+      <div class="project-visual-empty">
+
+        <div class="empty-icon">
+          ✦
+        </div>
+
+        <strong>
+          No project images yet
+        </strong>
+
+        <p>
+          Photos and sketches will
+          automatically appear here.
+        </p>
+
+
+        <button
+          class="primary-button"
+          onclick="switchProjectTab('design')"
+        >
+          Open Design
+        </button>
+
+      </div>
+    `;
+
+    return;
+  }
+
+
+  records.forEach(
+    record => {
+
+      grid.appendChild(
+        createVisualThumbnailCard(
+          record
+        )
+      );
+    }
+  );
+}
+
+function createVisualThumbnailCard(
+  record
+) {
+
+  const card =
+    document.createElement(
+      'article'
+    );
+
+
+  card.className =
+    'project-visual-card';
+
+
+  const roomName =
+    getRoomNameForDesignRecord(
+      record.roomId
+    );
+
+
+  card.innerHTML = `
+
+    <div class="project-visual-image">
+
+      <div class="design-image-placeholder">
+        ${
+          record.recordType === 'Sketch'
+            ? '✎'
+            : '📷'
+        }
+      </div>
+
+
+      ${
+        record.thumbnailUrl
+          ? `
+            <img
+              src="${escapeHtml(
+                record.thumbnailUrl
+              )}"
+              alt="${escapeHtml(
+                record.title || ''
+              )}"
+              loading="lazy"
+            >
+          `
+          : ''
+      }
+
+
+      <div class="visual-card-overlay">
+
+        <span>
+          Tap to view
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="project-visual-info">
+
+      <div class="design-record-type">
+        ${escapeHtml(
+          record.recordType
+        )}
+      </div>
+
+
+      <strong>
+        ${escapeHtml(
+          record.title ||
+          record.recordType
+        )}
+      </strong>
+
+
+      <span>
+        ${escapeHtml(
+          roomName
+        )}
+      </span>
+
+    </div>
+  `;
+
+
+  card.addEventListener(
+    'click',
+    () => {
+
+      openDesignRecordViewer(
+        record.designRecordId
+      );
+    }
+  );
+
+
+  return card;
+}
+
+async function openDesignRecordViewer(
+  designRecordId
+) {
+
+  appState.selectedDesignRecordId =
+    designRecordId;
+
+
+  let records =
+    appState.designWorkspace
+      ?.records || [];
+
+
+  let record =
+    records.find(
+      item =>
+        String(
+          item.designRecordId
+        ) ===
+        String(
+          designRecordId
+        )
+    );
+
+
+  if (!record) {
+
+    const workspace =
+      await serverCall(
+        'PDS_getDesignWorkspace',
+        appState.currentProjectId
+      );
+
+
+    appState.designWorkspace =
+      workspace;
+
+
+    record =
+      workspace.records.find(
+        item =>
+          String(
+            item.designRecordId
+          ) ===
+          String(
+            designRecordId
+          )
+      );
+  }
+
+
+  if (!record) {
+
+    showToast(
+      'The design item could not be found.',
+      true
+    );
+
+    return;
+  }
+
+
+  appState.selectedDesignRecord =
+    record;
+
+
+  setText(
+    'viewerRecordType',
+    record.recordType ||
+    'DESIGN'
+  );
+
+
+  setText(
+    'viewerRecordTitle',
+    record.title ||
+    record.recordType ||
+    'Design'
+  );
+
+
+  setText(
+    'viewerRoom',
+    getRoomNameForDesignRecord(
+      record.roomId
+    )
+  );
+
+
+  setText(
+    'viewerDate',
+    record.createdDate || ''
+  );
+
+
+  setText(
+    'viewerVersion',
+    'Version ' +
+    Number(
+      record.versionNumber || 1
+    )
+  );
+
+
+  setText(
+    'viewerDescription',
+    record.description ||
+    'No notes have been added.'
+  );
+
+
+  show(
+    'designRecordViewer'
+  );
+
+
+  document.body.classList.add(
+    'viewer-open'
+  );
+
+
+  show(
+    'viewerLoading'
+  );
+
+
+  hide(
+    'viewerImage'
+  );
+
+
+  try {
+
+    const asset =
+      await serverCall(
+        'PDS_getDesignRecordAsset',
+        designRecordId
+      );
+
+
+    appState.selectedDesignAsset =
+      asset;
+
+
+    const image =
+      document.getElementById(
+        'viewerImage'
+      );
+
+
+    image.src =
+      asset.dataUrl;
+
+
+    image.onload =
+      () => {
+
+        hide(
+          'viewerLoading'
+        );
+
+        show(
+          'viewerImage'
+        );
+      };
+
+
+  } catch (error) {
+
+    hide(
+      'viewerLoading'
+    );
+
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+  }
+}
+
+
+
+function closeDesignRecordViewer() {
+
+  hide(
+    'designRecordViewer'
+  );
+
+
+  document.body.classList.remove(
+    'viewer-open'
+  );
+}
+
+
+
+function openSelectedDesignOriginal() {
+
+  const record =
+    appState.selectedDesignRecord;
+
+
+  if (
+    !record ||
+    !record.driveUrl
+  ) {
+    return;
+  }
+
+
+  window.open(
+    record.driveUrl,
+    '_blank'
+  );
+}
+
+function openDesignRecordDetailsEditor() {
+
+  const record =
+    appState.selectedDesignRecord;
+
+
+  if (!record) {
+    return;
+  }
+
+
+  populateDesignRoomSelect(
+    'editDesignRecordRoom'
+  );
+
+
+  document
+    .getElementById(
+      'editDesignRecordTitle'
+    )
+    .value =
+      record.title || '';
+
+
+  document
+    .getElementById(
+      'editDesignRecordRoom'
+    )
+    .value =
+      record.roomId || '';
+
+
+  document
+    .getElementById(
+      'editDesignRecordDescription'
+    )
+    .value =
+      record.description || '';
+
+
+  document
+    .getElementById(
+      'editDesignRecordClientVisible'
+    )
+    .checked =
+      Boolean(
+        record.clientVisible
+      );
+
+
+  show(
+    'designRecordEditModal'
+  );
+}
+
+
+
+async function submitDesignRecordDetails(
+  event
+) {
+
+  event.preventDefault();
+
+
+  const button =
+    document.getElementById(
+      'saveDesignRecordDetailsButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Saving…'
+  );
+
+
+  try {
+
+    await serverCall(
+      'PDS_updateDesignRecordDetails',
+      {
+
+        designRecordId:
+          appState
+            .selectedDesignRecordId,
+
+        title:
+          value(
+            'editDesignRecordTitle'
+          ),
+
+        roomId:
+          value(
+            'editDesignRecordRoom'
+          ),
+
+        description:
+          value(
+            'editDesignRecordDescription'
+          ),
+
+        clientVisible:
+          document
+            .getElementById(
+              'editDesignRecordClientVisible'
+            )
+            .checked
+      }
+    );
+
+
+    closeModal(
+      'designRecordEditModal'
+    );
+
+
+    closeDesignRecordViewer();
+
+
+    showToast(
+      'Design details updated'
+    );
+
+
+    await refreshDesignWorkspace();
+
+
+    /*
+     * If we are on Overview,
+     * redraw its preview too.
+     */
+    if (
+      appState.currentProjectTab ===
+      'overview'
+    ) {
+
+      await loadProjectVisualPreview();
+    }
+
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+
+
+  } finally {
+
+    setButtonBusy(
+      button,
+      false,
+      'Save Changes'
+    );
+  }
+}
+
+async function loadDesignWorkspace() {
+
+  const container =
+    document.getElementById(
+      'projectTabContent'
+    );
+
+
+  container.innerHTML = `
+    <div class="loading-state">
+      <div class="loading-mark">✦</div>
+      Loading design workspace…
+    </div>
+  `;
+
+
+  try {
+
+    const data =
+      await serverCall(
+        'PDS_getDesignWorkspace',
+        appState.currentProjectId
+      );
+
+
+    appState.designWorkspace =
+      data;
+
+
+    renderDesignWorkspace();
+
+  } catch (error) {
+
+    container.innerHTML = `
+      <div class="project-empty-panel">
+        ${escapeHtml(
+          getErrorMessage(error)
+        )}
+      </div>
+    `;
+  }
+}
+
+
+
+function renderDesignWorkspace() {
+
+  const container =
+    document.getElementById(
+      'projectTabContent'
+    );
+
+
+  const data =
+    appState.designWorkspace || {
+      rooms: [],
+      records: []
+    };
+
+
+  container.innerHTML = `
+
+    <section class="design-hero">
+
+      <div>
+
+        <p class="eyebrow">
+          DESIGN WORKSPACE
+        </p>
+
+        <h2>
+          Ideas, Photos & Selections
+        </h2>
+
+        <p>
+          Capture the project visually as you
+          move through the design process.
+        </p>
+
+      </div>
+
+
+      <div class="design-action-grid">
+
+        <button
+          class="design-action-card"
+          onclick="openDesignPhotoModal()"
+        >
+          <span class="design-action-icon">
+            📷
+          </span>
+
+          <strong>
+            Take / Add Photo
+          </strong>
+
+          <small>
+            Capture the existing space
+          </small>
+        </button>
+
+
+        <button
+          class="design-action-card"
+          onclick="openDesignNoteModal()"
+        >
+          <span class="design-action-icon">
+            ✎
+          </span>
+
+          <strong>
+            Design Note
+          </strong>
+
+          <small>
+            Save an idea or client preference
+          </small>
+        </button>
+
+
+        <button
+          class="design-action-card"
+          onclick="openSketchModal()"
+        >
+          <span class="design-action-icon">
+            ✏️
+          </span>
+
+          <strong>
+            New Sketch
+          </strong>
+
+          <small>
+            Draw with Apple Pencil or touch
+          </small>
+        </button>
+
+
+        <button
+          class="design-action-card"
+          onclick="showToast('Photo markup is coming with the sketch canvas.')"
+        >
+          <span class="design-action-icon">
+            ↗
+          </span>
+
+          <strong>
+            Markup Photo
+          </strong>
+
+          <small>
+            Draw directly over a site photo
+          </small>
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <section class="detail-panel design-library">
+
+      <div class="design-library-heading">
+
+        <div>
+
+          <p class="eyebrow">
+            PROJECT LIBRARY
+          </p>
+
+          <h2>
+            Design Records
+          </h2>
+
+        </div>
+
+
+        <select
+          id="designRoomFilter"
+          class="filter-select"
+          onchange="renderDesignWorkspaceCards()"
+        >
+
+          <option value="">
+            All Rooms
+          </option>
+
+          ${data.rooms.map(room => `
+
+            <option
+              value="${escapeHtml(
+                room.roomId
+              )}"
+            >
+              ${escapeHtml(
+                room.roomName
+              )}
+            </option>
+
+          `).join('')}
+
+        </select>
+
+      </div>
+
+
+      <div
+        id="designRecordGrid"
+        class="design-record-grid"
+      ></div>
+
+    </section>
+  `;
+
+
+  renderDesignWorkspaceCards();
+}
+
+
+
+function renderDesignWorkspaceCards() {
+
+  const grid =
+    document.getElementById(
+      'designRecordGrid'
+    );
+
+  if (!grid) {
+    return;
+  }
+
+  const data =
+    appState.designWorkspace || {
+      records: []
+    };
+
+  const selectedRoom =
+    document
+      .getElementById(
+        'designRoomFilter'
+      )
+      ?.value || '';
+
+  const records =
+    (data.records || [])
+      .filter(record => {
+
+        return (
+          !selectedRoom ||
+          String(record.roomId) ===
+            String(selectedRoom)
+        );
+      });
+
+  grid.innerHTML = '';
+
+  if (!records.length) {
+
+    grid.innerHTML = `
+      <div class="design-empty-state">
+        <div class="empty-icon">✦</div>
+        <h3>Nothing here yet</h3>
+        <p>
+          Add site photos, sketches,
+          or design notes to begin
+          building this project's
+          visual history.
+        </p>
+      </div>
+    `;
+
+    return;
+  }
+
+  records.forEach(record => {
+
+    const card =
+      document.createElement(
+        'article'
+      );
+
+    card.className =
+      'design-record-card';
+
+    const isVisual =
+      isVisualDesignRecord(
+        record
+      );
+
+    if (isVisual) {
+
+      const icon =
+        record.recordType ===
+          'Sketch'
+          ? '✎'
+          : '📷';
+
+      card.classList.add(
+        'design-record-card-clickable'
+      );
+
+      card.innerHTML = `
+        <div class="design-photo-preview">
+          <div class="design-image-placeholder">
+            ${icon}
+          </div>
+
+          ${
+            record.thumbnailUrl
+              ? `
+                <img
+                  src="${escapeHtml(
+                    record.thumbnailUrl
+                  )}"
+                  alt="${escapeHtml(
+                    record.title ||
+                    record.recordType ||
+                    'Design image'
+                  )}"
+                  loading="lazy"
+                  onerror="this.style.display='none';"
+                >
+              `
+              : ''
+          }
+
+          <div class="design-preview-overlay">
+            <span>View larger</span>
+          </div>
+        </div>
+
+        <div class="design-record-body">
+          <div class="design-record-type">
+            ${escapeHtml(
+              record.recordType
+            )}
+          </div>
+
+          <h3>
+            ${escapeHtml(
+              record.title ||
+              record.recordType ||
+              'Design'
+            )}
+          </h3>
+
+          ${
+            record.description
+              ? `
+                <p>
+                  ${escapeHtml(
+                    record.description
+                  )}
+                </p>
+              `
+              : ''
+          }
+
+          <div class="design-record-meta">
+            <span>
+              ${escapeHtml(
+                getRoomNameForDesignRecord(
+                  record.roomId
+                )
+              )}
+            </span>
+
+            <span>
+              ${escapeHtml(
+                record.createdDate || ''
+              )}
+            </span>
+          </div>
+
+          <div class="design-record-actions">
+            <button
+              type="button"
+              class="text-button"
+              data-view-design-record
+            >
+              View / Edit →
+            </button>
+
+            ${
+              record.driveUrl
+                ? `
+                  <button
+                    type="button"
+                    class="text-button"
+                    data-open-original
+                  >
+                    Open original →
+                  </button>
+                `
+                : ''
+            }
+          </div>
+        </div>
+      `;
+
+      card.addEventListener(
+        'click',
+        () => {
+          openDesignRecordViewer(
+            record.designRecordId
+          );
+        }
+      );
+
+      const viewButton =
+        card.querySelector(
+          '[data-view-design-record]'
+        );
+
+      if (viewButton) {
+        viewButton.addEventListener(
+          'click',
+          event => {
+            event.stopPropagation();
+            openDesignRecordViewer(
+              record.designRecordId
+            );
+          }
+        );
+      }
+
+      const originalButton =
+        card.querySelector(
+          '[data-open-original]'
+        );
+
+      if (originalButton) {
+        originalButton.addEventListener(
+          'click',
+          event => {
+            event.stopPropagation();
+            window.open(
+              record.driveUrl,
+              '_blank'
+            );
+          }
+        );
+      }
+
+    } else {
+
+      card.classList.add(
+        'design-note-card'
+      );
+
+      card.innerHTML = `
+        <div class="design-note-icon">✎</div>
+
+        <div class="design-record-body">
+          <div class="design-record-type">
+            ${escapeHtml(
+              record.recordType
+            )}
+          </div>
+
+          <h3>
+            ${escapeHtml(
+              record.title ||
+              'Design Note'
+            )}
+          </h3>
+
+          <p>
+            ${escapeHtml(
+              record.description || ''
+            )}
+          </p>
+
+          <div class="design-record-meta">
+            <span>
+              ${escapeHtml(
+                getRoomNameForDesignRecord(
+                  record.roomId
+                )
+              )}
+            </span>
+
+            <span>
+              ${escapeHtml(
+                record.createdDate || ''
+              )}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+
+function getRoomNameForDesignRecord(
+  roomId
+) {
+
+  if (!roomId) {
+    return 'General Project';
+  }
+
+
+  const rooms =
+    appState.designWorkspace
+      ?.rooms || [];
+
+
+  const room =
+    rooms.find(
+      item =>
+        String(item.roomId) ===
+        String(roomId)
+    );
+
+
+  return room
+    ? room.roomName
+    : 'Project Area';
+}
+/* -----------------------------
+   CREATE CLIENT
+   ----------------------------- */
+
+function openNewClientModal() {
+
+  document
+    .getElementById(
+      'newClientForm'
+    )
+    .reset();
+
+  show('newClientModal');
+}
+
+
+async function submitNewClient(event) {
+
+  event.preventDefault();
+
+
+  const button =
+    document.getElementById(
+      'saveClientButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Saving…'
+  );
+
+
+  try {
+
+    const client =
+      await serverCall(
+        'PDS_createClient',
+        {
+          firstName:
+            value('clientFirstName'),
+
+          lastName:
+            value('clientLastName'),
+
+          email:
+            value('clientEmail'),
+
+          phone:
+            value('clientPhone'),
+
+          propertyAddress:
+            value(
+              'clientPropertyAddress'
+            ),
+
+          referralSource:
+            value(
+              'clientReferralSource'
+            ),
+
+          notes:
+            value('clientNotes')
+        }
+      );
+
+
+    closeModal(
+      'newClientModal'
+    );
+
+
+    showToast(
+      'Client added'
+    );
+
+
+    await refreshApplicationData();
+
+
+    navigateTo('clients');
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+
+  } finally {
+
+    setButtonBusy(
+      button,
+      false,
+      'Save Client'
+    );
+  }
+}
+
+
+/* -----------------------------
+   CREATE PROJECT
+   ----------------------------- */
+
+function openNewProjectModal(
+  preselectedClientId = ''
+) {
+
+  if (!appState.clients.length) {
+
+    showToast(
+      'Add a client before creating a project.',
+      true
+    );
+
+    openNewClientModal();
+
+    return;
+  }
+
+
+  document
+    .getElementById(
+      'newProjectForm'
+    )
+    .reset();
+
+
+  populateClientSelect(
+    preselectedClientId
+  );
+
+
+  show('newProjectModal');
+
+
+  if (preselectedClientId) {
+
+    handleProjectClientChange();
+  }
+}
+
+
+async function submitNewProject(event) {
+
+  event.preventDefault();
+
+
+  const button =
+    document.getElementById(
+      'saveProjectButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Creating…'
+  );
+
+
+  try {
+
+    const project =
+      await serverCall(
+        'PDS_createProject',
+        {
+          clientId:
+            value('projectClient'),
+
+          projectName:
+            value('projectName'),
+
+          propertyAddress:
+            value(
+              'projectPropertyAddress'
+            ),
+
+          scopeSummary:
+            value(
+              'projectScopeSummary'
+            ),
+
+          targetStartDate:
+            value(
+              'projectTargetStart'
+            ),
+
+          targetCompletionDate:
+            value(
+              'projectTargetCompletion'
+            )
+        }
+      );
+
+
+    closeModal(
+      'newProjectModal'
+    );
+
+
+    showToast(
+      'Project created'
+    );
+
+
+    await refreshApplicationData();
+
+
+    openProject(
+      project.project.projectId
+    );
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+
+  } finally {
+
+    setButtonBusy(
+      button,
+      false,
+      'Create Project'
+    );
+  }
+}
+
+
+/* -----------------------------
+   CREATE ROOM
+   ----------------------------- */
+
+function openNewRoomModal() {
+
+  if (!appState.currentProjectId) {
+    return;
+  }
+
+
+  document
+    .getElementById(
+      'newRoomForm'
+    )
+    .reset();
+
+
+  show('newRoomModal');
+}
+
+
+async function submitNewRoom(event) {
+
+  event.preventDefault();
+
+
+  const button =
+    document.getElementById(
+      'saveRoomButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Adding…'
+  );
+
+
+  try {
+
+    await serverCall(
+      'PDS_createRoom',
+      {
+        projectId:
+          appState.currentProjectId,
+
+        roomName:
+          value('roomName'),
+
+        roomType:
+          value('roomType'),
+
+        notes:
+          value('roomNotes')
+      }
+    );
+
+
+    closeModal(
+      'newRoomModal'
+    );
+
+
+    showToast(
+      'Room added'
+    );
+
+
+    await openProject(
+      appState.currentProjectId
+    );
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+
+  } finally {
+
+    setButtonBusy(
+      button,
+      false,
+      'Add Room'
+    );
+  }
+}
+
+
+/* -----------------------------
+   REFRESH
+   ----------------------------- */
+
+async function refreshApplicationData() {
+
+  const data =
+    await serverCall(
+      'PDS_getAppBootstrapData'
+    );
+
+
+  appState.dashboard =
+    data &&
+    data.dashboard &&
+    typeof data.dashboard === 'object'
+      ? data.dashboard
+      : {};
+
+
+  appState.clients =
+    data &&
+    Array.isArray(data.clients)
+      ? data.clients.filter(Boolean)
+      : [];
+
+
+  appState.projects =
+    data &&
+    Array.isArray(data.projects)
+      ? data.projects.filter(Boolean)
+      : [];
+
+
+  /*
+   * Refresh the dashboard first.
+   */
+  renderDashboard();
+
+
+  /*
+   * Then refresh optional client controls.
+   */
+  try {
+
+    populateClientSelect();
+
+    populateProjectClientFilter();
+
+  } catch (controlError) {
+
+    console.error(
+      'Client control refresh failed:',
+      controlError
+    );
+
+  }
+}
+
+
+/* -----------------------------
+   CLIENT SELECT
+   ----------------------------- */
+
+function populateClientSelect(
+  preselectedClientId = ''
+) {
+
+  const select =
+    document.getElementById(
+      'projectClient'
+    );
+
+
+  if (!select) {
+    return;
+  }
+
+
+  const existingSelection =
+    select.value;
+
+
+  select.innerHTML = `
+    <option value="">
+      Select a client…
+    </option>
+  `;
+
+
+  const clients =
+    Array.isArray(appState.clients)
+      ? appState.clients.filter(Boolean)
+      : [];
+
+
+  clients
+    .slice()
+    .sort(
+      (a, b) =>
+        String(
+          a.name ||
+          a.DisplayName ||
+          ''
+        )
+          .localeCompare(
+            String(
+              b.name ||
+              b.DisplayName ||
+              ''
+            )
+          )
+    )
+    .forEach(client => {
+
+      const clientId =
+        client.clientId ||
+        client.ClientID ||
+        '';
+
+
+      const clientName =
+        client.name ||
+        client.DisplayName ||
+        [
+          client.FirstName,
+          client.LastName
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+
+      if (!clientId) {
+        return;
+      }
+
+
+      const option =
+        document.createElement(
+          'option'
+        );
+
+
+      option.value =
+        clientId;
+
+
+      let label =
+        clientName ||
+        clientId;
+
+
+      const propertyAddress =
+        client.propertyAddress ||
+        client.PropertyAddress ||
+        '';
+
+
+      if (propertyAddress) {
+
+        label +=
+          ' — ' +
+          propertyAddress;
+      }
+
+
+      option.textContent =
+        label;
+
+
+      select.appendChild(
+        option
+      );
+    });
+
+
+  const targetSelection =
+    preselectedClientId ||
+    existingSelection;
+
+
+  if (targetSelection) {
+
+    select.value =
+      targetSelection;
+  }
+}
+
+function handleProjectClientChange() {
+
+  const clientId =
+    document
+      .getElementById(
+        'projectClient'
+      )
+      ?.value || '';
+
+
+  const addressField =
+    document.getElementById(
+      'projectPropertyAddress'
+    );
+
+
+  if (!addressField) {
+    return;
+  }
+
+
+  if (!clientId) {
+
+    addressField.value = '';
+
+    return;
+  }
+
+
+  const client =
+    appState.clients.find(
+      item =>
+        String(item.clientId) ===
+        String(clientId)
+    );
+
+
+  if (!client) {
+    return;
+  }
+
+
+  addressField.value =
+    client.propertyAddress || '';
+}
+
+
+
+function populateProjectClientFilter() {
+
+  const select =
+    document.getElementById(
+      'projectClientFilter'
+    );
+
+
+  if (!select) {
+    return;
+  }
+
+
+  const currentSelection =
+    select.value;
+
+
+  select.innerHTML = `
+    <option value="">
+      All Clients
+    </option>
+  `;
+
+
+  const clients =
+    Array.isArray(appState.clients)
+      ? appState.clients.filter(Boolean)
+      : [];
+
+
+  clients
+    .slice()
+    .sort(
+      (a, b) =>
+        String(
+          a.name ||
+          a.DisplayName ||
+          ''
+        )
+          .localeCompare(
+            String(
+              b.name ||
+              b.DisplayName ||
+              ''
+            )
+          )
+    )
+    .forEach(client => {
+
+      const clientId =
+        client.clientId ||
+        client.ClientID ||
+        '';
+
+
+      const clientName =
+        client.name ||
+        client.DisplayName ||
+        [
+          client.FirstName,
+          client.LastName
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+
+      if (!clientId) {
+        return;
+      }
+
+
+      const option =
+        document.createElement(
+          'option'
+        );
+
+
+      option.value =
+        clientId;
+
+
+      option.textContent =
+        clientName ||
+        clientId;
+
+
+      select.appendChild(
+        option
+      );
+    });
+
+
+  if (currentSelection) {
+
+    select.value =
+      currentSelection;
+  }
+}
+
+
+
+function openProjectsForClient(
+  clientId
+) {
+
+  navigateTo(
+    'projects'
+  );
+
+
+  const filter =
+    document.getElementById(
+      'projectClientFilter'
+    );
+
+
+  if (filter) {
+
+    filter.value =
+      clientId;
+  }
+
+
+  renderProjectsPage();
+}
+
+function populateDesignRoomSelect(
+  selectId
+) {
+
+  const select =
+    document.getElementById(
+      selectId
+    );
+
+
+  if (!select) {
+    return;
+  }
+
+
+  select.innerHTML = `
+    <option value="">
+      General Project
+    </option>
+  `;
+
+
+  const rooms =
+    appState.currentProjectData
+      ?.rooms || [];
+
+
+  rooms.forEach(room => {
+
+    const option =
+      document.createElement(
+        'option'
+      );
+
+
+    option.value =
+      room.roomId;
+
+
+    option.textContent =
+      room.roomName;
+
+
+    select.appendChild(
+      option
+    );
+  });
+}
+
+
+
+function openDesignPhotoModal() {
+
+  const form =
+    document.getElementById(
+      'designPhotoForm'
+    );
+
+
+  form.reset();
+
+
+  document
+    .getElementById(
+      'designPhotoProjectId'
+    )
+    .value =
+      appState.currentProjectId;
+
+
+  populateDesignRoomSelect(
+    'designPhotoRoom'
+  );
+
+
+  show(
+    'designPhotoModal'
+  );
+}
+
+
+
+function openDesignNoteModal() {
+
+  document
+    .getElementById(
+      'designNoteForm'
+    )
+    .reset();
+
+
+  populateDesignRoomSelect(
+    'designNoteRoom'
+  );
+
+
+  show(
+    'designNoteModal'
+  );
+}
+
+
+
+function submitDesignPhoto(event) {
+
+  event.preventDefault();
+
+
+  const form =
+    event.currentTarget;
+
+
+  const button =
+    document.getElementById(
+      'saveDesignPhotoButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Saving Photo…'
+  );
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      async () => {
+
+        closeModal(
+          'designPhotoModal'
+        );
+
+
+        showToast(
+          'Photo added to design workspace'
+        );
+
+
+        setButtonBusy(
+          button,
+          false,
+          'Save Photo'
+        );
+
+
+        await refreshDesignWorkspace();
+      }
+    )
+
+    .withFailureHandler(
+      error => {
+
+        setButtonBusy(
+          button,
+          false,
+          'Save Photo'
+        );
+
+
+        showToast(
+          getErrorMessage(error),
+          true
+        );
+      }
+    )
+
+    .PDS_uploadDesignPhoto(
+      form
+    );
+}
+
+
+
+async function submitDesignNote(
+  event
+) {
+
+  event.preventDefault();
+
+
+  const button =
+    document.getElementById(
+      'saveDesignNoteButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Saving…'
+  );
+
+
+  try {
+
+    await serverCall(
+      'PDS_createDesignNote',
+      {
+        projectId:
+          appState.currentProjectId,
+
+        roomId:
+          value(
+            'designNoteRoom'
+          ),
+
+        title:
+          value(
+            'designNoteTitle'
+          ),
+
+        description:
+          value(
+            'designNoteDescription'
+          ),
+
+        clientVisible:
+          document
+            .getElementById(
+              'designNoteClientVisible'
+            )
+            .checked
+      }
+    );
+
+
+    closeModal(
+      'designNoteModal'
+    );
+
+
+    showToast(
+      'Design note added'
+    );
+
+
+    await refreshDesignWorkspace();
+
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+
+
+  } finally {
+
+    setButtonBusy(
+      button,
+      false,
+      'Save Note'
+    );
+  }
+}
+
+
+
+async function refreshDesignWorkspace() {
+
+  const data =
+    await serverCall(
+      'PDS_getDesignWorkspace',
+      appState.currentProjectId
+    );
+
+
+  appState.designWorkspace =
+    data;
+
+
+  renderDesignWorkspace();
+}
+
+/* =============================
+   SKETCH WORKSPACE
+   ============================= */
+
+function openSketchModal() {
+
+  if (!appState.currentProjectId) {
+
+    showToast(
+      'Open a project first.',
+      true
+    );
+
+    return;
+  }
+
+
+  document
+    .getElementById(
+      'sketchTitle'
+    )
+    .value = '';
+
+
+  document
+    .getElementById(
+      'sketchBackground'
+    )
+    .value = 'blank';
+
+
+  document
+    .getElementById(
+      'sketchClientVisible'
+    )
+    .checked = false;
+
+
+  document
+    .getElementById(
+      'sketchColor'
+    )
+    .value = '#2f4356';
+
+
+  document
+    .getElementById(
+      'sketchWidth'
+    )
+    .value = 4;
+
+
+  populateDesignRoomSelect(
+    'sketchRoom'
+  );
+
+
+  sketchState.tool =
+    'pen';
+
+
+  sketchState.strokes =
+    [];
+
+
+  sketchState.redoStack =
+    [];
+
+
+  sketchState.activeStroke =
+    null;
+
+
+  sketchState.drawing =
+    false;
+
+
+  sketchState.background =
+    'blank';
+
+
+  document
+    .querySelectorAll(
+      '[data-sketch-tool]'
+    )
+    .forEach(button => {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.sketchTool ===
+          'pen'
+      );
+    });
+
+
+  show(
+    'designSketchModal'
+  );
+
+
+  document.body.classList.add(
+    'sketch-open'
+  );
+
+
+  requestAnimationFrame(
+    () => {
+
+      initializeSketchCanvas();
+    }
+  );
+}
+
+
+
+function closeSketchModal() {
+
+  hide(
+    'designSketchModal'
+  );
+
+
+  document.body.classList.remove(
+    'sketch-open'
+  );
+
+
+  sketchState.drawing =
+    false;
+
+
+  sketchState.activeStroke =
+    null;
+}
+
+
+
+function initializeSketchCanvas() {
+
+  const canvas =
+    document.getElementById(
+      'sketchCanvas'
+    );
+
+
+  const wrap =
+    document.getElementById(
+      'sketchCanvasWrap'
+    );
+
+
+  if (!canvas || !wrap) {
+    return;
+  }
+
+
+  if (!canvas.dataset.wired) {
+
+    canvas.addEventListener(
+      'pointerdown',
+      handleSketchPointerDown
+    );
+
+
+    canvas.addEventListener(
+      'pointermove',
+      handleSketchPointerMove
+    );
+
+
+    canvas.addEventListener(
+      'pointerup',
+      handleSketchPointerUp
+    );
+
+
+    canvas.addEventListener(
+      'pointercancel',
+      handleSketchPointerUp
+    );
+
+
+    canvas.dataset.wired =
+      'true';
+  }
+
+
+  resizeSketchCanvas();
+
+
+  changeSketchBackground();
+}
+
+
+
+function resizeSketchCanvas() {
+
+  const canvas =
+    document.getElementById(
+      'sketchCanvas'
+    );
+
+
+  const wrap =
+    document.getElementById(
+      'sketchCanvasWrap'
+    );
+
+
+  if (!canvas || !wrap) {
+    return;
+  }
+
+
+  const rect =
+    wrap.getBoundingClientRect();
+
+
+  const newWidth =
+    Math.max(
+      1,
+      Math.floor(
+        rect.width
+      )
+    );
+
+
+  const newHeight =
+    Math.max(
+      1,
+      Math.floor(
+        rect.height
+      )
+    );
+
+
+  const oldWidth =
+    sketchState.logicalWidth;
+
+
+  const oldHeight =
+    sketchState.logicalHeight;
+
+
+  /*
+   * Keep existing drawing aligned
+   * if iPad/iPhone rotates.
+   */
+  if (
+    oldWidth &&
+    oldHeight &&
+    (
+      oldWidth !== newWidth ||
+      oldHeight !== newHeight
+    )
+  ) {
+
+    const scaleX =
+      newWidth / oldWidth;
+
+
+    const scaleY =
+      newHeight / oldHeight;
+
+
+    sketchState.strokes
+      .forEach(stroke => {
+
+        stroke.points
+          .forEach(point => {
+
+            point.x *= scaleX;
+
+            point.y *= scaleY;
+          });
+      });
+
+
+    sketchState.redoStack
+      .forEach(stroke => {
+
+        stroke.points
+          .forEach(point => {
+
+            point.x *= scaleX;
+
+            point.y *= scaleY;
+          });
+      });
+  }
+
+
+  sketchState.logicalWidth =
+    newWidth;
+
+
+  sketchState.logicalHeight =
+    newHeight;
+
+
+  const dpr =
+    Math.min(
+      window.devicePixelRatio || 1,
+      3
+    );
+
+
+  canvas.width =
+    Math.round(
+      newWidth * dpr
+    );
+
+
+  canvas.height =
+    Math.round(
+      newHeight * dpr
+    );
+
+
+  canvas.style.width =
+    newWidth + 'px';
+
+
+  canvas.style.height =
+    newHeight + 'px';
+
+
+  renderSketchCanvas();
+}
+
+
+
+function getSketchPoint(
+  event
+) {
+
+  const canvas =
+    document.getElementById(
+      'sketchCanvas'
+    );
+
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+
+  return {
+
+    x:
+      event.clientX -
+      rect.left,
+
+    y:
+      event.clientY -
+      rect.top,
+
+    pressure:
+      event.pointerType === 'pen'
+        ? Math.max(
+            .15,
+            event.pressure || .5
+          )
+        : .5
+  };
+}
+
+
+
+function handleSketchPointerDown(
+  event
+) {
+
+  if (
+    event.pointerType === 'mouse' &&
+    event.button !== 0
+  ) {
+    return;
+  }
+
+
+  event.preventDefault();
+
+
+  const canvas =
+    event.currentTarget;
+
+
+  canvas.setPointerCapture(
+    event.pointerId
+  );
+
+
+  sketchState.pointerId =
+    event.pointerId;
+
+
+  sketchState.drawing =
+    true;
+
+
+  sketchState.redoStack =
+    [];
+
+
+  const point =
+    getSketchPoint(
+      event
+    );
+
+
+  sketchState.activeStroke = {
+
+    tool:
+      sketchState.tool,
+
+    color:
+      document
+        .getElementById(
+          'sketchColor'
+        )
+        .value,
+
+    width:
+      Number(
+        document
+          .getElementById(
+            'sketchWidth'
+          )
+          .value || 4
+      ),
+
+    points: [
+      point
+    ]
+  };
+
+
+  sketchState.strokes.push(
+    sketchState.activeStroke
+  );
+
+
+  renderSketchCanvas();
+}
+
+
+
+function handleSketchPointerMove(
+  event
+) {
+
+  if (
+    !sketchState.drawing ||
+    event.pointerId !==
+      sketchState.pointerId ||
+    !sketchState.activeStroke
+  ) {
+    return;
+  }
+
+
+  event.preventDefault();
+
+
+  const point =
+    getSketchPoint(
+      event
+    );
+
+
+  sketchState.activeStroke
+    .points
+    .push(
+      point
+    );
+
+
+  renderSketchCanvas();
+}
+
+
+
+function handleSketchPointerUp(
+  event
+) {
+
+  if (
+    event.pointerId !==
+    sketchState.pointerId
+  ) {
+    return;
+  }
+
+
+  event.preventDefault();
+
+
+  sketchState.drawing =
+    false;
+
+
+  sketchState.pointerId =
+    null;
+
+
+  sketchState.activeStroke =
+    null;
+
+
+  renderSketchCanvas();
+}
+
+
+
+function setSketchTool(
+  tool
+) {
+
+  sketchState.tool =
+    tool;
+
+
+  document
+    .querySelectorAll(
+      '[data-sketch-tool]'
+    )
+    .forEach(button => {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.sketchTool ===
+          tool
+      );
+    });
+
+
+  const width =
+    document.getElementById(
+      'sketchWidth'
+    );
+
+
+  if (tool === 'pen') {
+
+    if (
+      Number(width.value) > 10
+    ) {
+      width.value = 4;
+    }
+
+  }
+
+
+  if (tool === 'highlighter') {
+
+    if (
+      Number(width.value) < 10
+    ) {
+      width.value = 16;
+    }
+
+  }
+
+
+  if (tool === 'eraser') {
+
+    if (
+      Number(width.value) < 12
+    ) {
+      width.value = 18;
+    }
+  }
+}
+
+
+
+function renderSketchCanvas() {
+
+  const canvas =
+    document.getElementById(
+      'sketchCanvas'
+    );
+
+
+  if (!canvas) {
+    return;
+  }
+
+
+  const context =
+    canvas.getContext(
+      '2d'
+    );
+
+
+  const dpr =
+    Math.min(
+      window.devicePixelRatio || 1,
+      3
+    );
+
+
+  context.setTransform(
+    1,
+    0,
+    0,
+    1,
+    0,
+    0
+  );
+
+
+  context.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  context.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  sketchState.strokes
+    .forEach(
+      stroke => {
+
+        drawSketchStroke(
+          context,
+          stroke
+        );
+      }
+    );
+}
+
+
+
+function drawSketchStroke(
+  context,
+  stroke
+) {
+
+  if (
+    !stroke ||
+    !stroke.points ||
+    !stroke.points.length
+  ) {
+    return;
+  }
+
+
+  context.save();
+
+
+  context.lineCap =
+    'round';
+
+
+  context.lineJoin =
+    'round';
+
+
+  if (
+    stroke.tool ===
+    'eraser'
+  ) {
+
+    context.globalCompositeOperation =
+      'destination-out';
+
+
+    context.globalAlpha =
+      1;
+
+  } else {
+
+    context.globalCompositeOperation =
+      'source-over';
+
+
+    context.strokeStyle =
+      stroke.color ||
+      '#2f4356';
+
+
+    context.globalAlpha =
+      stroke.tool ===
+        'highlighter'
+        ? .25
+        : 1;
+  }
+
+
+  /*
+   * A single Pencil tap should
+   * still leave a visible mark.
+   */
+  if (
+    stroke.points.length === 1
+  ) {
+
+    const point =
+      stroke.points[0];
+
+
+    context.beginPath();
+
+
+    context.arc(
+      point.x,
+      point.y,
+      getSketchStrokeWidth(
+        stroke,
+        point
+      ) / 2,
+      0,
+      Math.PI * 2
+    );
+
+
+    if (
+      stroke.tool ===
+      'eraser'
+    ) {
+
+      context.fillStyle =
+        '#000000';
+
+    } else {
+
+      context.fillStyle =
+        stroke.color ||
+        '#2f4356';
+    }
+
+
+    context.fill();
+
+
+    context.restore();
+
+    return;
+  }
+
+
+  for (
+    let i = 1;
+    i < stroke.points.length;
+    i++
+  ) {
+
+    const previous =
+      stroke.points[i - 1];
+
+
+    const point =
+      stroke.points[i];
+
+
+    context.beginPath();
+
+
+    context.lineWidth =
+      getSketchStrokeWidth(
+        stroke,
+        point
+      );
+
+
+    context.moveTo(
+      previous.x,
+      previous.y
+    );
+
+
+    context.lineTo(
+      point.x,
+      point.y
+    );
+
+
+    context.stroke();
+  }
+
+
+  context.restore();
+}
+
+
+
+function getSketchStrokeWidth(
+  stroke,
+  point
+) {
+
+  let width =
+    Number(
+      stroke.width || 4
+    );
+
+
+  /*
+   * Pencil pressure gets a modest
+   * response without becoming wild.
+   */
+  if (
+    point &&
+    point.pressure
+  ) {
+
+    width *=
+      .72 +
+      (
+        point.pressure *
+        .56
+      );
+  }
+
+
+  return width;
+}
+
+
+
+function undoSketch() {
+
+  if (
+    !sketchState.strokes.length
+  ) {
+    return;
+  }
+
+
+  const stroke =
+    sketchState.strokes.pop();
+
+
+  sketchState.redoStack.push(
+    stroke
+  );
+
+
+  renderSketchCanvas();
+}
+
+
+
+function redoSketch() {
+
+  if (
+    !sketchState.redoStack.length
+  ) {
+    return;
+  }
+
+
+  const stroke =
+    sketchState.redoStack.pop();
+
+
+  sketchState.strokes.push(
+    stroke
+  );
+
+
+  renderSketchCanvas();
+}
+
+
+
+function changeSketchBackground() {
+
+  const wrap =
+    document.getElementById(
+      'sketchCanvasWrap'
+    );
+
+
+  const select =
+    document.getElementById(
+      'sketchBackground'
+    );
+
+
+  if (!wrap || !select) {
+    return;
+  }
+
+
+  sketchState.background =
+    select.value;
+
+
+  wrap.classList.toggle(
+    'grid-background',
+    select.value === 'grid'
+  );
+}
+
+function createSketchExportDataUrl() {
+
+  const sourceCanvas =
+    document.getElementById(
+      'sketchCanvas'
+    );
+
+
+  const exportCanvas =
+    document.createElement(
+      'canvas'
+    );
+
+
+  exportCanvas.width =
+    sourceCanvas.width;
+
+
+  exportCanvas.height =
+    sourceCanvas.height;
+
+
+  const context =
+    exportCanvas.getContext(
+      '2d'
+    );
+
+
+  /*
+   * Always export onto white.
+   */
+  context.fillStyle =
+    '#ffffff';
+
+
+  context.fillRect(
+    0,
+    0,
+    exportCanvas.width,
+    exportCanvas.height
+  );
+
+
+  /*
+   * Draw grid into exported image
+   * when Grid is selected.
+   */
+  if (
+    sketchState.background ===
+    'grid'
+  ) {
+
+    drawSketchExportGrid(
+      context,
+      exportCanvas
+    );
+  }
+
+
+  /*
+   * Add transparent drawing layer.
+   */
+  context.drawImage(
+    sourceCanvas,
+    0,
+    0
+  );
+
+
+  return exportCanvas
+    .toDataURL(
+      'image/png'
+    );
+}
+
+
+
+function drawSketchExportGrid(
+  context,
+  canvas
+) {
+
+  const dpr =
+    Math.min(
+      window.devicePixelRatio || 1,
+      3
+    );
+
+
+  const spacing =
+    24 * dpr;
+
+
+  context.save();
+
+
+  context.strokeStyle =
+    '#e7e1d9';
+
+
+  context.lineWidth =
+    Math.max(
+      1,
+      dpr
+    );
+
+
+  for (
+    let x = 0;
+    x <= canvas.width;
+    x += spacing
+  ) {
+
+    context.beginPath();
+
+    context.moveTo(
+      x,
+      0
+    );
+
+    context.lineTo(
+      x,
+      canvas.height
+    );
+
+    context.stroke();
+  }
+
+
+  for (
+    let y = 0;
+    y <= canvas.height;
+    y += spacing
+  ) {
+
+    context.beginPath();
+
+    context.moveTo(
+      0,
+      y
+    );
+
+    context.lineTo(
+      canvas.width,
+      y
+    );
+
+    context.stroke();
+  }
+
+
+  context.restore();
+}
+
+
+
+async function saveCurrentSketch() {
+
+  if (
+    !sketchState.strokes.length
+  ) {
+
+    showToast(
+      'Add something to the sketch before saving.',
+      true
+    );
+
+    return;
+  }
+
+
+  const button =
+    document.getElementById(
+      'saveSketchButton'
+    );
+
+
+  setButtonBusy(
+    button,
+    true,
+    'Saving…'
+  );
+
+
+  try {
+
+    const imageData =
+      createSketchExportDataUrl();
+
+
+    let title =
+      value(
+        'sketchTitle'
+      );
+
+
+    if (!title) {
+
+      const roomId =
+        value(
+          'sketchRoom'
+        );
+
+
+      const room =
+        appState
+          .designWorkspace
+          ?.rooms
+          ?.find(
+            item =>
+              String(
+                item.roomId
+              ) ===
+              String(
+                roomId
+              )
+          );
+
+
+      title =
+        room
+          ? room.roomName +
+            ' Sketch'
+          : 'Design Sketch';
+    }
+
+
+    await serverCall(
+      'PDS_saveDesignSketch',
+      {
+
+        projectId:
+          appState.currentProjectId,
+
+        roomId:
+          value(
+            'sketchRoom'
+          ),
+
+        title:
+          title,
+
+        description:
+          '',
+
+        background:
+          sketchState.background,
+
+        clientVisible:
+          document
+            .getElementById(
+              'sketchClientVisible'
+            )
+            .checked,
+
+        imageData:
+          imageData
+      }
+    );
+
+
+    closeSketchModal();
+
+
+    showToast(
+      'Sketch saved to the project'
+    );
+
+
+    await refreshDesignWorkspace();
+
+
+  } catch (error) {
+
+    showToast(
+      getErrorMessage(error),
+      true
+    );
+
+
+  } finally {
+
+    setButtonBusy(
+      button,
+      false,
+      'Save'
+    );
+  }
+}
+window.addEventListener(
+  'resize',
+  () => {
+
+    if (
+      !document
+        .getElementById(
+          'designSketchModal'
+        )
+        ?.classList
+        .contains('hidden')
+    ) {
+
+      clearTimeout(
+        window.pdsSketchResizeTimer
+      );
+
+
+      window.pdsSketchResizeTimer =
+        setTimeout(
+          resizeSketchCanvas,
+          120
+        );
+    }
+  }
+);
+/* -----------------------------
+   MODALS
+   ----------------------------- */
+
+function closeModal(id) {
+  hide(id);
+}
+
+
+function handleBackdropClick(
+  event,
+  modalId
+) {
+
+  if (
+    event.target.id === modalId
+  ) {
+    closeModal(modalId);
+  }
+}
+
+
+/* -----------------------------
+   UI HELPERS
+   ----------------------------- */
+
+function value(id) {
+
+  return document
+    .getElementById(id)
+    ?.value
+    ?.trim() || '';
+}
+
+
+function setText(id, value) {
+
+  const element =
+    document.getElementById(id);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+
+function show(id) {
+
+  const element =
+    document.getElementById(id);
+
+  if (element) {
+    element.classList.remove(
+      'hidden'
+    );
+  }
+}
+
+
+function hide(id) {
+
+  const element =
+    document.getElementById(id);
+
+  if (element) {
+    element.classList.add(
+      'hidden'
+    );
+  }
+}
+
+
+function setButtonBusy(
+  button,
+  busy,
+  label
+) {
+
+  if (!button) {
+    return;
+  }
+
+  button.disabled = busy;
+  button.textContent = label;
+}
+
+
+function showToast(
+  message,
+  isError = false
+) {
+
+  const container =
+    document.getElementById(
+      'toastContainer'
+    );
+
+
+  const toast =
+    document.createElement('div');
+
+
+  toast.className =
+    'toast' +
+    (isError ? ' error' : '');
+
+
+  toast.textContent = message;
+
+
+  container.appendChild(toast);
+
+
+  setTimeout(
+    () => {
+      toast.remove();
+    },
+    3500
+  );
+}
+
+
+function getInitials(name) {
+
+  return String(name || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+
+function getErrorMessage(error) {
+
+  if (!error) {
+    return 'Something went wrong.';
+  }
+
+  return (
+    error.message ||
+    String(error)
+  );
+}
+
+
+function handleAppError(error) {
+
+  const loading =
+    document.getElementById(
+      'loadingState'
+    );
+
+
+  loading.innerHTML = `
+    <strong>
+      The application could not load.
+    </strong>
+
+    <br><br>
+
+    ${escapeHtml(
+      getErrorMessage(error)
+    )}
+  `;
+}
+
+
+function escapeHtml(value) {
+
+  return String(value ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
+</script>

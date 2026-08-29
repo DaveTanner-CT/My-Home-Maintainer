@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <?!= include('Styles'); ?>
+</head>
+
+<body>
+
+<div id="app">
+
+  <header class="app-header">
+
+    <button
+      id="mobileMenuButton"
+      class="mobile-menu-button"
+      type="button"
+      aria-label="Open navigation"
+    >
+      ☰
+    </button>
+
+    <div
+      class="brand"
+      onclick="navigateTo('dashboard')"
+    >
+      <div class="brand-mark">✦</div>
+
+      <div class="brand-name">
+        petite<span>design</span>studio
+      </div>
+    </div>
+
+    <button
+      class="header-action"
+      type="button"
+      onclick="openNewProjectModal()"
+    >
+      + New Project
+    </button>
+
+  </header>
+
+
+  <div class="app-layout">
+
+    <aside
+      id="sidebar"
+      class="sidebar"
+    >
+
+      <nav class="nav">
+
+        <button
+          class="nav-item active"
+          data-page="dashboard"
+          onclick="navigateTo('dashboard')"
+        >
+          <span>⌂</span>
+          Dashboard
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="clients"
+          onclick="navigateTo('clients')"
+        >
+          <span>◎</span>
+          Clients
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="projects"
+          onclick="navigateTo('projects')"
+        >
+          <span>▦</span>
+          Projects
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="design"
+          onclick="navigateTo('design')"
+        >
+          <span>✎</span>
+          Design
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="financials"
+          onclick="navigateTo('financials')"
+        >
+          <span>$</span>
+          Financials
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="vendors"
+          onclick="navigateTo('vendors')"
+        >
+          <span>◇</span>
+          Vendors
+        </button>
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-version">
+          Petite Design Studio
+        </div>
+      </div>
+
+    </aside>
+
+
+    <main class="main-content">
+
+      <div
+        id="loadingState"
+        class="loading-state"
+      >
+        <div class="loading-mark">✦</div>
+        <div>Loading your studio…</div>
+      </div>
+
+
+      <section
+        id="configurationState"
+        class="page hidden"
+      >
+
+        <div class="empty-state">
+
+          <div class="empty-icon">
+            ✦
+          </div>
+
+          <h1>
+            Petite Design Studio
+          </h1>
+
+          <p>
+            The application foundation is installed.
+            Add the Google Sheet ID in
+            <strong>Setup.gs</strong> and run
+            <strong>PDS_runInitialSetup()</strong>.
+          </p>
+
+        </div>
+
+      </section>
+
+
+      <!-- DASHBOARD -->
+
+      <section
+        id="page-dashboard"
+        class="page hidden"
+      >
+
+        <div class="page-heading">
+
+          <p class="eyebrow">
+            PETITE DESIGN STUDIO
+          </p>
+
+          <h1>
+            Studio Dashboard
+          </h1>
+
+          <p class="page-subtitle">
+            A clear view of your clients,
+            projects, and what needs attention.
+          </p>
+
+        </div>
+
+
+        <div class="summary-grid">
+
+          <article
+            class="summary-card clickable"
+            onclick="navigateTo('clients')"
+          >
+
+            <span class="summary-label">
+              Clients
+            </span>
+
+            <strong
+              id="clientCount"
+              class="summary-value"
+            >
+              0
+            </strong>
+
+            <span class="summary-link">
+              View clients →
+            </span>
+
+          </article>
+
+
+          <article
+            class="summary-card clickable"
+            onclick="navigateTo('projects')"
+          >
+
+            <span class="summary-label">
+              Active Projects
+            </span>
+
+            <strong
+              id="activeProjectCount"
+              class="summary-value"
+            >
+              0
+            </strong>
+
+            <span class="summary-link">
+              View active work →
+            </span>
+
+          </article>
+
+
+          <article class="summary-card accent">
+
+            <span class="summary-label">
+              All Projects
+            </span>
+
+            <strong
+              id="projectCount"
+              class="summary-value"
+            >
+              0
+            </strong>
+
+            <span class="summary-link light">
+              Studio history
+            </span>
+
+          </article>
+
+        </div>
+
+
+        <section class="content-section">
+
+          <div class="section-heading">
+
+            <div>
+              <p class="eyebrow">
+                RECENT
+              </p>
+
+              <h2>
+                Projects
+              </h2>
+            </div>
+
+            <button
+              class="primary-button"
+              type="button"
+              onclick="openNewProjectModal()"
+            >
+              + New Project
+            </button>
+
+          </div>
+
+
+          <div
+            id="dashboardProjectGrid"
+            class="project-grid"
+          ></div>
+
+
+          <div
+            id="dashboardEmptyProjects"
+            class="empty-projects hidden"
+          >
+            <h3>
+              Your projects will appear here.
+            </h3>
+
+            <p>
+              Add a client and create the first
+              project to begin.
+            </p>
+
+            <button
+              class="primary-button"
+              onclick="openNewClientModal()"
+            >
+              Add First Client
+            </button>
+          </div>
+
+        </section>
+
+      </section>
+
+
+      <!-- CLIENTS -->
+
+      <section
+        id="page-clients"
+        class="page hidden"
+      >
+
+        <div class="page-heading-with-action">
+
+          <div>
+            <p class="eyebrow">
+              RELATIONSHIPS
+            </p>
+
+            <h1>
+              Clients
+            </h1>
+
+            <p class="page-subtitle">
+              People, properties, and project history.
+            </p>
+          </div>
+
+          <button
+            class="primary-button"
+            onclick="openNewClientModal()"
+          >
+            + New Client
+          </button>
+
+        </div>
+
+
+        <div class="toolbar">
+
+          <div class="search-box">
+            <span>⌕</span>
+
+            <input
+              id="clientSearch"
+              type="search"
+              placeholder="Search clients…"
+              oninput="renderClients()"
+            >
+          </div>
+
+        </div>
+
+
+        <div
+          id="clientGrid"
+          class="client-grid"
+        ></div>
+
+      </section>
+
+
+      <!-- PROJECTS -->
+
+      <section
+        id="page-projects"
+        class="page hidden"
+      >
+
+        <div class="page-heading-with-action">
+
+          <div>
+            <p class="eyebrow">
+              CURRENT WORK
+            </p>
+
+            <h1>
+              Projects
+            </h1>
+
+            <p class="page-subtitle">
+              Every project, from first inquiry
+              through completion.
+            </p>
+          </div>
+
+          <button
+            class="primary-button"
+            onclick="openNewProjectModal()"
+          >
+            + New Project
+          </button>
+
+        </div>
+
+
+        <div class="toolbar toolbar-split">
+
+          <div class="search-box">
+            <span>⌕</span>
+
+            <input
+              id="projectSearch"
+              type="search"
+              placeholder="Search projects…"
+              oninput="renderProjectsPage()"
+            >
+          </div>
+
+
+          <select
+            id="projectStatusFilter"
+            class="filter-select"
+            onchange="renderProjectsPage()"
+          >
+            <option value="">
+              All Statuses
+            </option>
+
+            <option>New Inquiry</option>
+            <option>Consultation</option>
+            <option>Design</option>
+            <option>Estimating</option>
+            <option>Proposal Sent</option>
+            <option>Client Review</option>
+            <option>Approved</option>
+            <option>In Progress</option>
+            <option>
+              Awaiting Final Payment
+            </option>
+            <option>Complete</option>
+          </select>
+
+<select
+  id="projectClientFilter"
+  class="filter-select"
+  onchange="renderProjectsPage()"
+>
+  <option value="">
+    All Clients
+  </option>
+</select>
+
+        </div>
+
+
+        <div
+          id="projectsPageGrid"
+          class="project-grid"
+        ></div>
+
+      </section>
+
+
+      <!-- PROJECT DETAIL -->
+
+      <section
+        id="page-project-detail"
+        class="page hidden"
+      >
+
+        <nav
+          id="projectBreadcrumbs"
+          class="breadcrumbs"
+          aria-label="Project navigation"
+        ></nav>
+
+
+        <div
+          id="projectDetailContent"
+        ></div>
+
+      </section>
+
+
+      <!-- PLACEHOLDER MODULES -->
+
+      <section
+        id="page-design"
+        class="page hidden"
+      >
+
+        <div class="page-heading">
+          <p class="eyebrow">
+            DESIGN STUDIO
+          </p>
+
+          <h1>
+            Design
+          </h1>
+
+          <p class="page-subtitle">
+            Jump into the visual workspace for any active project.
+            Capture photos, notes, sketches, measurements, and selections.
+          </p>
+        </div>
+
+
+        <div class="design-hub-intro">
+          <div class="design-hub-intro-mark">
+            ✦
+          </div>
+
+          <div>
+            <strong>
+              Working on site?
+            </strong>
+
+            <p>
+              Choose a project below to open its Design workspace.
+              On iPhone or iPad you can take photos directly from the device.
+            </p>
+          </div>
+        </div>
+
+
+        <div class="toolbar">
+          <div class="search-box">
+            <span>⌕</span>
+
+            <input
+              id="designProjectSearch"
+              type="search"
+              placeholder="Search design projects…"
+              oninput="renderDesignHub()"
+            >
+          </div>
+        </div>
+
+
+        <div
+          id="designHubGrid"
+          class="design-hub-grid"
+        ></div>
+
+      </section>
+
+
+      <section
+        id="page-financials"
+        class="page hidden"
+      >
+        <div class="module-placeholder">
+          <div class="empty-icon">$</div>
+
+          <h1>Financials</h1>
+
+          <p>
+            Estimates, expenses, invoices,
+            payments, and profitability will live here.
+          </p>
+        </div>
+      </section>
+
+
+      <section
+        id="page-vendors"
+        class="page hidden"
+      >
+        <div class="module-placeholder">
+          <div class="empty-icon">◇</div>
+
+          <h1>Vendors</h1>
+
+          <p>
+            The vendor and sourcing directory
+            will be added in a later module.
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+</div>
+
+
+<!-- NEW CLIENT MODAL -->
+
+<div
+  id="newClientModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'newClientModal')"
+>
+
+  <div class="modal-card">
+
+    <div class="modal-header">
+
+      <div>
+        <p class="eyebrow">
+          NEW RELATIONSHIP
+        </p>
+
+        <h2>
+          Add Client
+        </h2>
+      </div>
+
+      <button
+        class="modal-close"
+        onclick="closeModal('newClientModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form
+      id="newClientForm"
+      onsubmit="submitNewClient(event)"
+    >
+
+      <div class="form-grid two-column">
+
+        <label class="field">
+          <span>First Name</span>
+          <input
+            id="clientFirstName"
+            type="text"
+          >
+        </label>
+
+        <label class="field">
+          <span>Last Name</span>
+          <input
+            id="clientLastName"
+            type="text"
+          >
+        </label>
+
+      </div>
+
+
+      <div class="form-grid two-column">
+
+        <label class="field">
+          <span>Email</span>
+          <input
+            id="clientEmail"
+            type="email"
+          >
+        </label>
+
+        <label class="field">
+          <span>Phone</span>
+          <input
+            id="clientPhone"
+            type="tel"
+          >
+        </label>
+
+      </div>
+
+
+      <label class="field">
+        <span>Property Address</span>
+        <input
+          id="clientPropertyAddress"
+          type="text"
+        >
+      </label>
+
+
+      <label class="field">
+        <span>How did they hear about Petite?</span>
+
+        <input
+          id="clientReferralSource"
+          type="text"
+        >
+      </label>
+
+
+      <label class="field">
+        <span>Notes</span>
+
+        <textarea
+          id="clientNotes"
+          rows="4"
+        ></textarea>
+      </label>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          onclick="closeModal('newClientModal')"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="saveClientButton"
+          type="submit"
+          class="primary-button"
+        >
+          Save Client
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- NEW PROJECT MODAL -->
+
+<div
+  id="newProjectModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'newProjectModal')"
+>
+
+  <div class="modal-card modal-wide">
+
+    <div class="modal-header">
+
+      <div>
+        <p class="eyebrow">
+          NEW PROJECT
+        </p>
+
+        <h2>
+          Start a Project
+        </h2>
+      </div>
+
+      <button
+        class="modal-close"
+        onclick="closeModal('newProjectModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form
+      id="newProjectForm"
+      onsubmit="submitNewProject(event)"
+    >
+
+      <label class="field">
+        <span>Client</span>
+
+        <select
+  id="projectClient"
+  required
+  onchange="handleProjectClientChange()"
+>
+  <option value="">
+    Select a client…
+  </option>
+</select>
+      </label>
+
+
+      <label class="field">
+        <span>Project Name</span>
+
+        <input
+          id="projectName"
+          type="text"
+          placeholder="Primary Bathroom"
+          required
+        >
+      </label>
+
+
+      <label class="field">
+        <span>Property Address</span>
+
+        <input
+          id="projectPropertyAddress"
+          type="text"
+          placeholder="Defaults to client property address"
+        >
+      </label>
+
+
+      <label class="field">
+        <span>Scope Summary</span>
+
+        <textarea
+          id="projectScopeSummary"
+          rows="4"
+          placeholder="Briefly describe the project…"
+        ></textarea>
+      </label>
+
+
+      <div class="form-grid two-column">
+
+        <label class="field">
+          <span>Target Start</span>
+
+          <input
+            id="projectTargetStart"
+            type="date"
+          >
+        </label>
+
+        <label class="field">
+          <span>Target Completion</span>
+
+          <input
+            id="projectTargetCompletion"
+            type="date"
+          >
+        </label>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          onclick="closeModal('newProjectModal')"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="saveProjectButton"
+          type="submit"
+          class="primary-button"
+        >
+          Create Project
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- NEW ROOM MODAL -->
+
+<div
+  id="newRoomModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'newRoomModal')"
+>
+
+  <div class="modal-card">
+
+    <div class="modal-header">
+
+      <div>
+        <p class="eyebrow">
+          PROJECT AREA
+        </p>
+
+        <h2>
+          Add Room
+        </h2>
+      </div>
+
+      <button
+        class="modal-close"
+        onclick="closeModal('newRoomModal')"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form
+      id="newRoomForm"
+      onsubmit="submitNewRoom(event)"
+    >
+
+      <label class="field">
+        <span>Room Name</span>
+
+        <input
+          id="roomName"
+          type="text"
+          placeholder="Primary Bathroom"
+          required
+        >
+      </label>
+
+
+      <label class="field">
+        <span>Room Type</span>
+
+        <select id="roomType">
+          <option value="">
+            Select type…
+          </option>
+          <option>Kitchen</option>
+          <option>Primary Bathroom</option>
+          <option>Bathroom</option>
+          <option>Powder Room</option>
+          <option>Living Room</option>
+          <option>Bedroom</option>
+          <option>Dining Room</option>
+          <option>Office</option>
+          <option>Mudroom</option>
+          <option>Laundry</option>
+          <option>Other</option>
+        </select>
+      </label>
+
+
+      <label class="field">
+        <span>Notes</span>
+
+        <textarea
+          id="roomNotes"
+          rows="4"
+        ></textarea>
+      </label>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          onclick="closeModal('newRoomModal')"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="saveRoomButton"
+          type="submit"
+          class="primary-button"
+        >
+          Add Room
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- DESIGN PHOTO MODAL -->
+
+<div
+  id="designPhotoModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'designPhotoModal')"
+>
+  <div class="modal-card modal-wide">
+    <div class="modal-header">
+      <div>
+        <p class="eyebrow">DESIGN PHOTO</p>
+        <h2>Take / Add Photo</h2>
+      </div>
+      <button
+        type="button"
+        class="modal-close"
+        onclick="closeModal('designPhotoModal')"
+      >×</button>
+    </div>
+
+    <form
+      id="designPhotoForm"
+      onsubmit="submitDesignPhoto(event)"
+    >
+      <input
+        id="designPhotoProjectId"
+        name="projectId"
+        type="hidden"
+      >
+
+      <label class="field">
+        <span>Room</span>
+        <select
+          id="designPhotoRoom"
+          name="roomId"
+        >
+          <option value="">General Project</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Photo</span>
+        <input
+          name="designPhoto"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          required
+        >
+        <small class="field-help">
+          On iPhone or iPad, choose the camera or photo library.
+        </small>
+      </label>
+
+      <label class="field">
+        <span>Title</span>
+        <input
+          name="title"
+          type="text"
+          placeholder="Existing vanity wall"
+        >
+      </label>
+
+      <label class="field">
+        <span>Description</span>
+        <textarea
+          name="description"
+          rows="4"
+          placeholder="Add notes about the image…"
+        ></textarea>
+      </label>
+
+      <label class="check-field">
+        <input
+          name="clientVisible"
+          type="checkbox"
+        >
+        <span>Available for client-facing views</span>
+      </label>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          onclick="closeModal('designPhotoModal')"
+        >Cancel</button>
+
+        <button
+          id="saveDesignPhotoButton"
+          type="submit"
+          class="primary-button"
+        >Save Photo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- DESIGN NOTE MODAL -->
+
+<div
+  id="designNoteModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'designNoteModal')"
+>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <p class="eyebrow">DESIGN NOTE</p>
+        <h2>Add Design Note</h2>
+      </div>
+      <button
+        type="button"
+        class="modal-close"
+        onclick="closeModal('designNoteModal')"
+      >×</button>
+    </div>
+
+    <form
+      id="designNoteForm"
+      onsubmit="submitDesignNote(event)"
+    >
+      <label class="field">
+        <span>Room</span>
+        <select id="designNoteRoom">
+          <option value="">General Project</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Title</span>
+        <input
+          id="designNoteTitle"
+          type="text"
+          placeholder="Client prefers warm brass"
+          required
+        >
+      </label>
+
+      <label class="field">
+        <span>Note</span>
+        <textarea
+          id="designNoteDescription"
+          rows="5"
+          required
+        ></textarea>
+      </label>
+
+      <label class="check-field">
+        <input
+          id="designNoteClientVisible"
+          type="checkbox"
+        >
+        <span>Available for client-facing views</span>
+      </label>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          onclick="closeModal('designNoteModal')"
+        >Cancel</button>
+
+        <button
+          id="saveDesignNoteButton"
+          type="submit"
+          class="primary-button"
+        >Save Note</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- DESIGN SKETCH WORKSPACE -->
+
+<div
+  id="designSketchModal"
+  class="sketch-modal hidden"
+>
+  <div class="sketch-shell">
+    <header class="sketch-topbar">
+      <button
+        type="button"
+        class="sketch-close-button"
+        onclick="closeSketchModal()"
+        aria-label="Close sketch"
+      >←</button>
+
+      <div class="sketch-topbar-title">
+        <span class="eyebrow">PETITE DESIGN STUDIO</span>
+        <strong>New Sketch</strong>
+      </div>
+
+      <button
+        id="saveSketchButton"
+        type="button"
+        class="primary-button"
+        onclick="saveCurrentSketch()"
+      >Save</button>
+    </header>
+
+    <div class="sketch-meta-bar">
+      <label class="sketch-meta-field">
+        <span>Title</span>
+        <input
+          id="sketchTitle"
+          type="text"
+          placeholder="Vanity wall concept"
+        >
+      </label>
+
+      <label class="sketch-meta-field">
+        <span>Room</span>
+        <select id="sketchRoom">
+          <option value="">General Project</option>
+        </select>
+      </label>
+
+      <label class="sketch-meta-field">
+        <span>Background</span>
+        <select
+          id="sketchBackground"
+          onchange="changeSketchBackground()"
+        >
+          <option value="blank">Blank</option>
+          <option value="grid">Grid</option>
+        </select>
+      </label>
+
+      <label class="sketch-client-visible">
+        <input
+          id="sketchClientVisible"
+          type="checkbox"
+        >
+        <span>Client visible</span>
+      </label>
+    </div>
+
+    <div class="sketch-toolbar">
+      <div class="sketch-tool-group">
+        <button
+          type="button"
+          class="sketch-tool active"
+          data-sketch-tool="pen"
+          onclick="setSketchTool('pen')"
+        >✎<span>Pen</span></button>
+
+        <button
+          type="button"
+          class="sketch-tool"
+          data-sketch-tool="highlighter"
+          onclick="setSketchTool('highlighter')"
+        >▰<span>Highlight</span></button>
+
+        <button
+          type="button"
+          class="sketch-tool"
+          data-sketch-tool="eraser"
+          onclick="setSketchTool('eraser')"
+        >◇<span>Eraser</span></button>
+      </div>
+
+      <div class="sketch-tool-divider"></div>
+
+      <label class="sketch-color-control">
+        <span>Color</span>
+        <input
+          id="sketchColor"
+          type="color"
+          value="#2f4356"
+        >
+      </label>
+
+      <label class="sketch-width-control">
+        <span>Size</span>
+        <input
+          id="sketchWidth"
+          type="range"
+          min="1"
+          max="22"
+          step="1"
+          value="4"
+        >
+      </label>
+
+      <div class="sketch-tool-divider"></div>
+
+      <button
+        type="button"
+        class="sketch-history-button"
+        onclick="undoSketch()"
+      >↶<span>Undo</span></button>
+
+      <button
+        type="button"
+        class="sketch-history-button"
+        onclick="redoSketch()"
+      >↷<span>Redo</span></button>
+    </div>
+
+    <div
+      id="sketchCanvasWrap"
+      class="sketch-canvas-wrap"
+    >
+      <canvas id="sketchCanvas"></canvas>
+    </div>
+
+    <div class="sketch-footer">
+      <span>Draw with Apple Pencil or your finger.</span>
+      <span>Your sketch is saved with this project.</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- DESIGN RECORD VIEWER -->
+
+<div
+  id="designRecordViewer"
+  class="visual-viewer hidden"
+>
+  <div class="visual-viewer-shell">
+    <header class="visual-viewer-header">
+      <button
+        type="button"
+        class="viewer-close-button"
+        onclick="closeDesignRecordViewer()"
+      >←</button>
+
+      <div class="viewer-heading">
+        <span
+          id="viewerRecordType"
+          class="eyebrow"
+        >DESIGN</span>
+        <strong id="viewerRecordTitle"></strong>
+      </div>
+
+      <button
+        type="button"
+        class="secondary-button viewer-edit-button"
+        onclick="openDesignRecordDetailsEditor()"
+      >Edit Details</button>
+    </header>
+
+    <div class="visual-viewer-content">
+      <div class="visual-viewer-stage">
+        <div
+          id="viewerLoading"
+          class="viewer-loading"
+        >Loading image…</div>
+
+        <img
+          id="viewerImage"
+          class="hidden"
+          alt="Design preview"
+        >
+      </div>
+
+      <aside class="visual-viewer-sidebar">
+        <div>
+          <span class="info-label">Room</span>
+          <div id="viewerRoom" class="info-value"></div>
+        </div>
+
+        <div>
+          <span class="info-label">Added</span>
+          <div id="viewerDate" class="info-value"></div>
+        </div>
+
+        <div>
+          <span class="info-label">Version</span>
+          <div id="viewerVersion" class="info-value"></div>
+        </div>
+
+        <div>
+          <span class="info-label">Notes</span>
+          <div id="viewerDescription" class="viewer-description"></div>
+        </div>
+
+        <div class="viewer-sidebar-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            onclick="openDesignRecordDetailsEditor()"
+          >Edit Details</button>
+
+          <button
+            type="button"
+            class="secondary-button"
+            onclick="openSelectedDesignOriginal()"
+          >Open Original</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+
+<!-- EDIT DESIGN RECORD -->
+
+<div
+  id="designRecordEditModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'designRecordEditModal')"
+>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <p class="eyebrow">DESIGN RECORD</p>
+        <h2>Edit Details</h2>
+      </div>
+      <button
+        type="button"
+        class="modal-close"
+        onclick="closeModal('designRecordEditModal')"
+      >×</button>
+    </div>
+
+    <form
+      id="designRecordEditForm"
+      onsubmit="submitDesignRecordDetails(event)"
+    >
+      <label class="field">
+        <span>Title</span>
+        <input
+          id="editDesignRecordTitle"
+          type="text"
+        >
+      </label>
+
+      <label class="field">
+        <span>Room</span>
+        <select id="editDesignRecordRoom">
+          <option value="">General Project</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Notes</span>
+        <textarea
+          id="editDesignRecordDescription"
+          rows="5"
+        ></textarea>
+      </label>
+
+      <label class="check-field">
+        <input
+          id="editDesignRecordClientVisible"
+          type="checkbox"
+        >
+        <span>Available for client-facing views</span>
+      </label>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          onclick="closeModal('designRecordEditModal')"
+        >Cancel</button>
+
+        <button
+          id="saveDesignRecordDetailsButton"
+          type="submit"
+          class="primary-button"
+        >Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<div
+  id="toastContainer"
+  class="toast-container"
+></div>
+
+
+<?!= include('Scripts'); ?>
+
+</body>
+</html>
