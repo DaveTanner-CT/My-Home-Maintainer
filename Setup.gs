@@ -24,7 +24,7 @@ function PDS_getSchemas_() {
     Users: ['UserID','Email','DisplayName','Role','Active','CreatedDate','LastUpdatedDate'],
     Clients: ['ClientID','FirstName','LastName','PreferredName','Email','Phone','PropertyAddress','BillingAddress','PreferredCommunicationMethod','ReferralSource','Notes','CreatedDate','LastUpdatedDate','Active'],
     Projects: ['ProjectID','ClientID','ProjectName','PropertyAddress','ScopeSummary','ProjectStatus','InquiryDate','ConsultationDate','TargetStartDate','TargetCompletionDate','ActualCompletionDate','LeadDesigner','DriveFolderID','InternalNotes','ClientFacingNotes','CreatedDate','LastUpdatedDate','Archived'],
-    Rooms: ['RoomID','ProjectID','RoomName','RoomType','SortOrder','Notes','CreatedDate','LastUpdatedDate'],
+    Rooms: ['RoomID','ProjectID','RoomName','RoomType','SortOrder','Notes','LengthFeet','LengthInches','WidthFeet','WidthInches','CeilingHeightFeet','CeilingHeightInches','CreatedDate','LastUpdatedDate'],
     DesignRecords: ['DesignRecordID','ProjectID','RoomID','RecordType','Title','Description','DriveFileID','OriginalDesignRecordID','ParentDesignRecordID','VersionNumber','CreatedDate','CreatedBy','LastModifiedDate','ClientVisible','Notes'],
     Measurements: ['MeasurementID','ProjectID','RoomID','DesignRecordID','MeasurementType','Label','Value','Unit','Notes','CreatedDate','CreatedBy'],
     Estimates: ['EstimateID','ProjectID','EstimateVersion','CreatedDate','SentDate','ApprovalDate','Status','EstimatedCost','TargetMargin','SuggestedSellingPrice','OverrideSellingPrice','FinalProposedPrice','EstimatedProfit','EstimatedMargin','Notes'],

@@ -10,6 +10,9 @@ let appState = {
   currentProjectData: null,
   currentProjectTab: 'overview',
 
+  currentRoomId: '',
+  currentRoomDetail: null,
+
   designWorkspace: null,
 
   selectedDesignRecordId: '',
@@ -1314,7 +1317,13 @@ function renderProjectOverviewTab() {
 
                   ${rooms.map(room => `
 
-                    <article class="room-card">
+                    <article
+                      class="room-card room-card-clickable"
+                      role="button"
+                      tabindex="0"
+                      onclick="openRoomDetail('${escapeHtml(room.roomId)}')"
+                      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRoomDetail('${escapeHtml(room.roomId)}');}"
+                    >
 
                       <h4>
                         ${escapeHtml(
@@ -1920,6 +1929,8 @@ async function openDesignRecordViewer(
   );
 
 
+  resetViewerZoom();
+
   show(
     'designRecordViewer'
   );
@@ -1991,6 +2002,123 @@ async function openDesignRecordViewer(
 }
 
 
+
+
+let viewerZoom = 1;
+let viewerPanX = 0;
+let viewerPanY = 0;
+let viewerPointerStart = null;
+let viewerPinchStartDistance = 0;
+let viewerPinchStartZoom = 1;
+const viewerTouches = new Map();
+
+function applyViewerTransform() {
+  const image = document.getElementById('viewerImage');
+  const label = document.getElementById('viewerZoomLabel');
+  if (image) image.style.transform = `translate(${viewerPanX}px, ${viewerPanY}px) scale(${viewerZoom})`;
+  if (label) label.textContent = `${Math.round(viewerZoom * 100)}%`;
+}
+
+function changeViewerZoom(delta) {
+  viewerZoom = Math.min(5, Math.max(0.5, viewerZoom + delta));
+  if (viewerZoom <= 1) {
+    viewerPanX = 0;
+    viewerPanY = 0;
+  }
+  applyViewerTransform();
+}
+
+function resetViewerZoom() {
+  viewerZoom = 1;
+  viewerPanX = 0;
+  viewerPanY = 0;
+  viewerPointerStart = null;
+  viewerTouches.clear();
+  applyViewerTransform();
+}
+
+function initializeViewerZoomInteractions() {
+  const stage = document.querySelector('.visual-viewer-stage');
+  if (!stage || stage.dataset.zoomReady === 'true') return;
+  stage.dataset.zoomReady = 'true';
+
+  stage.addEventListener('wheel', event => {
+    if (document.getElementById('designRecordViewer')?.classList.contains('hidden')) return;
+    event.preventDefault();
+    changeViewerZoom(event.deltaY < 0 ? 0.15 : -0.15);
+  }, { passive: false });
+
+  stage.addEventListener('dblclick', () => {
+    if (viewerZoom === 1) changeViewerZoom(1);
+    else resetViewerZoom();
+  });
+
+  stage.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    stage.setPointerCapture?.(event.pointerId);
+    viewerTouches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (viewerTouches.size === 1) {
+      viewerPointerStart = { x: event.clientX, y: event.clientY, panX: viewerPanX, panY: viewerPanY };
+    } else if (viewerTouches.size === 2) {
+      const points = Array.from(viewerTouches.values());
+      viewerPinchStartDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      viewerPinchStartZoom = viewerZoom;
+    }
+  });
+
+  stage.addEventListener('pointermove', event => {
+    if (!viewerTouches.has(event.pointerId)) return;
+    viewerTouches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (viewerTouches.size === 2) {
+      const points = Array.from(viewerTouches.values());
+      const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      if (viewerPinchStartDistance > 0) {
+        viewerZoom = Math.min(5, Math.max(0.5, viewerPinchStartZoom * (distance / viewerPinchStartDistance)));
+        applyViewerTransform();
+      }
+      return;
+    }
+
+    if (viewerTouches.size === 1 && viewerZoom > 1 && viewerPointerStart) {
+      viewerPanX = viewerPointerStart.panX + (event.clientX - viewerPointerStart.x);
+      viewerPanY = viewerPointerStart.panY + (event.clientY - viewerPointerStart.y);
+      applyViewerTransform();
+    }
+  });
+
+  const finishPointer = event => {
+    viewerTouches.delete(event.pointerId);
+    if (viewerTouches.size < 2) viewerPinchStartDistance = 0;
+    if (viewerTouches.size === 0) viewerPointerStart = null;
+  };
+
+  stage.addEventListener('pointerup', finishPointer);
+  stage.addEventListener('pointercancel', finishPointer);
+}
+
+document.addEventListener('DOMContentLoaded', initializeViewerZoomInteractions);
+
+async function deleteSelectedDesignRecord() {
+  const record = appState.selectedDesignRecord;
+  if (!record) return;
+
+  const label = record.recordType === 'Site Photo' ? 'photo' : 'design item';
+  if (!window.confirm(`Delete this ${label}? The image file will be moved to Google Drive trash.`)) return;
+
+  try {
+    await serverCall('PDS_deleteDesignRecord', record.designRecordId);
+    closeDesignRecordViewer();
+    showToast('Photo deleted');
+
+    if (appState.currentRoomId) await refreshCurrentRoomDetail();
+    await refreshDesignWorkspace();
+    if (appState.currentProjectTab === 'overview') await loadProjectVisualPreview();
+  } catch (error) {
+    showToast(getErrorMessage(error), true);
+  }
+}
 
 function closeDesignRecordViewer() {
 
@@ -2152,6 +2280,10 @@ async function submitDesignRecordDetails(
 
 
     await refreshDesignWorkspace();
+
+    if (appState.currentRoomId) {
+      await refreshCurrentRoomDetail();
+    }
 
 
     /*
@@ -2940,6 +3072,170 @@ async function submitNewProject(event) {
 }
 
 
+
+/* -----------------------------
+   ROOM DETAIL
+   ----------------------------- */
+
+async function openRoomDetail(roomId) {
+  appState.currentRoomId = String(roomId || '');
+  appState.currentRoomDetail = null;
+
+  show('roomDetailModal');
+  setText('roomDetailName', 'Loading room…');
+  setText('roomDetailType', '');
+
+  const gallery = document.getElementById('roomPhotoGallery');
+  if (gallery) gallery.innerHTML = '<div class="room-photo-empty">Loading photos…</div>';
+
+  try {
+    const detail = await serverCall('PDS_getRoomDetail', appState.currentRoomId);
+    appState.currentRoomDetail = detail;
+    renderRoomDetail();
+  } catch (error) {
+    closeRoomDetail();
+    showToast(getErrorMessage(error), true);
+  }
+}
+
+function closeRoomDetail() {
+  closeModal('roomDetailModal');
+  appState.currentRoomId = '';
+  appState.currentRoomDetail = null;
+}
+
+function renderRoomDetail() {
+  const detail = appState.currentRoomDetail || {};
+  const room = detail.room || {};
+
+  setText('roomDetailName', room.roomName || 'Room');
+  setText('roomDetailType', room.roomType || 'Project area');
+
+  setInputValue('roomLengthFeet', room.lengthFeet);
+  setInputValue('roomLengthInches', room.lengthInches);
+  setInputValue('roomWidthFeet', room.widthFeet);
+  setInputValue('roomWidthInches', room.widthInches);
+  setInputValue('roomCeilingFeet', room.ceilingHeightFeet);
+  setInputValue('roomCeilingInches', room.ceilingHeightInches);
+
+  updateRoomSquareFootage();
+  renderRoomPhotoGallery();
+}
+
+function setInputValue(id, inputValue) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = inputValue === '' || inputValue === null || typeof inputValue === 'undefined' ? '' : inputValue;
+}
+
+function dimensionInFeet(feetId, inchesId) {
+  const feetRaw = document.getElementById(feetId)?.value;
+  const inchesRaw = document.getElementById(inchesId)?.value;
+  const feet = feetRaw === '' ? 0 : Number(feetRaw);
+  const inches = inchesRaw === '' ? 0 : Number(inchesRaw);
+  if (!Number.isFinite(feet) || !Number.isFinite(inches)) return 0;
+  return feet + (inches / 12);
+}
+
+function updateRoomSquareFootage() {
+  const length = dimensionInFeet('roomLengthFeet', 'roomLengthInches');
+  const width = dimensionInFeet('roomWidthFeet', 'roomWidthInches');
+  const output = document.getElementById('roomSquareFootage');
+  if (!output) return;
+
+  if (length > 0 && width > 0) {
+    const sqft = length * width;
+    output.textContent = `${sqft.toFixed(sqft >= 100 ? 0 : 1)} sq ft`;
+  } else {
+    output.textContent = '—';
+  }
+}
+
+['roomLengthFeet','roomLengthInches','roomWidthFeet','roomWidthInches'].forEach(id => {
+  document.addEventListener('input', event => {
+    if (event.target && event.target.id === id) updateRoomSquareFootage();
+  });
+});
+
+async function submitRoomDimensions(event) {
+  event.preventDefault();
+  if (!appState.currentRoomId) return;
+
+  const button = document.getElementById('saveRoomDimensionsButton');
+  setButtonBusy(button, true, 'Saving…');
+
+  try {
+    const updatedRoom = await serverCall('PDS_updateRoomDimensions', {
+      roomId: appState.currentRoomId,
+      lengthFeet: value('roomLengthFeet'),
+      lengthInches: value('roomLengthInches'),
+      widthFeet: value('roomWidthFeet'),
+      widthInches: value('roomWidthInches'),
+      ceilingHeightFeet: value('roomCeilingFeet'),
+      ceilingHeightInches: value('roomCeilingInches')
+    });
+
+    if (appState.currentRoomDetail) appState.currentRoomDetail.room = updatedRoom;
+
+    const roomInProject = (appState.currentProjectData?.rooms || []).find(item => String(item.roomId) === String(updatedRoom.roomId));
+    if (roomInProject) Object.assign(roomInProject, updatedRoom);
+
+    updateRoomSquareFootage();
+    showToast('Room dimensions saved');
+  } catch (error) {
+    showToast(getErrorMessage(error), true);
+  } finally {
+    setButtonBusy(button, false, 'Save Dimensions');
+  }
+}
+
+function renderRoomPhotoGallery() {
+  const gallery = document.getElementById('roomPhotoGallery');
+  if (!gallery) return;
+
+  const photos = appState.currentRoomDetail?.photos || [];
+  if (!photos.length) {
+    gallery.innerHTML = `
+      <div class="room-photo-empty">
+        <strong>No room photos yet.</strong>
+        <p>Add reference, progress, detail, or inspiration photos for this room.</p>
+        <button type="button" class="secondary-button" onclick="openRoomPhotoModal()">Add First Photo</button>
+      </div>`;
+    return;
+  }
+
+  gallery.innerHTML = photos.map(photo => `
+    <article class="room-photo-card">
+      <button
+        type="button"
+        class="room-photo-thumb"
+        onclick="openDesignRecordViewer('${escapeHtml(photo.designRecordId)}')"
+        aria-label="Open ${escapeHtml(photo.title || 'room photo')}"
+      >
+        ${photo.thumbnailUrl ? `<img src="${escapeHtml(photo.thumbnailUrl)}" alt="${escapeHtml(photo.title || '')}" loading="lazy">` : '<span class="room-photo-placeholder">📷</span>'}
+        <span class="room-photo-enlarge">Enlarge</span>
+      </button>
+      <div class="room-photo-caption">
+        <strong>${escapeHtml(photo.title || 'Room Photo')}</strong>
+        <p>${photo.description ? escapeHtml(photo.description) : '<span class="room-photo-no-caption">No description added.</span>'}</p>
+        <button type="button" class="text-button" onclick="openDesignRecordViewer('${escapeHtml(photo.designRecordId)}')">View / Edit Description</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+function openRoomPhotoModal() {
+  if (!appState.currentRoomId) return;
+  openDesignPhotoModal(appState.currentRoomId);
+}
+
+async function refreshCurrentRoomDetail() {
+  if (!appState.currentRoomId) return;
+  const detail = await serverCall('PDS_getRoomDetail', appState.currentRoomId);
+  appState.currentRoomDetail = detail;
+  renderRoomDetail();
+}
+
 /* -----------------------------
    CREATE ROOM
    ----------------------------- */
@@ -3445,7 +3741,7 @@ function populateDesignRoomSelect(
 
 
 
-function openDesignPhotoModal() {
+function openDesignPhotoModal(preselectedRoomId = '') {
 
   const form =
     document.getElementById(
@@ -3468,6 +3764,9 @@ function openDesignPhotoModal() {
     'designPhotoRoom'
   );
 
+  if (preselectedRoomId) {
+    document.getElementById('designPhotoRoom').value = preselectedRoomId;
+  }
 
   show(
     'designPhotoModal'
@@ -3540,6 +3839,10 @@ function submitDesignPhoto(event) {
           'Save Photo'
         );
 
+
+        if (appState.currentRoomId) {
+          await refreshCurrentRoomDetail();
+        }
 
         await refreshDesignWorkspace();
       }
@@ -3668,7 +3971,11 @@ async function refreshDesignWorkspace() {
     data;
 
 
-  renderDesignWorkspace();
+  if (appState.currentProjectTab === 'design') {
+    renderDesignWorkspace();
+  } else if (appState.currentProjectTab === 'overview') {
+    await loadProjectVisualPreview();
+  }
 }
 
 /* =============================

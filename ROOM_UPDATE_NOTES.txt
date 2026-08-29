@@ -1,0 +1,44 @@
+ROOM DETAIL UPDATE - 2026-08-29
+
+FILES CHANGED
+- Config.gs
+- Setup.gs
+- RoomsService.gs
+- DesignService.gs
+- Index.html
+- Scripts.html
+- Styles.html
+- README.txt
+
+WHAT WAS ADDED
+1. Clicking a Room card now opens a Room Detail window.
+2. Dimensions appear at the top of the room:
+   - Length: feet + inches
+   - Width: feet + inches
+   - Ceiling height: feet + inches
+   - Approximate square footage automatically calculates from length x width.
+3. Room photo gallery:
+   - Add photos directly from the room.
+   - Existing Design photo storage is reused, so room photos also remain visible in Design.
+   - Photos display as thumbnails with title and description underneath.
+   - View / Edit Description opens the existing photo-details editor.
+4. Enlarged photo viewer:
+   - Zoom + / - controls
+   - Reset percentage control
+   - Mouse-wheel zoom
+   - Double-click zoom/reset
+   - Pinch-to-zoom on touch devices
+   - Pan while zoomed
+5. Photos/design items can be deleted from the viewer. The Drive file is moved to Trash and its DesignRecords row is removed.
+6. Room dimension columns install automatically on first dimension save. PDS_initializeDataModel() can also add them safely.
+
+DATA COLUMNS ADDED TO ROOMS
+- LengthFeet
+- LengthInches
+- WidthFeet
+- WidthInches
+- CeilingHeightFeet
+- CeilingHeightInches
+
+APP VERSION
+- Updated from 0.3.0 to 0.3.1

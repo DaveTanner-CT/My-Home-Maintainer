@@ -24,3 +24,15 @@ Setup:
 Important:
 - Markup Photo is still shown as a coming feature in this export; non-destructive photo markup/revisions are the next planned build step.
 - Do not make project Drive files public just to render previews.
+
+
+2026-08-29 Room Detail Update
+-----------------------------
+- Room cards now open a Room Detail view.
+- Room Detail starts with Length, Width, Ceiling Height, and calculated square footage.
+- Room photos are shown as thumbnails with descriptions.
+- Add Photos reuses the Design photo workflow and stores images in the room's Design folder.
+- Clicking a thumbnail opens the full viewer with zoom, pinch-to-zoom, mouse-wheel zoom, and panning.
+- Photo descriptions can be edited through View / Edit Description.
+- Photos can be deleted; the Drive file is moved to trash and the DesignRecords row is removed.
+- The six dimension columns are added automatically the first time room dimensions are saved. Running PDS_initializeDataModel() also adds them safely.

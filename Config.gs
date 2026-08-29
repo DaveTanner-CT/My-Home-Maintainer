@@ -1,6 +1,6 @@
 const PDS = Object.freeze({
   APP_NAME: 'Petite Design Studio',
-  APP_VERSION: '0.3.0',
+  APP_VERSION: '0.3.1',
   PROPERTY_KEYS: {
     SPREADSHEET_ID: 'PDS_SPREADSHEET_ID',
     PROJECT_ROOT_FOLDER_ID: 'PDS_PROJECT_ROOT_FOLDER_ID'

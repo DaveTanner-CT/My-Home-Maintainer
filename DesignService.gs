@@ -110,6 +110,43 @@ function PDS_updateDesignRecordDetails(data) {
   return PDS_serializeDesignRecord_(PDS_findRecord_(PDS.SHEETS.DESIGN_RECORDS, 'DesignRecordID', id));
 }
 
+
+function PDS_deleteDesignRecord(designRecordId) {
+  const id = String(designRecordId || '').trim();
+  if (!id) throw new Error('A Design Record ID is required.');
+
+  const record = PDS_findRecord_(PDS.SHEETS.DESIGN_RECORDS, 'DesignRecordID', id);
+  if (!record) throw new Error('The design record could not be found.');
+
+  if (record.DriveFileID) {
+    try {
+      DriveApp.getFileById(record.DriveFileID).setTrashed(true);
+    } catch (driveError) {
+      console.warn('Could not move design file to trash:', driveError);
+    }
+  }
+
+  const sheet = PDS_getSheet_(PDS.SHEETS.DESIGN_RECORDS);
+  const values = sheet.getDataRange().getValues();
+  if (!values.length) throw new Error('Design records sheet is empty.');
+  const headers = values[0].map(String);
+  const idIndex = headers.indexOf('DesignRecordID');
+  if (idIndex < 0) throw new Error('DesignRecordID column is missing.');
+
+  let rowNumber = -1;
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][idIndex]) === id) {
+      rowNumber = r + 1;
+      break;
+    }
+  }
+  if (rowNumber < 0) throw new Error('The design record could not be found.');
+
+  sheet.deleteRow(rowNumber);
+  PDS_logActivity_(record.ProjectID, 'DesignRecord', id, 'Deleted', 'Design record deleted: ' + (record.Title || record.RecordType || id));
+  return { success: true, projectId: record.ProjectID || '', roomId: record.RoomID || '' };
+}
+
 function PDS_getDesignStorageFolder_(project, roomId) {
   let projectFolderId = project.DriveFolderID || '';
   if (!projectFolderId) {

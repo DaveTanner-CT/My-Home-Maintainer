@@ -959,6 +959,105 @@
 </div>
 
 
+
+<!-- ROOM DETAIL MODAL -->
+
+<div
+  id="roomDetailModal"
+  class="modal-backdrop hidden"
+  onclick="handleBackdropClick(event, 'roomDetailModal')"
+>
+  <div class="modal-card room-detail-modal">
+    <div class="modal-header room-detail-header">
+      <div>
+        <p class="eyebrow">ROOM</p>
+        <h2 id="roomDetailName">Room</h2>
+        <p id="roomDetailType" class="room-detail-type"></p>
+      </div>
+      <button
+        type="button"
+        class="modal-close"
+        onclick="closeRoomDetail()"
+      >×</button>
+    </div>
+
+    <section class="room-detail-section room-dimensions-section">
+      <div class="section-heading compact-heading">
+        <div>
+          <p class="eyebrow">ROOM SIZE</p>
+          <h3>Dimensions</h3>
+        </div>
+        <div id="roomSquareFootage" class="room-square-footage">—</div>
+      </div>
+
+      <form id="roomDimensionsForm" onsubmit="submitRoomDimensions(event)">
+        <div class="room-dimension-grid">
+          <div class="dimension-group">
+            <strong>Length</strong>
+            <div class="dimension-inputs">
+              <label class="field dimension-field">
+                <span>Feet</span>
+                <input id="roomLengthFeet" type="number" min="0" step="1" inputmode="numeric">
+              </label>
+              <label class="field dimension-field">
+                <span>Inches</span>
+                <input id="roomLengthInches" type="number" min="0" max="11.99" step="0.01" inputmode="decimal">
+              </label>
+            </div>
+          </div>
+
+          <div class="dimension-group">
+            <strong>Width</strong>
+            <div class="dimension-inputs">
+              <label class="field dimension-field">
+                <span>Feet</span>
+                <input id="roomWidthFeet" type="number" min="0" step="1" inputmode="numeric">
+              </label>
+              <label class="field dimension-field">
+                <span>Inches</span>
+                <input id="roomWidthInches" type="number" min="0" max="11.99" step="0.01" inputmode="decimal">
+              </label>
+            </div>
+          </div>
+
+          <div class="dimension-group">
+            <strong>Ceiling Height</strong>
+            <div class="dimension-inputs">
+              <label class="field dimension-field">
+                <span>Feet</span>
+                <input id="roomCeilingFeet" type="number" min="0" step="1" inputmode="numeric">
+              </label>
+              <label class="field dimension-field">
+                <span>Inches</span>
+                <input id="roomCeilingInches" type="number" min="0" max="11.99" step="0.01" inputmode="decimal">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="room-dimension-actions">
+          <span class="field-help">Square footage is calculated from length × width.</span>
+          <button id="saveRoomDimensionsButton" type="submit" class="secondary-button">Save Dimensions</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="room-detail-section">
+      <div class="section-heading compact-heading">
+        <div>
+          <p class="eyebrow">ROOM REFERENCE</p>
+          <h3>Photos</h3>
+        </div>
+        <button type="button" class="primary-button" onclick="openRoomPhotoModal()">+ Add Photos</button>
+      </div>
+
+      <div id="roomPhotoGallery" class="room-photo-gallery">
+        <div class="room-photo-empty">Loading photos…</div>
+      </div>
+    </section>
+  </div>
+</div>
+
 <!-- DESIGN PHOTO MODAL -->
 
 <div
@@ -1311,10 +1410,17 @@
           class="viewer-loading"
         >Loading image…</div>
 
+        <div class="viewer-zoom-controls" aria-label="Image zoom controls">
+          <button type="button" onclick="changeViewerZoom(-0.25)" title="Zoom out">−</button>
+          <button type="button" onclick="resetViewerZoom()" title="Reset zoom"><span id="viewerZoomLabel">100%</span></button>
+          <button type="button" onclick="changeViewerZoom(0.25)" title="Zoom in">+</button>
+        </div>
+
         <img
           id="viewerImage"
           class="hidden"
           alt="Design preview"
+          draggable="false"
         >
       </div>
 
@@ -1351,6 +1457,12 @@
             class="secondary-button"
             onclick="openSelectedDesignOriginal()"
           >Open Original</button>
+
+          <button
+            type="button"
+            class="danger-button"
+            onclick="deleteSelectedDesignRecord()"
+          >Delete Photo</button>
         </div>
       </aside>
     </div>
