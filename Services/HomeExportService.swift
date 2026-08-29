@@ -24,7 +24,14 @@ struct HomeArchive: Codable {
 }
 
 struct HomeSnapshot: Codable { let name, address, notes: String; let yearBuilt, squareFeet: Int?; let purchaseDate: Date? }
-struct RoomSnapshot: Codable { let name, notes, areaType: String; let isFavorite: Bool }
+struct RoomSnapshot: Codable {
+    let name, notes, areaType: String
+    let isFavorite: Bool
+    var dimensionUnit: String? = nil
+    var dimensionLength: Double? = nil
+    var dimensionWidth: Double? = nil
+    var ceilingHeight: Double? = nil
+}
 struct VendorSnapshot: Codable { let businessName, contactName, category, phone, email, website, address, notes: String; let isFavorite: Bool }
 struct SystemSnapshot: Codable { let name, type, manufacturer, model, serialNumber, location, roomName, notes, website, vendorName, sourceProjectName: String; let installationDate, warrantyExpiration: Date?; let purchaseCost: Double?; let expectedServiceLifeYears: Int? }
 struct ApplianceSnapshot: Codable { let name, category, manufacturer, model, serialNumber, purchasedFrom, manufacturerWebsite, productRegistrationLink, notes, roomName, sourceProjectName: String; let purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double? }
@@ -60,9 +67,18 @@ enum HomeExportService {
 
         return HomeArchive(
             exportedAt: .now,
-            appVersion: "0.19",
+            appVersion: "0.20",
             homes: homes.map { .init(name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) },
-            rooms: rooms.map { .init(name: $0.name, notes: $0.notes, areaType: $0.areaType.rawValue, isFavorite: $0.isFavorite) },
+            rooms: rooms.map { .init(
+                name: $0.name,
+                notes: $0.notes,
+                areaType: $0.areaType.rawValue,
+                isFavorite: $0.isFavorite,
+                dimensionUnit: $0.dimensionUnit.rawValue,
+                dimensionLength: $0.dimensionLength,
+                dimensionWidth: $0.dimensionWidth,
+                ceilingHeight: $0.ceilingHeight
+            ) },
             vendors: vendors.map { .init(businessName: $0.businessName, contactName: $0.contactName, category: $0.category, phone: $0.phone, email: $0.email, website: $0.website, address: $0.address, notes: $0.notes, isFavorite: $0.isFavorite) },
             systems: systems.map { .init(name: $0.name, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, location: $0.location, roomName: $0.room?.name ?? "", notes: $0.notes, website: $0.website, vendorName: $0.vendor?.businessName ?? "", sourceProjectName: $0.sourceProject?.title ?? "", installationDate: $0.installationDate, warrantyExpiration: $0.warrantyExpiration, purchaseCost: $0.purchaseCost, expectedServiceLifeYears: $0.expectedServiceLifeYears) },
             appliances: appliances.map { .init(name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, purchasedFrom: $0.purchasedFrom, manufacturerWebsite: $0.manufacturerWebsite, productRegistrationLink: $0.productRegistrationLink, notes: $0.notes, roomName: $0.room?.name ?? "", sourceProjectName: $0.sourceProject?.title ?? "", purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice) },

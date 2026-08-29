@@ -121,6 +121,17 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 - Project completion asks for confirmation before closing.
 - Backup copy is clearly distinguished from the supported stable-ID Home Transfer import path.
 
+
+## v0.20 — Room dimensions + photo grid
+
+- Preserves the full Room Detail page: projects, paint/finishes, systems, devices/equipment, fixtures, tasks, history, and inline add actions.
+- Adds room dimensions directly to the Area section with Feet/Meters selection, Length, Width, Ceiling Height, and calculated floor area.
+- Converts saved measurements when switching between Feet and Meters.
+- Moves room photos to a compact thumbnail-only grid directly below Area (2 columns on compact layouts, 3 on regular layouts).
+- Keeps photos tappable for the existing full-screen zoom viewer and keeps captions editable in photo details.
+- Leaves documents in the Documents section at the bottom so room photos are not duplicated there.
+- Includes dimension fields in Home Transfer and Home Export archives.
+
 ## v0.19 — Home History stories
 
 - Preserves all v0.18.1 workflow-hardening and Recommended Maintenance clarity changes.

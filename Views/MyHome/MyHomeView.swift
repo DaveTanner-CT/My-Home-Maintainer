@@ -263,8 +263,25 @@ struct RoomDetailView: View {
             Section("Area") {
                 LabeledContent("Type", value: room.areaType.rawValue)
                 if room.isFavorite { Label("Favorite", systemImage: "star.fill").foregroundStyle(.yellow) }
+
+                Picker("Dimension units", selection: dimensionUnitBinding) {
+                    ForEach(RoomDimensionUnit.allCases) { unit in
+                        Text(unit.rawValue).tag(unit)
+                    }
+                }
+
+                dimensionRow("Length", value: dimensionBinding(\.dimensionLength))
+                dimensionRow("Width", value: dimensionBinding(\.dimensionWidth))
+                dimensionRow("Ceiling height", value: dimensionBinding(\.ceilingHeight))
+
+                if let area = room.calculatedArea {
+                    LabeledContent("Calculated area", value: "\(area.formatted(.number.precision(.fractionLength(0...2)))) \(room.dimensionUnit.areaAbbreviation)")
+                }
+
                 if !room.notes.isEmpty { Text(room.notes) }
             }
+
+            RoomPhotoGridSection(room: room)
 
             Section("At a Glance") {
                 LabeledContent("Active projects", value: "\(roomProjects.filter { $0.stage != .completed }.count)")
@@ -334,7 +351,7 @@ struct RoomDetailView: View {
                 NavigationLink { HomeHistoryView() } label: { Label("View Full Home History", systemImage: "clock.arrow.circlepath") }
             }
 
-            AttachmentSection(owner: .room(room))
+            AttachmentSection(owner: .room(room), showsPhotos: false)
         }
         .navigationTitle(room.name)
         .toolbar {
@@ -361,6 +378,65 @@ struct RoomDetailView: View {
         .sheet(isPresented: $showAddSystem) { NavigationStack { SystemFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: room) } }
         .onAppear { connectLegacyRecords() }
+    }
+
+    private var dimensionUnitBinding: Binding<RoomDimensionUnit> {
+        Binding(
+            get: { room.dimensionUnit },
+            set: { newUnit in
+                guard newUnit != room.dimensionUnit else { return }
+                convertDimensions(from: room.dimensionUnit, to: newUnit)
+                room.dimensionUnit = newUnit
+                try? modelContext.save()
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func dimensionRow(_ label: String, value: Binding<Double?>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField("—", text: decimalBinding(value))
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 90)
+            Text(room.dimensionUnit.abbreviation)
+                .foregroundStyle(.secondary)
+                .frame(width: 24, alignment: .leading)
+        }
+    }
+
+    private func dimensionBinding(_ keyPath: ReferenceWritableKeyPath<Room, Double?>) -> Binding<Double?> {
+        Binding(
+            get: { room[keyPath: keyPath] },
+            set: { newValue in
+                room[keyPath: keyPath] = newValue
+                try? modelContext.save()
+            }
+        )
+    }
+
+    private func decimalBinding(_ value: Binding<Double?>) -> Binding<String> {
+        Binding(
+            get: {
+                guard let number = value.wrappedValue else { return "" }
+                return number.formatted(.number.precision(.fractionLength(0...2)).grouping(.never))
+            },
+            set: { text in
+                let normalized = text.replacingOccurrences(of: ",", with: ".")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                value.wrappedValue = normalized.isEmpty ? nil : Double(normalized)
+            }
+        )
+    }
+
+    private func convertDimensions(from oldUnit: RoomDimensionUnit, to newUnit: RoomDimensionUnit) {
+        guard oldUnit != newUnit else { return }
+        let factor = oldUnit == .feet ? 0.3048 : 3.280839895
+        if let value = room.dimensionLength { room.dimensionLength = value * factor }
+        if let value = room.dimensionWidth { room.dimensionWidth = value * factor }
+        if let value = room.ceilingHeight { room.ceilingHeight = value * factor }
     }
 
     private func connectLegacyRecords() {

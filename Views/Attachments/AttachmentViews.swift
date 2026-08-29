@@ -9,18 +9,21 @@ struct AttachmentSection: View {
     @Query(sort: \HomeAttachment.createdAt, order: .reverse) private var allAttachments: [HomeAttachment]
 
     let owner: AttachmentOwnerReference
+    var showsPhotos: Bool = true
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showFileImporter = false
     @State private var importError: String?
 
     private var attachments: [HomeAttachment] {
-        allAttachments.filter { owner.matches($0) }
+        allAttachments.filter { attachment in
+            owner.matches(attachment) && (showsPhotos || !attachment.isImage)
+        }
     }
 
     var body: some View {
-        Section("Photos & Documents") {
+        Section(showsPhotos ? "Photos & Documents" : "Documents") {
             if attachments.isEmpty {
-                Text("No photos or documents yet")
+                Text(showsPhotos ? "No photos or documents yet" : "No documents yet")
                     .foregroundStyle(.secondary)
             }
 
@@ -32,8 +35,10 @@ struct AttachmentSection: View {
                 }
             }
 
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label("Add Photo", systemImage: "photo")
+            if showsPhotos {
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Label("Add Photo", systemImage: "photo")
+                }
             }
             Button {
                 showFileImporter = true
@@ -94,6 +99,89 @@ struct AttachmentSection: View {
             Button("OK", role: .cancel) { importError = nil }
         } message: {
             Text(importError ?? "Unknown error")
+        }
+    }
+}
+
+
+struct RoomPhotoGridSection: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Query(sort: \HomeAttachment.createdAt, order: .reverse) private var allAttachments: [HomeAttachment]
+
+    let room: Room
+    @State private var selectedPhoto: PhotosPickerItem?
+
+    private var photos: [HomeAttachment] {
+        allAttachments.filter { attachment in
+            attachment.room?.persistentModelID == room.persistentModelID && attachment.isImage
+        }
+    }
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 10), count: horizontalSizeClass == .regular ? 3 : 2)
+    }
+
+    var body: some View {
+        Section("Room Photos") {
+            if photos.isEmpty {
+                Text("No room photos yet")
+                    .foregroundStyle(.secondary)
+            } else {
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(photos) { attachment in
+                        NavigationLink {
+                            AttachmentDetailView(attachment: attachment)
+                        } label: {
+                            if let image = UIImage(data: attachment.fileData) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(maxWidth: .infinity)
+                                    .aspectRatio(4.0 / 3.0, contentMode: .fill)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(.quaternary, lineWidth: 1)
+                                    }
+                            } else {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(.quaternary)
+                                    .aspectRatio(4.0 / 3.0, contentMode: .fit)
+                                    .overlay { Image(systemName: "photo") }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(attachment.caption.isEmpty ? "Open room photo" : attachment.caption)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Label("Add Room Photo", systemImage: "photo.badge.plus")
+            }
+        }
+        .onChange(of: selectedPhoto) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                if let data = try? await newValue.loadTransferable(type: Data.self) {
+                    await MainActor.run {
+                        let attachment = HomeAttachment(
+                            name: "Room Photo",
+                            category: "Photo",
+                            fileName: "room-photo-\(Int(Date().timeIntervalSince1970)).jpg",
+                            typeIdentifier: "image/jpeg",
+                            fileData: data
+                        )
+                        attachment.room = room
+                        modelContext.insert(attachment)
+                        try? modelContext.save()
+                    }
+                }
+                await MainActor.run { selectedPhoto = nil }
+            }
         }
     }
 }

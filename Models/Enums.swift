@@ -99,3 +99,12 @@ enum HomeEventType: String, CaseIterable, Identifiable {
         }
     }
 }
+enum RoomDimensionUnit: String, CaseIterable, Identifiable, Codable {
+    case feet = "Feet"
+    case meters = "Meters"
+
+    var id: String { rawValue }
+    var abbreviation: String { self == .feet ? "ft" : "m" }
+    var areaAbbreviation: String { self == .feet ? "sq ft" : "m²" }
+}
+

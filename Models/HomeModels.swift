@@ -28,16 +28,46 @@ final class Room {
     // Optional for lightweight migration of homes created before exterior/property areas existed.
     var areaTypeRaw: String?
 
-    init(name: String, notes: String = "", isFavorite: Bool = false, areaType: HomeAreaType = .interior) {
+    // Optional room measurements preserve lightweight migration for existing homes.
+    // Values are stored in the unit selected in dimensionUnitRaw.
+    var dimensionUnitRaw: String?
+    var dimensionLength: Double?
+    var dimensionWidth: Double?
+    var ceilingHeight: Double?
+
+    init(
+        name: String,
+        notes: String = "",
+        isFavorite: Bool = false,
+        areaType: HomeAreaType = .interior,
+        dimensionUnit: RoomDimensionUnit = .feet,
+        dimensionLength: Double? = nil,
+        dimensionWidth: Double? = nil,
+        ceilingHeight: Double? = nil
+    ) {
         self.name = name
         self.notes = notes
         self.isFavorite = isFavorite
         self.areaTypeRaw = areaType.rawValue
+        self.dimensionUnitRaw = dimensionUnit.rawValue
+        self.dimensionLength = dimensionLength
+        self.dimensionWidth = dimensionWidth
+        self.ceilingHeight = ceilingHeight
     }
 
     var areaType: HomeAreaType {
         get { HomeAreaType(rawValue: areaTypeRaw ?? "") ?? .interior }
         set { areaTypeRaw = newValue.rawValue }
+    }
+
+    var dimensionUnit: RoomDimensionUnit {
+        get { RoomDimensionUnit(rawValue: dimensionUnitRaw ?? "") ?? .feet }
+        set { dimensionUnitRaw = newValue.rawValue }
+    }
+
+    var calculatedArea: Double? {
+        guard let dimensionLength, let dimensionWidth, dimensionLength > 0, dimensionWidth > 0 else { return nil }
+        return dimensionLength * dimensionWidth
     }
 }
 

@@ -26,7 +26,14 @@ struct HomeTransferArchive: Codable {
 }
 
 struct TransferHome: Codable { let id, name, address, notes: String; let yearBuilt, squareFeet: Int?; let purchaseDate: Date? }
-struct TransferRoom: Codable { let id, name, notes, areaType: String; let isFavorite: Bool }
+struct TransferRoom: Codable {
+    let id, name, notes, areaType: String
+    let isFavorite: Bool
+    var dimensionUnit: String? = nil
+    var dimensionLength: Double? = nil
+    var dimensionWidth: Double? = nil
+    var ceilingHeight: Double? = nil
+}
 struct TransferVendor: Codable { let id, businessName, contactName, category, phone, email, website, address, notes: String; let isFavorite: Bool }
 struct TransferSystem: Codable { let id, name, type, manufacturer, model, serialNumber, location, notes, website: String; let installationDate, warrantyExpiration: Date?; let purchaseCost: Double?; let expectedServiceLifeYears: Int?; let roomID, vendorID, sourceProjectID: String? }
 struct TransferAppliance: Codable { let id, name, category, manufacturer, model, serialNumber, purchasedFrom, manufacturerWebsite, productRegistrationLink, notes: String; let purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double?; let roomID, sourceProjectID: String? }
@@ -195,7 +202,16 @@ enum HomeTransferService {
             context.insert(Home(name: h.name, address: h.address, yearBuilt: h.yearBuilt, purchaseDate: h.purchaseDate, squareFeet: h.squareFeet, notes: h.notes))
         }
         for r in archive.rooms {
-            let item = Room(name: r.name, notes: r.notes, isFavorite: r.isFavorite, areaType: HomeAreaType(rawValue: r.areaType) ?? .interior)
+            let item = Room(
+                name: r.name,
+                notes: r.notes,
+                isFavorite: r.isFavorite,
+                areaType: HomeAreaType(rawValue: r.areaType) ?? .interior,
+                dimensionUnit: RoomDimensionUnit(rawValue: r.dimensionUnit ?? "") ?? .feet,
+                dimensionLength: r.dimensionLength,
+                dimensionWidth: r.dimensionWidth,
+                ceilingHeight: r.ceilingHeight
+            )
             context.insert(item); rooms[r.id] = item
         }
         for v in archive.vendors {
@@ -310,8 +326,18 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.19", packageType: packageType, exportedAt: .now, home: h,
-            rooms: rooms.map { .init(id: roomIDs[$0.persistentModelID]!, name: $0.name, notes: $0.notes, areaType: $0.areaType.rawValue, isFavorite: $0.isFavorite) },
+            formatVersion: 1, appVersion: "0.20", packageType: packageType, exportedAt: .now, home: h,
+            rooms: rooms.map { .init(
+                id: roomIDs[$0.persistentModelID]!,
+                name: $0.name,
+                notes: $0.notes,
+                areaType: $0.areaType.rawValue,
+                isFavorite: $0.isFavorite,
+                dimensionUnit: $0.dimensionUnit.rawValue,
+                dimensionLength: $0.dimensionLength,
+                dimensionWidth: $0.dimensionWidth,
+                ceilingHeight: $0.ceilingHeight
+            ) },
             vendors: vendors.map { .init(id: vendorIDs[$0.persistentModelID]!, businessName: $0.businessName, contactName: $0.contactName, category: $0.category, phone: $0.phone, email: $0.email, website: $0.website, address: $0.address, notes: $0.notes, isFavorite: $0.isFavorite) },
             systems: systems.map { .init(id: systemIDs[$0.persistentModelID]!, name: $0.name, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, location: $0.location, notes: $0.notes, website: $0.website, installationDate: $0.installationDate, warrantyExpiration: $0.warrantyExpiration, purchaseCost: $0.purchaseCost, expectedServiceLifeYears: $0.expectedServiceLifeYears, roomID: rid($0.room, roomIDs), vendorID: rid($0.vendor, vendorIDs), sourceProjectID: rid($0.sourceProject, projectIDs)) },
             appliances: appliances.map { .init(id: applianceIDs[$0.persistentModelID]!, name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, purchasedFrom: $0.purchasedFrom, manufacturerWebsite: $0.manufacturerWebsite, productRegistrationLink: $0.productRegistrationLink, notes: $0.notes, purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice, roomID: rid($0.room, roomIDs), sourceProjectID: rid($0.sourceProject, projectIDs)) },
