@@ -112,6 +112,7 @@ final class HomeSystem {
     var website: String
     var vendor: Vendor?
     var room: Room?
+    var additionalRooms: [Room] = []
     var sourceProject: Project?
 
     init(name: String, type: String, manufacturer: String = "", model: String = "", serialNumber: String = "", installationDate: Date? = nil, purchaseCost: Double? = nil, warrantyExpiration: Date? = nil, expectedServiceLifeYears: Int? = nil, location: String = "", notes: String = "", website: String = "", vendor: Vendor? = nil, room: Room? = nil, sourceProject: Project? = nil) {
@@ -150,6 +151,7 @@ final class Appliance {
     var productRegistrationLink: String
     var notes: String
     var room: Room?
+    var additionalRooms: [Room] = []
     var sourceProject: Project?
 
     init(name: String, category: String, manufacturer: String = "", model: String = "", serialNumber: String = "", purchaseDate: Date? = nil, purchasePrice: Double? = nil, purchasedFrom: String = "", warrantyExpiration: Date? = nil, manufacturerWebsite: String = "", productRegistrationLink: String = "", notes: String = "", room: Room? = nil, sourceProject: Project? = nil) {
@@ -175,6 +177,7 @@ final class PaintFinish {
     // roomName is retained for compatibility with paint records created before linked rooms/areas.
     var roomName: String
     var room: Room?
+    var additionalRooms: [Room] = []
     var surface: String
     var brand: String
     var productLine: String
@@ -231,6 +234,7 @@ final class Fixture {
     var productLink: String
     var notes: String
     var room: Room?
+    var additionalRooms: [Room] = []
     var vendor: Vendor?
     var sourceProject: Project?
 
@@ -251,5 +255,64 @@ final class Fixture {
         self.room = room
         self.vendor = vendor
         self.sourceProject = sourceProject
+    }
+}
+
+
+// MARK: - Multi-room linking helpers
+
+extension HomeSystem {
+    func isLinked(to target: Room) -> Bool {
+        room?.persistentModelID == target.persistentModelID || additionalRooms.contains { $0.persistentModelID == target.persistentModelID }
+    }
+    func link(to target: Room) {
+        guard !isLinked(to: target) else { return }
+        if room == nil { room = target; location = target.name } else { additionalRooms.append(target) }
+    }
+    func setPrimaryRoom(_ target: Room?) {
+        guard room?.persistentModelID != target?.persistentModelID else { return }
+        let old = room
+        if let target { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }
+        room = target
+        if let old, target != nil, !additionalRooms.contains(where: { $0.persistentModelID == old.persistentModelID }) { additionalRooms.append(old) }
+        if let target { location = target.name }
+    }
+    func unlink(from target: Room) {
+        if room?.persistentModelID == target.persistentModelID {
+            if let replacement = additionalRooms.first { room = replacement; location = replacement.name; additionalRooms.removeFirst() }
+            else { room = nil; if location.caseInsensitiveCompare(target.name) == .orderedSame { location = "" } }
+        } else { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }
+    }
+    var linkedRooms: [Room] { ([room].compactMap { $0 } + additionalRooms).uniquedRooms() }
+}
+
+extension Appliance {
+    func isLinked(to target: Room) -> Bool { room?.persistentModelID == target.persistentModelID || additionalRooms.contains { $0.persistentModelID == target.persistentModelID } }
+    func link(to target: Room) { guard !isLinked(to: target) else { return }; if room == nil { room = target } else { additionalRooms.append(target) } }
+    func setPrimaryRoom(_ target: Room?) { let old = room; if room?.persistentModelID == target?.persistentModelID { return }; if let target { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }; room = target; if let old, target != nil, !additionalRooms.contains(where: { $0.persistentModelID == old.persistentModelID }) { additionalRooms.append(old) } }
+    func unlink(from target: Room) { if room?.persistentModelID == target.persistentModelID { if let replacement = additionalRooms.first { room = replacement; additionalRooms.removeFirst() } else { room = nil } } else { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } } }
+    var linkedRooms: [Room] { ([room].compactMap { $0 } + additionalRooms).uniquedRooms() }
+}
+
+extension PaintFinish {
+    func isLinked(to target: Room) -> Bool { room?.persistentModelID == target.persistentModelID || additionalRooms.contains { $0.persistentModelID == target.persistentModelID } }
+    func link(to target: Room) { guard !isLinked(to: target) else { return }; if room == nil { room = target; roomName = target.name } else { additionalRooms.append(target) } }
+    func setPrimaryRoom(_ target: Room?) { let old = room; if room?.persistentModelID == target?.persistentModelID { return }; if let target { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }; room = target; if let target { roomName = target.name }; if let old, target != nil, !additionalRooms.contains(where: { $0.persistentModelID == old.persistentModelID }) { additionalRooms.append(old) } }
+    func unlink(from target: Room) { if room?.persistentModelID == target.persistentModelID { if let replacement = additionalRooms.first { room = replacement; roomName = replacement.name; additionalRooms.removeFirst() } else { room = nil; if roomName.caseInsensitiveCompare(target.name) == .orderedSame { roomName = "" } } } else { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } } }
+    var linkedRooms: [Room] { ([room].compactMap { $0 } + additionalRooms).uniquedRooms() }
+}
+
+extension Fixture {
+    func isLinked(to target: Room) -> Bool { room?.persistentModelID == target.persistentModelID || additionalRooms.contains { $0.persistentModelID == target.persistentModelID } }
+    func link(to target: Room) { guard !isLinked(to: target) else { return }; if room == nil { room = target } else { additionalRooms.append(target) } }
+    func setPrimaryRoom(_ target: Room?) { let old = room; if room?.persistentModelID == target?.persistentModelID { return }; if let target { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }; room = target; if let old, target != nil, !additionalRooms.contains(where: { $0.persistentModelID == old.persistentModelID }) { additionalRooms.append(old) } }
+    func unlink(from target: Room) { if room?.persistentModelID == target.persistentModelID { if let replacement = additionalRooms.first { room = replacement; additionalRooms.removeFirst() } else { room = nil } } else { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } } }
+    var linkedRooms: [Room] { ([room].compactMap { $0 } + additionalRooms).uniquedRooms() }
+}
+
+private extension Array where Element == Room {
+    func uniquedRooms() -> [Room] {
+        var seen = Set<PersistentIdentifier>()
+        return filter { seen.insert($0.persistentModelID).inserted }
     }
 }

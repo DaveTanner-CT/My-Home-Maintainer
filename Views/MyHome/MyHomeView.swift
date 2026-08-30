@@ -302,28 +302,34 @@ struct RoomDetailView: View {
     @State private var showAddFixture = false
     @State private var showAddSystem = false
     @State private var showAddTask = false
+    @State private var showLinkProject = false
+    @State private var showLinkPaint = false
+    @State private var showLinkAppliance = false
+    @State private var showLinkFixture = false
+    @State private var showLinkSystem = false
+    @State private var showLinkTask = false
 
-    private var roomAppliances: [Appliance] { appliances.filter { $0.room?.persistentModelID == room.persistentModelID } }
-    private var roomTasks: [MaintenanceTask] { tasks.filter { $0.room?.persistentModelID == room.persistentModelID } }
+    private var roomAppliances: [Appliance] { appliances.filter { $0.isLinked(to: room) } }
+    private var roomTasks: [MaintenanceTask] { tasks.filter { $0.isRelevant(to: room) } }
     private var roomPaints: [PaintFinish] {
         paints.filter {
-            $0.room?.persistentModelID == room.persistentModelID ||
-            ($0.room == nil && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
+            $0.isLinked(to: room) ||
+            ($0.room == nil && $0.additionalRooms.isEmpty && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
         }
     }
     private var roomProjects: [Project] {
         projects.filter {
-            $0.room?.persistentModelID == room.persistentModelID ||
-            ($0.room == nil && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
+            $0.isLinked(to: room) ||
+            ($0.room == nil && $0.additionalRooms.isEmpty && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
         }
     }
     private var roomSystems: [HomeSystem] {
         systems.filter {
-            $0.room?.persistentModelID == room.persistentModelID ||
-            ($0.room == nil && $0.location.caseInsensitiveCompare(room.name) == .orderedSame)
+            $0.isLinked(to: room) ||
+            ($0.room == nil && $0.additionalRooms.isEmpty && $0.location.caseInsensitiveCompare(room.name) == .orderedSame)
         }
     }
-    private var roomFixtures: [Fixture] { fixtures.filter { $0.room?.persistentModelID == room.persistentModelID } }
+    private var roomFixtures: [Fixture] { fixtures.filter { $0.isLinked(to: room) } }
     private var openRoomTasks: [MaintenanceTask] { roomTasks.filter { !$0.isCompleted }.sorted { $0.dueDate < $1.dueDate } }
     private var roomHistory: [MaintenanceRecord] {
         history.filter { record in
@@ -375,7 +381,9 @@ struct RoomDetailView: View {
                 NavigationLink { RoomTasksSummaryView(room: room, tasks: roomTasks) } label: {
                     LabeledContent("Open tasks", value: "\(openRoomTasks.count)")
                 }
-                LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
+                NavigationLink { RoomAssetsSummaryView(room: room, systems: roomSystems, appliances: roomAppliances, fixtures: roomFixtures) } label: {
+                    LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
+                }
                 if warrantyAlerts > 0 { Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark").foregroundStyle(.orange) }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
                 Text("Use the Add controls in each section below, or the + menu above, to add records already connected to this room.")
@@ -398,9 +406,8 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddProject = true } label: {
-                    Label("Add Project to This Room", systemImage: "plus.circle.fill")
-                }
+                Button { showAddProject = true } label: { Label("Create New Project", systemImage: "plus.circle.fill") }
+                Button { showLinkProject = true } label: { Label("Link Existing Project", systemImage: "link") }
             }
 
             Section("Paint & Finishes") {
@@ -413,33 +420,29 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddPaint = true } label: {
-                    Label("Add Paint / Finish to This Room", systemImage: "plus.circle.fill")
-                }
+                Button { showAddPaint = true } label: { Label("Create New Paint / Finish", systemImage: "plus.circle.fill") }
+                Button { showLinkPaint = true } label: { Label("Link Existing Paint / Finish", systemImage: "link") }
             }
 
             Section("Home Systems") {
                 if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
                 ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
-                Button { showAddSystem = true } label: {
-                    Label("Add Home System to This Room", systemImage: "plus.circle.fill")
-                }
+                Button { showAddSystem = true } label: { Label("Create New Home System", systemImage: "plus.circle.fill") }
+                Button { showLinkSystem = true } label: { Label("Link Existing Home System", systemImage: "link") }
             }
 
             Section("Devices & Equipment") {
                 if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
-                Button { showAddAppliance = true } label: {
-                    Label("Add Device / Equipment to This Room", systemImage: "plus.circle.fill")
-                }
+                Button { showAddAppliance = true } label: { Label("Create New Device / Equipment", systemImage: "plus.circle.fill") }
+                Button { showLinkAppliance = true } label: { Label("Link Existing Device / Equipment", systemImage: "link") }
             }
 
             Section("Fixtures") {
                 if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
                 ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
-                Button { showAddFixture = true } label: {
-                    Label("Add Fixture to This Room", systemImage: "plus.circle.fill")
-                }
+                Button { showAddFixture = true } label: { Label("Create New Fixture", systemImage: "plus.circle.fill") }
+                Button { showLinkFixture = true } label: { Label("Link Existing Fixture", systemImage: "link") }
             }
 
             Section("Tasks") {
@@ -447,9 +450,8 @@ struct RoomDetailView: View {
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
                 }
-                Button { showAddTask = true } label: {
-                    Label("Add Task to This Room", systemImage: "plus.circle.fill")
-                }
+                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
             }
 
             Section("Recent Home History") {
@@ -472,6 +474,15 @@ struct RoomDetailView: View {
                     Button { showAddAppliance = true } label: { Label("Device / Equipment", systemImage: "refrigerator") }
                     Button { showAddFixture = true } label: { Label("Fixture", systemImage: "lightbulb") }
                     Button { showAddPaint = true } label: { Label("Paint / Finish", systemImage: "paintbrush") }
+                    Divider()
+                    Menu("Link Existing") {
+                        Button("Project") { showLinkProject = true }
+                        Button("Task") { showLinkTask = true }
+                        Button("Home System") { showLinkSystem = true }
+                        Button("Device / Equipment") { showLinkAppliance = true }
+                        Button("Fixture") { showLinkFixture = true }
+                        Button("Paint / Finish") { showLinkPaint = true }
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -484,6 +495,12 @@ struct RoomDetailView: View {
         .sheet(isPresented: $showAddFixture) { NavigationStack { FixtureFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddSystem) { NavigationStack { SystemFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: room) } }
+        .sheet(isPresented: $showLinkProject) { NavigationStack { RoomLinkExistingView(room: room, category: .projects) } }
+        .sheet(isPresented: $showLinkPaint) { NavigationStack { RoomLinkExistingView(room: room, category: .paints) } }
+        .sheet(isPresented: $showLinkAppliance) { NavigationStack { RoomLinkExistingView(room: room, category: .appliances) } }
+        .sheet(isPresented: $showLinkFixture) { NavigationStack { RoomLinkExistingView(room: room, category: .fixtures) } }
+        .sheet(isPresented: $showLinkSystem) { NavigationStack { RoomLinkExistingView(room: room, category: .systems) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { RoomLinkExistingView(room: room, category: .tasks) } }
         .onAppear { connectLegacyRecords() }
     }
 
@@ -567,6 +584,126 @@ struct RoomDetailView: View {
     }
 }
 
+
+
+enum RoomLinkCategory: String, Identifiable {
+    case projects = "Projects"
+    case paints = "Paint & Finishes"
+    case systems = "Home Systems"
+    case appliances = "Devices & Equipment"
+    case fixtures = "Fixtures"
+    case tasks = "Tasks"
+    var id: String { rawValue }
+}
+
+struct RoomLinkExistingView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    let room: Room
+    let category: RoomLinkCategory
+
+    @Query(sort: \Project.title) private var projects: [Project]
+    @Query(sort: \PaintFinish.colorName) private var paints: [PaintFinish]
+    @Query(sort: \HomeSystem.name) private var systems: [HomeSystem]
+    @Query(sort: \Appliance.name) private var appliances: [Appliance]
+    @Query(sort: \Fixture.name) private var fixtures: [Fixture]
+    @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
+
+    var body: some View {
+        List {
+            Section {
+                Text("Select existing records that belong in \(room.name). Linking a record here does not remove it from another room or area.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            content
+        }
+        .navigationTitle("Link Existing \(category.rawValue)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch category {
+        case .projects:
+            if projects.isEmpty { empty("No projects are available to link.") }
+            ForEach(projects) { item in linkRow(title: item.title, subtitle: item.stage.rawValue, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .paints:
+            if paints.isEmpty { empty("No paint or finish records are available to link.") }
+            ForEach(paints) { item in
+                let title = [item.colorName, item.surface].filter { !$0.isEmpty }.joined(separator: " · ")
+                linkRow(title: title.isEmpty ? "Paint / Finish" : title, subtitle: [item.brand, item.colorCode].filter { !$0.isEmpty }.joined(separator: " · "), linked: item.isLinked(to: room)) { toggle(item) }
+            }
+        case .systems:
+            if systems.isEmpty { empty("No home systems are available to link.") }
+            ForEach(systems) { item in linkRow(title: item.name, subtitle: item.type, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .appliances:
+            if appliances.isEmpty { empty("No devices or equipment are available to link.") }
+            ForEach(appliances) { item in linkRow(title: item.name, subtitle: [item.manufacturer, item.model].filter { !$0.isEmpty }.joined(separator: " · "), linked: item.isLinked(to: room)) { toggle(item) } }
+        case .fixtures:
+            if fixtures.isEmpty { empty("No fixtures are available to link.") }
+            ForEach(fixtures) { item in linkRow(title: item.name, subtitle: item.category, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .tasks:
+            if tasks.isEmpty { empty("No tasks are available to link.") }
+            ForEach(tasks) { item in
+                let inherited = item.isRelevant(to: room) && !item.isDirectlyLinked(to: room)
+                linkRow(title: item.title, subtitle: inherited ? "Already appears here through a linked record" : item.dueDate.formatted(date: .abbreviated, time: .omitted), linked: item.isDirectlyLinked(to: room)) { toggle(item) }
+            }
+        }
+    }
+
+    private func empty(_ text: String) -> some View { Text(text).foregroundStyle(.secondary) }
+
+    private func linkRow(title: String, subtitle: String, linked: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).foregroundStyle(.primary)
+                    if !subtitle.isEmpty { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+                }
+                Spacer()
+                Image(systemName: linked ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(linked ? Color.blue : Color.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggle(_ item: Project) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: PaintFinish) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: HomeSystem) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: Appliance) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: Fixture) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: MaintenanceTask) { item.isDirectlyLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func save() { try? modelContext.save() }
+}
+
+struct RoomAssetsSummaryView: View {
+    let room: Room
+    let systems: [HomeSystem]
+    let appliances: [Appliance]
+    let fixtures: [Fixture]
+
+    var body: some View {
+        List {
+            Section("Home Systems") {
+                if systems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
+                ForEach(systems) { item in NavigationLink(item.name) { SystemDetailView(system: item) } }
+            }
+            Section("Devices & Equipment") {
+                if appliances.isEmpty { Text("No linked devices or equipment").foregroundStyle(.secondary) }
+                ForEach(appliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
+            }
+            Section("Fixtures") {
+                if fixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
+                ForEach(fixtures) { item in NavigationLink(item.name) { FixtureDetailView(fixture: item) } }
+            }
+        }
+        .navigationTitle("\(room.name) Assets")
+    }
+}
+
 struct SystemsListView: View {
     @Query(sort: \HomeSystem.name) private var systems: [HomeSystem]
     @State private var showAdd = false
@@ -595,7 +732,11 @@ struct SystemDetailView: View {
                 if !system.manufacturer.isEmpty { LabeledContent("Manufacturer", value: system.manufacturer) }
                 if !system.model.isEmpty { LabeledContent("Model", value: system.model) }
                 if !system.serialNumber.isEmpty { LabeledContent("Serial", value: system.serialNumber) }
-                if let room = system.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } } else if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
+                if !system.linkedRooms.isEmpty {
+                    ForEach(system.linkedRooms) { linkedRoom in
+                        NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                    }
+                } else if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
                 if let project = system.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
             }
             if system.warrantyExpiration != nil || (system.installationDate != nil && system.expectedServiceLifeYears != nil) {
@@ -653,7 +794,9 @@ struct ApplianceDetailView: View {
                 if !appliance.manufacturer.isEmpty { LabeledContent("Manufacturer", value: appliance.manufacturer) }
                 if !appliance.model.isEmpty { LabeledContent("Model", value: appliance.model) }
                 if !appliance.serialNumber.isEmpty { LabeledContent("Serial", value: appliance.serialNumber) }
-                if let room = appliance.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+                ForEach(appliance.linkedRooms) { linkedRoom in
+                    NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                }
                 if let project = appliance.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
             }
             Section("Purchase & Warranty") {
@@ -698,8 +841,10 @@ struct PaintDetailView: View {
     var body: some View {
         List {
             Section("Location") {
-                if let room = paint.room {
-                    NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) }
+                if !paint.linkedRooms.isEmpty {
+                    ForEach(paint.linkedRooms) { linkedRoom in
+                        NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                    }
                 } else {
                     LabeledContent("Room / Area", value: paint.roomName)
                 }

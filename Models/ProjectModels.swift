@@ -12,6 +12,7 @@ final class Project {
     // roomName is retained for compatibility with projects created before linked areas.
     var roomName: String
     var room: Room?
+    var additionalRooms: [Room] = []
     var coverPhotoData: Data?
 
     init(title: String, projectDescription: String = "", stage: ProjectStage = .idea, targetDate: Date? = nil, budget: Double? = nil, notes: String = "", roomName: String = "", room: Room? = nil, coverPhotoData: Data? = nil) {
@@ -112,5 +113,18 @@ final class ProjectMeasurement {
         self.value = value
         self.unit = unit
         self.notes = notes
+    }
+}
+
+
+extension Project {
+    func isLinked(to target: Room) -> Bool { room?.persistentModelID == target.persistentModelID || additionalRooms.contains { $0.persistentModelID == target.persistentModelID } }
+    func link(to target: Room) { guard !isLinked(to: target) else { return }; if room == nil { room = target; roomName = target.name } else { additionalRooms.append(target) } }
+    func setPrimaryRoom(_ target: Room?) { let old = room; if room?.persistentModelID == target?.persistentModelID { return }; if let target { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }; room = target; if let target { roomName = target.name }; if let old, target != nil, !additionalRooms.contains(where: { $0.persistentModelID == old.persistentModelID }) { additionalRooms.append(old) } }
+    func unlink(from target: Room) { if room?.persistentModelID == target.persistentModelID { if let replacement = additionalRooms.first { room = replacement; roomName = replacement.name; additionalRooms.removeFirst() } else { room = nil; if roomName.caseInsensitiveCompare(target.name) == .orderedSame { roomName = "" } } } else { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } } }
+    var linkedRooms: [Room] {
+        var result = [Room]()
+        for value in [room].compactMap({ $0 }) + additionalRooms where !result.contains(where: { $0.persistentModelID == value.persistentModelID }) { result.append(value) }
+        return result
     }
 }

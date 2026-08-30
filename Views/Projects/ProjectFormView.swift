@@ -130,7 +130,7 @@ struct ProjectFormView: View {
         project.title = title
         project.projectDescription = description
         project.stage = stage
-        project.room = selectedRoom
+        project.setPrimaryRoom(selectedRoom)
         project.roomName = selectedRoom?.name ?? ""
         project.budget = Double(budgetText)
         project.targetDate = hasTargetDate ? targetDate : nil

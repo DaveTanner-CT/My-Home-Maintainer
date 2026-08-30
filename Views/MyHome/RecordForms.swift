@@ -44,13 +44,42 @@ struct RoomFormView: View {
     private func save() {
         let record = existing ?? Room(name: name, areaType: areaType)
         if existing == nil { modelContext.insert(record) }
-        record.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let oldName = record.name
+        let newName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        record.name = newName
         record.notes = notes
         record.isFavorite = favorite
         record.areaType = areaType
+        if existing != nil && oldName != newName { syncLegacyLocationNames(for: record, newName: newName) }
         try? modelContext.save(); dismiss()
     }
-    private func delete() { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }
+    private func delete() {
+        guard let existing else { return }
+        unlinkAllRecords(from: existing)
+        modelContext.delete(existing)
+        try? modelContext.save(); dismiss()
+    }
+
+    private func syncLegacyLocationNames(for room: Room, newName: String) {
+        if let paints = try? modelContext.fetch(FetchDescriptor<PaintFinish>()) {
+            for item in paints where item.room?.persistentModelID == room.persistentModelID { item.roomName = newName }
+        }
+        if let projects = try? modelContext.fetch(FetchDescriptor<Project>()) {
+            for item in projects where item.room?.persistentModelID == room.persistentModelID { item.roomName = newName }
+        }
+        if let systems = try? modelContext.fetch(FetchDescriptor<HomeSystem>()) {
+            for item in systems where item.room?.persistentModelID == room.persistentModelID { item.location = newName }
+        }
+    }
+
+    private func unlinkAllRecords(from room: Room) {
+        if let values = try? modelContext.fetch(FetchDescriptor<HomeSystem>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<Appliance>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<Fixture>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<PaintFinish>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<Project>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<MaintenanceTask>()) { for item in values where item.isDirectlyLinked(to: room) { item.unlink(from: room) } }
+    }
     @ViewBuilder private func deleteSection(label: String) -> some View { Section { Button(label, role: .destructive) { showDelete = true } } }
     @ToolbarContentBuilder private func formToolbar(save: @escaping () -> Void) -> some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -116,7 +145,7 @@ struct SystemFormView: View {
     private func save() {
         let record = existing ?? HomeSystem(name: name, type: type); if existing == nil { modelContext.insert(record) }
         record.name = name; record.type = type; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial
-        record.room = selectedRoom; record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
+        record.setPrimaryRoom(selectedRoom); record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
         record.purchaseCost = Double(purchaseCost); record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
         record.expectedServiceLifeYears = serviceLife == 0 ? nil : serviceLife; record.vendor = selectedVendor; record.sourceProject = selectedProject
         try? modelContext.save(); dismiss()
@@ -180,7 +209,7 @@ struct ApplianceFormView: View {
     }
     private func save() {
         let record = existing ?? Appliance(name: name, category: category); if existing == nil { modelContext.insert(record) }
-        record.name = name; record.category = category; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial; record.room = selectedRoom
+        record.name = name; record.category = category; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial; record.setPrimaryRoom(selectedRoom)
         record.purchaseDate = hasPurchaseDate ? purchaseDate : nil; record.purchasePrice = Double(price); record.purchasedFrom = purchasedFrom
         record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil; record.manufacturerWebsite = manufacturerWebsite; record.productRegistrationLink = registrationLink; record.notes = notes; record.sourceProject = selectedProject
         try? modelContext.save(); dismiss()
@@ -289,7 +318,7 @@ struct PaintFormView: View {
         guard let room = selectedRoom else { return }
         let record = existing ?? PaintFinish(room: room, surface: surface)
         if existing == nil { modelContext.insert(record) }
-        record.room = room
+        record.setPrimaryRoom(room)
         record.roomName = room.name
         record.surface = surface
         record.brand = brand

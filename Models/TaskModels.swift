@@ -20,6 +20,7 @@ final class MaintenanceTask {
     var isCompleted: Bool
     var completedDate: Date?
     var room: Room?
+    var additionalRooms: [Room] = []
     var system: HomeSystem?
     var appliance: Appliance?
     var fixture: Fixture?
@@ -105,5 +106,21 @@ final class MaintenanceRecord {
     var eventType: HomeEventType {
         get { HomeEventType(rawValue: eventTypeRaw ?? "") ?? .maintenance }
         set { eventTypeRaw = newValue.rawValue }
+    }
+}
+
+
+extension MaintenanceTask {
+    func isDirectlyLinked(to target: Room) -> Bool { room?.persistentModelID == target.persistentModelID || additionalRooms.contains { $0.persistentModelID == target.persistentModelID } }
+    func isRelevant(to target: Room) -> Bool {
+        isDirectlyLinked(to: target) || system?.isLinked(to: target) == true || appliance?.isLinked(to: target) == true || fixture?.isLinked(to: target) == true || project?.isLinked(to: target) == true
+    }
+    func link(to target: Room) { guard !isDirectlyLinked(to: target) else { return }; if room == nil { room = target } else { additionalRooms.append(target) } }
+    func setPrimaryRoom(_ target: Room?) { let old = room; if room?.persistentModelID == target?.persistentModelID { return }; if let target { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } }; room = target; if let old, target != nil, !additionalRooms.contains(where: { $0.persistentModelID == old.persistentModelID }) { additionalRooms.append(old) } }
+    func unlink(from target: Room) { if room?.persistentModelID == target.persistentModelID { if let replacement = additionalRooms.first { room = replacement; additionalRooms.removeFirst() } else { room = nil } } else { additionalRooms.removeAll { $0.persistentModelID == target.persistentModelID } } }
+    var linkedRooms: [Room] {
+        var result = [Room]()
+        for value in [room].compactMap({ $0 }) + additionalRooms where !result.contains(where: { $0.persistentModelID == value.persistentModelID }) { result.append(value) }
+        return result
     }
 }

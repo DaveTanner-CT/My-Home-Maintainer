@@ -168,3 +168,9 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Entries such as 38 inches normalize to 3 ft 2 in when leaving the field.
 - Entries such as 74 inches normalize to 6 ft 2 in.
 - Raw typing is preserved while editing so SwiftUI does not reformat the field mid-entry.
+
+## v0.25 — Multi-Room Linking & Relationship Flows
+- Room pages can now link existing Projects, Paint & Finishes, Home Systems, Devices & Equipment, Fixtures, and Tasks in addition to creating new records.
+- Shared records can belong to multiple rooms without duplication (for example, one mini-split serving two rooms).
+- Related tasks inherit room context through linked systems/devices/fixtures/projects.
+- Detail views, transfer archives, exports, room rename/delete behavior, and primary-room editing now preserve the expanded relationships.

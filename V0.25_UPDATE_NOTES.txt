@@ -1,0 +1,38 @@
+HomeMaintainer v0.25 - Multi-Room Linking & Relationship Flow Update
+
+ROOM PAGE
+- Every relationship section now offers both Create New and Link Existing.
+- Link Existing is available for Projects, Paint & Finishes, Home Systems,
+  Devices & Equipment, Fixtures, and Tasks.
+- The top-right + menu also includes a Link Existing submenu.
+- Existing links can be toggled off from the same selector.
+
+MULTI-ROOM RELATIONSHIPS
+- Home systems, devices/equipment, fixtures, paint/finish records, projects,
+  and tasks can now be linked to more than one Room / Area.
+- The existing primary room field is retained for compatibility with prior data.
+- Adding another room does not move the record out of its existing room.
+- Detail pages show every room/area linked to the record.
+
+INHERITED ROOM CONTEXT
+- A task now appears on a Room page when it is directly linked to that room OR
+  when its related system, device/equipment, fixture, or project is linked to
+  the room. This keeps maintenance context connected without duplicating tasks.
+- The At a Glance Systems / devices / fixtures count is now tappable and opens
+  the exact assets represented by the count.
+
+EDIT / DELETE SAFETY
+- Changing the primary room in an existing record preserves the prior room as
+  an additional link instead of silently dropping it.
+- Deleting a room first removes/promotes its record relationships cleanly.
+- Renaming a room updates legacy room/location text used by older records.
+
+TRANSFER / EXPORT
+- Home Transfer archives now preserve additional room links while remaining
+  compatible with older archives that contain only one room per record.
+- Human-readable exports list all linked room names for supported records.
+
+BUILD
+- Visible Home page version label: HomeMaintainer v0.25
+- Settings build number: 0.25
+- Transfer/export appVersion: 0.25

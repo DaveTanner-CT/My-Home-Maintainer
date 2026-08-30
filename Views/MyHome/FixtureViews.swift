@@ -48,7 +48,9 @@ struct FixtureDetailView: View {
         List {
             Section("Fixture") {
                 if !fixture.category.isEmpty { LabeledContent("Category", value: fixture.category) }
-                if let room = fixture.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+                ForEach(fixture.linkedRooms) { linkedRoom in
+                    NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                }
                 if let project = fixture.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
                 if !fixture.manufacturer.isEmpty { LabeledContent("Manufacturer", value: fixture.manufacturer) }
                 if !fixture.model.isEmpty { LabeledContent("Model", value: fixture.model) }
@@ -189,7 +191,7 @@ struct FixtureFormView: View {
         record.model = model
         record.partNumber = partNumber
         record.finishColor = finishColor
-        record.room = selectedRoom
+        record.setPrimaryRoom(selectedRoom)
         record.vendor = selectedVendor
         record.sourceProject = selectedProject
         record.installationDate = hasInstallDate ? installDate : nil

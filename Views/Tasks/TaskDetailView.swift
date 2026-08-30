@@ -34,9 +34,9 @@ struct TaskDetailView: View {
                 if let system = task.system { NavigationLink { SystemDetailView(system: system) } label: { LabeledContent("System", value: system.name) } }
                 if let fixture = task.fixture { NavigationLink { FixtureDetailView(fixture: fixture) } label: { LabeledContent("Fixture", value: fixture.name) } }
                 if let appliance = task.appliance { NavigationLink { ApplianceDetailView(appliance: appliance) } label: { LabeledContent("Device / Equipment", value: appliance.name) } }
-                if let room = task.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room", value: room.name) } }
+                ForEach(task.linkedRooms) { linkedRoom in NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room", value: linkedRoom.name) } }
                 if let project = task.project { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Project", value: project.title) } }
-                if task.system == nil && task.appliance == nil && task.fixture == nil && task.room == nil && task.project == nil { Text("No related records").foregroundStyle(.secondary) }
+                if task.system == nil && task.appliance == nil && task.fixture == nil && task.linkedRooms.isEmpty && task.project == nil { Text("No related records").foregroundStyle(.secondary) }
             }
             AttachmentSection(owner: .task(task))
             if !task.isCompleted { Section { Button { showComplete = true } label: { Label("Complete Task", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) } } }

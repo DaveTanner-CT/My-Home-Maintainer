@@ -49,11 +49,13 @@ struct ProjectDetailView: View {
 
             Section("Project") {
                 LabeledContent("Stage", value: project.stageRaw)
-                if let room = project.room {
-                    NavigationLink {
-                        RoomDetailView(room: room)
-                    } label: {
-                        LabeledContent("Room / Area", value: room.name)
+                if !project.linkedRooms.isEmpty {
+                    ForEach(project.linkedRooms) { linkedRoom in
+                        NavigationLink {
+                            RoomDetailView(room: linkedRoom)
+                        } label: {
+                            LabeledContent("Room / Area", value: linkedRoom.name)
+                        }
                     }
                 } else if !project.roomName.isEmpty {
                     LabeledContent("Room / Area", value: project.roomName)

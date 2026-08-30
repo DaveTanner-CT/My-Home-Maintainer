@@ -124,7 +124,7 @@ struct TaskFormView: View {
         task.leadTimeDays = leadTimeDays; task.recurrence = recurrence; task.recurrenceAnchor = recurrenceAnchor; task.priority = priority; task.notes = notes; task.instructions = instructions
         task.contactName = contactName; task.phone = phone; task.email = email; task.website = website
         task.vendor = selectedVendor; task.system = selectedSystem; task.appliance = selectedAppliance; task.fixture = selectedFixture; task.project = selectedProject
-        task.room = selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room
+        task.setPrimaryRoom(selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room)
         try? modelContext.save(); Task { await NotificationManager.shared.schedule(for: task) }; dismiss()
     }
 }
