@@ -25,18 +25,34 @@ struct HomeInsightsView: View {
     var body: some View {
         List {
             Section("Home Health") {
-                insightRow("Warranties expiring in 90 days", count: expiringSystems.count + expiringAppliances.count + expiringFixtures.count, icon: "shield.lefthalf.filled")
-                insightRow("Detector replacements due soon", count: replacementDetectors.count, icon: "sensor.tag.radiowaves.forward")
-                insightRow("Consumables due soon", count: replacementConsumables.count, icon: "arrow.triangle.2.circlepath")
-                insightRow("Active projects", count: activeProjects.count, icon: "hammer")
-                insightRow("Stored photos & documents", count: attachments.count, icon: "paperclip")
+                NavigationLink { WarrantyCenterView() } label: {
+                    insightRow("Warranties expiring in 90 days", count: expiringSystems.count + expiringAppliances.count + expiringFixtures.count, icon: "shield.lefthalf.filled")
+                }
+                NavigationLink { DetectorsListView() } label: {
+                    insightRow("Detector replacements due soon", count: replacementDetectors.count, icon: "sensor.tag.radiowaves.forward")
+                }
+                NavigationLink { ConsumablesListView() } label: {
+                    insightRow("Consumables due soon", count: replacementConsumables.count, icon: "arrow.triangle.2.circlepath")
+                }
+                NavigationLink { ProjectsView() } label: {
+                    insightRow("Active projects", count: activeProjects.count, icon: "hammer")
+                }
+                NavigationLink { StoredAttachmentLibraryView(attachments: attachments) } label: {
+                    insightRow("Stored photos & documents", count: attachments.count, icon: "paperclip")
+                }
             }
 
             Section("Maintenance This Year") {
-                LabeledContent("Completed records", value: thisYearRecords.count.formatted())
-                LabeledContent("Recorded spending", value: thisYearSpend.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                NavigationLink { HomeHistoryView() } label: {
+                    LabeledContent("Completed records", value: thisYearRecords.count.formatted())
+                }
+                NavigationLink { HomeHistoryView() } label: {
+                    LabeledContent("Recorded spending", value: thisYearSpend.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                }
                 if let latest = records.first {
-                    LabeledContent("Most recent", value: latest.date.formatted(date: .abbreviated, time: .omitted))
+                    NavigationLink { MaintenanceRecordDetailView(record: latest) } label: {
+                        LabeledContent("Most recent", value: latest.date.formatted(date: .abbreviated, time: .omitted))
+                    }
                 }
             }
 
@@ -114,6 +130,26 @@ struct HomeInsightsView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
+    }
+}
+
+
+private struct StoredAttachmentLibraryView: View {
+    let attachments: [HomeAttachment]
+
+    var body: some View {
+        List {
+            if attachments.isEmpty {
+                ContentUnavailableView("No stored files", systemImage: "paperclip")
+            } else {
+                ForEach(attachments.sorted { $0.createdAt > $1.createdAt }) { attachment in
+                    NavigationLink { AttachmentDetailView(attachment: attachment) } label: {
+                        AttachmentRow(attachment: attachment)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Photos & Documents")
     }
 }
 

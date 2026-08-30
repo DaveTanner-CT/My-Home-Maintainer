@@ -1,6 +1,35 @@
 import SwiftUI
 import SwiftData
 
+private struct SetupIssueItem: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let destination: AnyView
+}
+
+private struct SetupIssueListView: View {
+    let title: String
+    let guidance: String
+    let items: [SetupIssueItem]
+
+    var body: some View {
+        List {
+            Section { Text(guidance).font(.footnote).foregroundStyle(.secondary) }
+            Section("Records") {
+                ForEach(items) { item in
+                    NavigationLink { item.destination } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.title).font(.headline)
+                            Text(item.subtitle).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }.navigationTitle(title)
+    }
+}
+
 struct HomeSetupView: View {
     @Query private var homes: [Home]
     @Query private var rooms: [Room]
@@ -59,6 +88,53 @@ struct HomeSetupView: View {
         detectors.filter { $0.manufactureDate == nil && $0.installationDate == nil }.count
     }
 
+    private var unassignedSystemItems: [SetupIssueItem] {
+        systems.filter { $0.room == nil && $0.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.map {
+            .init(id: "system-\($0.persistentModelID)", title: $0.name, subtitle: "No Room / Area or location", destination: AnyView(SystemDetailView(system: $0)))
+        }
+    }
+    private var unassignedApplianceItems: [SetupIssueItem] {
+        appliances.filter { $0.room == nil }.map {
+            .init(id: "device-\($0.persistentModelID)", title: $0.name, subtitle: "No Room / Area assigned", destination: AnyView(ApplianceDetailView(appliance: $0)))
+        }
+    }
+    private var unassignedFixtureItems: [SetupIssueItem] {
+        fixtures.filter { $0.room == nil }.map {
+            .init(id: "fixture-\($0.persistentModelID)", title: $0.name, subtitle: "No Room / Area assigned", destination: AnyView(FixtureDetailView(fixture: $0)))
+        }
+    }
+    private var unassignedPaintItems: [SetupIssueItem] {
+        paints.filter { $0.room == nil && $0.roomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.map {
+            .init(id: "paint-\($0.persistentModelID)", title: $0.colorName.isEmpty ? $0.surface : $0.colorName, subtitle: "No Room / Area assigned", destination: AnyView(PaintDetailView(paint: $0)))
+        }
+    }
+    private var unlinkedTaskItems: [SetupIssueItem] {
+        tasks.filter { !$0.isCompleted && $0.room == nil && $0.system == nil && $0.appliance == nil && $0.fixture == nil && $0.project == nil }.map {
+            .init(id: "task-\($0.persistentModelID)", title: $0.title, subtitle: "No room, asset, fixture, system, or project link", destination: AnyView(TaskDetailView(task: $0)))
+        }
+    }
+
+    private var systemsMissingIdentityItems: [SetupIssueItem] {
+        systems.filter { $0.manufacturer.isEmpty || $0.model.isEmpty || $0.installationDate == nil }.map {
+            .init(id: "system-detail-\($0.persistentModelID)", title: $0.name, subtitle: "Missing manufacturer, model, or installation date", destination: AnyView(SystemDetailView(system: $0)))
+        }
+    }
+    private var appliancesMissingIdentityItems: [SetupIssueItem] {
+        appliances.filter { $0.manufacturer.isEmpty || $0.model.isEmpty || $0.purchaseDate == nil }.map {
+            .init(id: "device-detail-\($0.persistentModelID)", title: $0.name, subtitle: "Missing manufacturer, model, or purchase date", destination: AnyView(ApplianceDetailView(appliance: $0)))
+        }
+    }
+    private var fixturesMissingIdentityItems: [SetupIssueItem] {
+        fixtures.filter { $0.manufacturer.isEmpty || $0.model.isEmpty || ($0.installationDate == nil && $0.purchaseDate == nil) }.map {
+            .init(id: "fixture-detail-\($0.persistentModelID)", title: $0.name, subtitle: "Missing manufacturer, model, or date", destination: AnyView(FixtureDetailView(fixture: $0)))
+        }
+    }
+    private var detectorsMissingDateItems: [SetupIssueItem] {
+        detectors.filter { $0.manufactureDate == nil && $0.installationDate == nil }.map {
+            .init(id: "detector-detail-\($0.persistentModelID)", title: "\($0.type) detector", subtitle: $0.location.isEmpty ? "Missing manufacture / installation date" : "\($0.location) · Missing manufacture / installation date", destination: AnyView(DetectorDetailView(detector: $0)))
+        }
+    }
+
     private var relationshipIssueCount: Int {
         unassignedSystems + unassignedAppliances + unassignedFixtures + unassignedPaint + unlinkedTasks
     }
@@ -110,27 +186,27 @@ struct HomeSetupView: View {
                     qualityRow(icon: "link.circle.fill", title: "Connected records look good", subtitle: "Current assets and open tasks have the location or relationship information needed for connected navigation.", tint: .green)
                 } else {
                     if unassignedSystems > 0 {
-                        NavigationLink { SystemsListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Systems Without a Location", guidance: "These are the exact systems that need a Room / Area or location.", items: unassignedSystemItems) } label: {
                             issueRow(count: unassignedSystems, title: "Home systems without a location", subtitle: "Assign a Room / Area or enter a location.")
                         }
                     }
                     if unassignedAppliances > 0 {
-                        NavigationLink { AppliancesListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Unassigned Devices & Equipment", guidance: "These records are not connected to a Room / Area.", items: unassignedApplianceItems) } label: {
                             issueRow(count: unassignedAppliances, title: "Devices & equipment without a Room / Area", subtitle: "Connecting them improves room dashboards, maintenance, and history.")
                         }
                     }
                     if unassignedFixtures > 0 {
-                        NavigationLink { FixturesListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Unassigned Fixtures", guidance: "These fixtures are not connected to a Room / Area.", items: unassignedFixtureItems) } label: {
                             issueRow(count: unassignedFixtures, title: "Fixtures without a Room / Area", subtitle: "Assigning a room makes project, warranty, and history navigation much stronger.")
                         }
                     }
                     if unassignedPaint > 0 {
-                        NavigationLink { PaintListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Paint Without a Location", guidance: "These paint and finish records have no Room / Area.", items: unassignedPaintItems) } label: {
                             issueRow(count: unassignedPaint, title: "Paint records without a location", subtitle: "Connect each finish to a Room / Area when possible.")
                         }
                     }
                     if unlinkedTasks > 0 {
-                        NavigationLink { TasksHubView(initialSection: .all) } label: {
+                        NavigationLink { SetupIssueListView(title: "Unlinked Open Tasks", guidance: "These open tasks have no connected room, asset, fixture, system, or project.", items: unlinkedTaskItems) } label: {
                             issueRow(count: unlinkedTasks, title: "Open tasks with no connected context", subtitle: "A task can stand alone, but linking it to a room, asset, or project makes the home record more useful.")
                         }
                     }
@@ -145,22 +221,22 @@ struct HomeSetupView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     if systemsMissingIdentity > 0 {
-                        NavigationLink { SystemsListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Systems Missing Details", guidance: "Open a record to add the identity and installation details used by warranty and replacement planning.", items: systemsMissingIdentityItems) } label: {
                             issueRow(count: systemsMissingIdentity, title: "Systems missing model or installation details", subtitle: "These fields improve warranty and replacement planning.")
                         }
                     }
                     if appliancesMissingIdentity > 0 {
-                        NavigationLink { AppliancesListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Devices Missing Details", guidance: "Open a record to add model and purchase details.", items: appliancesMissingIdentityItems) } label: {
                             issueRow(count: appliancesMissingIdentity, title: "Devices & equipment missing model or purchase details", subtitle: "Useful for warranty, replacement, and documentation.")
                         }
                     }
                     if fixturesMissingIdentity > 0 {
-                        NavigationLink { FixturesListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Fixtures Missing Details", guidance: "Open a record to add model and installation or purchase details.", items: fixturesMissingIdentityItems) } label: {
                             issueRow(count: fixturesMissingIdentity, title: "Fixtures missing model or date details", subtitle: "Especially useful for faucets, lighting, fans, and replacement parts.")
                         }
                     }
                     if detectorsMissingDates > 0 {
-                        NavigationLink { DetectorsListView() } label: {
+                        NavigationLink { SetupIssueListView(title: "Detectors Missing Dates", guidance: "Open a detector to add a manufacture or installation date so replacement timing can be estimated.", items: detectorsMissingDateItems) } label: {
                             issueRow(count: detectorsMissingDates, title: "Detectors missing manufacture / installation dates", subtitle: "A date is needed to estimate replacement timing.")
                         }
                     }

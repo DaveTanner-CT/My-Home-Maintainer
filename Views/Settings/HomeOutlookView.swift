@@ -31,6 +31,46 @@ private struct HomeOutlookItem: Identifiable {
     var locationName: String { room?.name ?? "" }
 }
 
+
+private struct OutlookDataIssueItem: Identifiable {
+    let id: String
+    let name: String
+    let kind: String
+    let detail: String
+    let destination: AnyView
+}
+
+private struct OutlookDataIssueListView: View {
+    let title: String
+    let guidance: String
+    let items: [OutlookDataIssueItem]
+
+    var body: some View {
+        List {
+            Section {
+                Text(guidance)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Items to Update") {
+                ForEach(items) { item in
+                    NavigationLink { item.destination } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.name).font(.headline)
+                            Text(item.kind).font(.caption).foregroundStyle(.secondary)
+                            if !item.detail.isEmpty {
+                                Text(item.detail).font(.caption2).foregroundStyle(.orange)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+        }
+        .navigationTitle(title)
+    }
+}
+
 struct HomeOutlookView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var systems: [HomeSystem]
@@ -121,6 +161,32 @@ struct HomeOutlookView: View {
 
     private var systemsMissingLifeCount: Int {
         systems.filter { ($0.expectedServiceLifeYears ?? 0) <= 0 }.count
+    }
+
+    private var missingDateItems: [OutlookDataIssueItem] {
+        systems.filter { $0.installationDate == nil }.map { system in
+            .init(id: "date-system-\(system.persistentModelID)", name: system.name, kind: "Home System", detail: "Add installation date", destination: AnyView(SystemDetailView(system: system)))
+        } + appliances.filter { $0.purchaseDate == nil }.map { item in
+            .init(id: "date-device-\(item.persistentModelID)", name: item.name, kind: "Device / Equipment", detail: "Add purchase date", destination: AnyView(ApplianceDetailView(appliance: item)))
+        } + fixtures.filter { $0.installationDate == nil && $0.purchaseDate == nil }.map { item in
+            .init(id: "date-fixture-\(item.persistentModelID)", name: item.name, kind: "Fixture", detail: "Add installation or purchase date", destination: AnyView(FixtureDetailView(fixture: item)))
+        }
+    }
+
+    private var missingCostItems: [OutlookDataIssueItem] {
+        systems.filter { $0.purchaseCost == nil }.map { system in
+            .init(id: "cost-system-\(system.persistentModelID)", name: system.name, kind: "Home System", detail: "Add recorded purchase / installation cost", destination: AnyView(SystemDetailView(system: system)))
+        } + appliances.filter { $0.purchasePrice == nil }.map { item in
+            .init(id: "cost-device-\(item.persistentModelID)", name: item.name, kind: "Device / Equipment", detail: "Add recorded purchase cost", destination: AnyView(ApplianceDetailView(appliance: item)))
+        } + fixtures.filter { $0.purchasePrice == nil }.map { item in
+            .init(id: "cost-fixture-\(item.persistentModelID)", name: item.name, kind: "Fixture", detail: "Add recorded purchase / installation cost", destination: AnyView(FixtureDetailView(fixture: item)))
+        }
+    }
+
+    private var missingLifeItems: [OutlookDataIssueItem] {
+        systems.filter { ($0.expectedServiceLifeYears ?? 0) <= 0 }.map { system in
+            .init(id: "life-system-\(system.persistentModelID)", name: system.name, kind: "Home System", detail: "Add expected service life", destination: AnyView(SystemDetailView(system: system)))
+        }
     }
 
     var body: some View {
@@ -214,15 +280,39 @@ struct HomeOutlookView: View {
                         .foregroundStyle(.green)
                 } else {
                     if missingDateCount > 0 {
-                        LabeledContent("Missing purchase / installation dates", value: "\(missingDateCount)")
+                        NavigationLink {
+                            OutlookDataIssueListView(
+                                title: "Missing Dates",
+                                guidance: "These records cannot be placed reliably on the replacement timeline until a purchase or installation date is recorded.",
+                                items: missingDateItems
+                            )
+                        } label: {
+                            LabeledContent("Missing purchase / installation dates", value: "\(missingDateCount)")
+                        }
                     }
                     if systemsMissingLifeCount > 0 {
-                        LabeledContent("Systems missing service-life estimate", value: "\(systemsMissingLifeCount)")
+                        NavigationLink {
+                            OutlookDataIssueListView(
+                                title: "Missing Service Life",
+                                guidance: "Add an expected service-life estimate to these systems so Home Outlook can calculate a planning window.",
+                                items: missingLifeItems
+                            )
+                        } label: {
+                            LabeledContent("Systems missing service-life estimate", value: "\(systemsMissingLifeCount)")
+                        }
                     }
                     if missingCostCount > 0 {
-                        LabeledContent("Items missing recorded cost", value: "\(missingCostCount)")
+                        NavigationLink {
+                            OutlookDataIssueListView(
+                                title: "Missing Recorded Cost",
+                                guidance: "These are the exact records behind the missing-cost count. Open any item to add its known historical cost.",
+                                items: missingCostItems
+                            )
+                        } label: {
+                            LabeledContent("Items missing recorded cost", value: "\(missingCostCount)")
+                        }
                     }
-                    Text("Open an item from My Home to fill in missing information. Recorded costs are shown only as a baseline; Home Maintainer does not inflate them into a future-price prediction.")
+                    Text("Tap any issue above to see the exact records that need attention. Recorded costs are shown only as a baseline; Home Maintainer does not inflate them into a future-price prediction.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

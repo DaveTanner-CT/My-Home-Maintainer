@@ -284,8 +284,12 @@ struct RoomDetailView: View {
             RoomPhotoGridSection(room: room)
 
             Section("At a Glance") {
-                LabeledContent("Active projects", value: "\(roomProjects.filter { $0.stage != .completed }.count)")
-                LabeledContent("Open tasks", value: "\(openRoomTasks.count)")
+                NavigationLink { RoomProjectsSummaryView(room: room, projects: roomProjects) } label: {
+                    LabeledContent("Active projects", value: "\(roomProjects.filter { $0.stage != .completed }.count)")
+                }
+                NavigationLink { RoomTasksSummaryView(room: room, tasks: roomTasks) } label: {
+                    LabeledContent("Open tasks", value: "\(openRoomTasks.count)")
+                }
                 LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
                 if warrantyAlerts > 0 { Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark").foregroundStyle(.orange) }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
@@ -415,13 +419,28 @@ struct RoomDetailView: View {
         HStack {
             Text(label)
             Spacer()
-            TextField("—", text: decimalBinding(value))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 90)
-            Text(room.dimensionUnit.abbreviation)
-                .foregroundStyle(.secondary)
-                .frame(width: 24, alignment: .leading)
+            if room.dimensionUnit == .feet {
+                TextField("0", text: feetBinding(value))
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 54)
+                Text("ft")
+                    .foregroundStyle(.secondary)
+                TextField("0", text: inchesBinding(value))
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 54)
+                Text("in")
+                    .foregroundStyle(.secondary)
+            } else {
+                TextField("—", text: decimalBinding(value))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                Text("m")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, alignment: .leading)
+            }
         }
     }
 
@@ -431,6 +450,51 @@ struct RoomDetailView: View {
             set: { newValue in
                 room[keyPath: keyPath] = newValue
                 try? modelContext.save()
+            }
+        )
+    }
+
+
+    private func feetBinding(_ value: Binding<Double?>) -> Binding<String> {
+        Binding(
+            get: {
+                guard let number = value.wrappedValue else { return "" }
+                let totalInches = max(0, Int((number * 12).rounded()))
+                return String(totalInches / 12)
+            },
+            set: { text in
+                let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let currentTotal = max(0, Int(((value.wrappedValue ?? 0) * 12).rounded()))
+                let currentInches = currentTotal % 12
+                if cleaned.isEmpty {
+                    value.wrappedValue = currentInches == 0 ? nil : Double(currentInches) / 12.0
+                    return
+                }
+                let feet = max(0, Int(cleaned) ?? 0)
+                value.wrappedValue = Double(feet * 12 + currentInches) / 12.0
+            }
+        )
+    }
+
+    private func inchesBinding(_ value: Binding<Double?>) -> Binding<String> {
+        Binding(
+            get: {
+                guard let number = value.wrappedValue else { return "" }
+                let totalInches = max(0, Int((number * 12).rounded()))
+                return String(totalInches % 12)
+            },
+            set: { text in
+                let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let currentTotal = max(0, Int(((value.wrappedValue ?? 0) * 12).rounded()))
+                let currentFeet = currentTotal / 12
+                if cleaned.isEmpty {
+                    value.wrappedValue = currentFeet == 0 ? nil : Double(currentFeet)
+                    return
+                }
+                let enteredInches = max(0, Int(cleaned) ?? 0)
+                let normalizedFeet = currentFeet + enteredInches / 12
+                let normalizedInches = enteredInches % 12
+                value.wrappedValue = Double(normalizedFeet * 12 + normalizedInches) / 12.0
             }
         )
     }
@@ -781,3 +845,34 @@ struct ConsumablesListView: View {
 struct ConsumableDetailView: View { let item: Consumable; @State private var showEdit = false; var body: some View { List { Section("Item") { if !item.type.isEmpty { LabeledContent("Type", value: item.type) }; if !item.size.isEmpty { LabeledContent("Size", value: item.size) }; if !item.manufacturer.isEmpty { LabeledContent("Manufacturer", value: item.manufacturer) }; if !item.modelPartNumber.isEmpty { LabeledContent("Part number", value: item.modelPartNumber) }; if !item.purchaseLink.isEmpty, let url = normalizedURL(item.purchaseLink) { Link("Purchase Link", destination: url) } }; Section("Replacement") { if let months = item.replacementIntervalMonths { LabeledContent("Interval", value: "Every \(months) months") }; if let date = item.lastReplaced { LabeledContent("Last replaced", value: date.formatted(date: .abbreviated, time: .omitted)) }; if let date = item.nextReplacement { LabeledContent("Next replacement", value: date.formatted(date: .long, time: .omitted)) } }; AttachmentSection(owner: .consumable(item)); if !item.notes.isEmpty { Section("Notes") { Text(item.notes) } } }.navigationTitle(item.name).toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ConsumableFormView(existing: item) } } } } }
 
 private func normalizedURL(_ value: String) -> URL? { if let url = URL(string: value), url.scheme != nil { return url }; return URL(string: "https://\(value)") }
+
+
+private struct RoomProjectsSummaryView: View {
+    let room: Room
+    let projects: [Project]
+    var body: some View {
+        List {
+            if projects.isEmpty { ContentUnavailableView("No projects", systemImage: "hammer") }
+            ForEach(projects) { project in
+                NavigationLink { ProjectDetailView(project: project) } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(project.title).font(.headline)
+                        Text(project.stage.rawValue).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }.navigationTitle("\(room.name) Projects")
+    }
+}
+
+private struct RoomTasksSummaryView: View {
+    let room: Room
+    let tasks: [MaintenanceTask]
+    var body: some View {
+        List {
+            let open = tasks.filter { !$0.isCompleted }.sorted { $0.dueDate < $1.dueDate }
+            if open.isEmpty { ContentUnavailableView("No open tasks", systemImage: "checkmark.circle") }
+            ForEach(open) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+        }.navigationTitle("\(room.name) Tasks")
+    }
+}

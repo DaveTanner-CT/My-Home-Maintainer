@@ -40,9 +40,18 @@ struct HomeDashboardView: View {
                 .buttonStyle(.plain)
 
                 HStack(spacing: 10) {
-                    SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
-                    SummaryCard(title: "Current", count: current.count, tint: .orange)
-                    SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
+                    NavigationLink { DashboardTaskListView(title: "Overdue Tasks", tasks: overdue) } label: {
+                        SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink { DashboardTaskListView(title: "Current Tasks", tasks: current) } label: {
+                        SummaryCard(title: "Current", count: current.count, tint: .orange)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink { DashboardTaskListView(title: "Upcoming Tasks", tasks: upcoming) } label: {
+                        SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 sectionTitle("Needs Attention")
@@ -208,5 +217,26 @@ struct EmptyCard: View {
         .padding(24)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+
+private struct DashboardTaskListView: View {
+    let title: String
+    let tasks: [MaintenanceTask]
+
+    var body: some View {
+        List {
+            if tasks.isEmpty {
+                ContentUnavailableView("No tasks", systemImage: "checkmark.circle")
+            } else {
+                ForEach(tasks.sorted { $0.dueDate < $1.dueDate }) { task in
+                    NavigationLink { TaskDetailView(task: task) } label: {
+                        TaskRowView(task: task)
+                    }
+                }
+            }
+        }
+        .navigationTitle(title)
     }
 }

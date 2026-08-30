@@ -143,3 +143,12 @@ Paint & Finish records now have a real optional SwiftData relationship to Room /
 
 ## v0.21 Room Page Update
 Room detail sections now include visible inline Add controls for Projects, Paint & Finishes, Home Systems, Devices & Equipment, Fixtures, and Tasks. The top-right + menu remains as an additional shortcut.
+
+
+## v0.22 — Feet/Inches + Connected Flows
+
+- Feet-based room dimensions now use separate feet and inches inputs; meters remains decimal.
+- Home Outlook data-quality counts link to the exact records behind each issue.
+- Home Setup warnings now open filtered affected-record lists.
+- Home Insights and dashboard summary counts are actionable.
+- Room At a Glance project/task counts open room-specific record lists.
