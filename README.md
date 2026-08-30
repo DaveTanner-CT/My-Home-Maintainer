@@ -152,3 +152,12 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Home Setup warnings now open filtered affected-record lists.
 - Home Insights and dashboard summary counts are actionable.
 - Room At a Glance project/task counts open room-specific record lists.
+
+
+## v0.23 — Remove Legacy Sample Data
+
+- Removed automatic demo/sample-data seeding.
+- Added a conservative one-time cleanup that removes only records still matching the original demo dataset.
+- User-edited records, records with attachments, and sample-origin records now referenced by user-created content are preserved.
+- Pristine sample room shells are removed only when nothing user-created is linked to them.
+- The existing Home object is retained so upgrading does not wipe user data.

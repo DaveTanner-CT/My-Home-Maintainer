@@ -3,7 +3,7 @@ import SwiftData
 
 struct RootTabView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var didSeed = false
+    @State private var didRunStartupMaintenance = false
 
     var body: some View {
         TabView {
@@ -28,9 +28,9 @@ struct RootTabView: View {
             .tabItem { Label("Projects", systemImage: "hammer.fill") }
         }
         .task {
-            guard !didSeed else { return }
-            didSeed = true
-            SeedData.insertIfNeeded(context: modelContext)
+            guard !didRunStartupMaintenance else { return }
+            didRunStartupMaintenance = true
+            LegacySampleDataCleanup.runIfNeeded(context: modelContext)
             if let tasks = try? modelContext.fetch(FetchDescriptor<MaintenanceTask>()) {
                 for task in tasks where !task.isCompleted {
                     await NotificationManager.shared.schedule(for: task)

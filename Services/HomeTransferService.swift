@@ -326,7 +326,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.22", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.23", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(
                 id: roomIDs[$0.persistentModelID]!,
                 name: $0.name,

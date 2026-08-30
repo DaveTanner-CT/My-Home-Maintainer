@@ -1,0 +1,9 @@
+HomeMaintainer v0.23 - Remove Legacy Sample Data
+
+- Automatic sample/demo data seeding has been removed.
+- On first launch of v0.23, the app runs a one-time conservative cleanup of the original demo records.
+- The cleanup deletes a demo record only while it still matches the known sample values and is not being used by user-created content or attachments.
+- Existing user-entered records are not bulk-deleted.
+- Demo room shells (Kitchen, Family Room, Mud Room, Basement) are removed only when pristine and unreferenced.
+- The Home record itself is preserved. If it is still the untouched original demo home, only the fake 1998 / 2450 sq ft values are cleared.
+- Build/export/transfer version updated to 0.23.
