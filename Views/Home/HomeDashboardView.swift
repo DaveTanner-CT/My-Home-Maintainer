@@ -119,6 +119,13 @@ struct HomeDashboardView: View {
                         destination: AnyView(HomeHistoryView())
                     )
                 }
+
+                Text("HomeMaintainer v0.24")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
             }
             .padding()
         }

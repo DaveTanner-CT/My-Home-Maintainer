@@ -1,0 +1,20 @@
+HomeMaintainer v0.24 - Room Inches Normalization
+
+ROOM DIMENSIONS
+- Corrected feet/inches entry behavior for Length, Width, and Ceiling Height.
+- The inches field now accepts total inches, including values greater than 11.
+- Examples:
+  38 inches -> 3 ft 2 in
+  74 inches -> 6 ft 2 in
+  120 inches -> 10 ft 0 in
+- If a feet value is also entered, total inches are added to it correctly.
+  Example: 5 ft + 26 in -> 7 ft 2 in.
+- The app preserves the raw number while the user is typing, then normalizes the display when the inches field loses focus.
+- Meter entry remains decimal and is unchanged.
+
+BASE BUILD
+- Preserves all v0.23 sample-data cleanup behavior.
+- Preserves v0.22 connected-flow improvements and all prior room features.
+
+VALIDATION
+- All Swift files were parsed successfully with swiftc -parse before packaging.

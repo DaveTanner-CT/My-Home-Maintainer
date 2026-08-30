@@ -67,7 +67,7 @@ enum HomeExportService {
 
         return HomeArchive(
             exportedAt: .now,
-            appVersion: "0.23",
+            appVersion: "0.24",
             homes: homes.map { .init(name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) },
             rooms: rooms.map { .init(
                 name: $0.name,

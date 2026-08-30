@@ -201,6 +201,91 @@ struct RoomsListView: View {
     }
 }
 
+private struct FeetInchesDimensionRow: View {
+    let label: String
+    @Binding var value: Double?
+
+    private enum Field: Hashable {
+        case feet
+        case inches
+    }
+
+    @State private var feetText = ""
+    @State private var inchesText = ""
+    @FocusState private var focusedField: Field?
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+
+            TextField("0", text: $feetText)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 54)
+                .focused($focusedField, equals: .feet)
+                .onChange(of: feetText) { _, _ in
+                    saveRawEntry()
+                }
+
+            Text("ft")
+                .foregroundStyle(.secondary)
+
+            TextField("0", text: $inchesText)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 54)
+                .focused($focusedField, equals: .inches)
+                .onChange(of: inchesText) { _, _ in
+                    saveRawEntry()
+                }
+
+            Text("in")
+                .foregroundStyle(.secondary)
+        }
+        .onAppear {
+            syncFromStoredValue()
+        }
+        .onChange(of: focusedField) { oldField, newField in
+            // Keep whatever the user types visible while editing. When they leave
+            // the inches field, normalize total inches into feet + remainder.
+            // Example: 38 inches -> 3 ft 2 in.
+            if oldField == .inches && newField != .inches {
+                syncFromStoredValue()
+            } else if oldField != nil && newField == nil {
+                syncFromStoredValue()
+            }
+        }
+    }
+
+    private func saveRawEntry() {
+        let cleanedFeet = feetText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedInches = inchesText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleanedFeet.isEmpty && cleanedInches.isEmpty {
+            value = nil
+            return
+        }
+
+        let enteredFeet = max(0, Int(cleanedFeet) ?? 0)
+        let enteredInches = max(0, Int(cleanedInches) ?? 0)
+        let totalInches = enteredFeet * 12 + enteredInches
+        value = Double(totalInches) / 12.0
+    }
+
+    private func syncFromStoredValue() {
+        guard let number = value else {
+            feetText = ""
+            inchesText = ""
+            return
+        }
+
+        let totalInches = max(0, Int((number * 12).rounded()))
+        feetText = String(totalInches / 12)
+        inchesText = String(totalInches % 12)
+    }
+}
+
 struct RoomDetailView: View {
     @Environment(\.modelContext) private var modelContext
     let room: Room
@@ -416,23 +501,12 @@ struct RoomDetailView: View {
 
     @ViewBuilder
     private func dimensionRow(_ label: String, value: Binding<Double?>) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            if room.dimensionUnit == .feet {
-                TextField("0", text: feetBinding(value))
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 54)
-                Text("ft")
-                    .foregroundStyle(.secondary)
-                TextField("0", text: inchesBinding(value))
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 54)
-                Text("in")
-                    .foregroundStyle(.secondary)
-            } else {
+        if room.dimensionUnit == .feet {
+            FeetInchesDimensionRow(label: label, value: value)
+        } else {
+            HStack {
+                Text(label)
+                Spacer()
                 TextField("—", text: decimalBinding(value))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
@@ -454,50 +528,6 @@ struct RoomDetailView: View {
         )
     }
 
-
-    private func feetBinding(_ value: Binding<Double?>) -> Binding<String> {
-        Binding(
-            get: {
-                guard let number = value.wrappedValue else { return "" }
-                let totalInches = max(0, Int((number * 12).rounded()))
-                return String(totalInches / 12)
-            },
-            set: { text in
-                let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                let currentTotal = max(0, Int(((value.wrappedValue ?? 0) * 12).rounded()))
-                let currentInches = currentTotal % 12
-                if cleaned.isEmpty {
-                    value.wrappedValue = currentInches == 0 ? nil : Double(currentInches) / 12.0
-                    return
-                }
-                let feet = max(0, Int(cleaned) ?? 0)
-                value.wrappedValue = Double(feet * 12 + currentInches) / 12.0
-            }
-        )
-    }
-
-    private func inchesBinding(_ value: Binding<Double?>) -> Binding<String> {
-        Binding(
-            get: {
-                guard let number = value.wrappedValue else { return "" }
-                let totalInches = max(0, Int((number * 12).rounded()))
-                return String(totalInches % 12)
-            },
-            set: { text in
-                let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                let currentTotal = max(0, Int(((value.wrappedValue ?? 0) * 12).rounded()))
-                let currentFeet = currentTotal / 12
-                if cleaned.isEmpty {
-                    value.wrappedValue = currentFeet == 0 ? nil : Double(currentFeet)
-                    return
-                }
-                let enteredInches = max(0, Int(cleaned) ?? 0)
-                let normalizedFeet = currentFeet + enteredInches / 12
-                let normalizedInches = enteredInches % 12
-                value.wrappedValue = Double(normalizedFeet * 12 + normalizedInches) / 12.0
-            }
-        )
-    }
 
     private func decimalBinding(_ value: Binding<Double?>) -> Binding<String> {
         Binding(

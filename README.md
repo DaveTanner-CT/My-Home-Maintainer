@@ -161,3 +161,10 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - User-edited records, records with attachments, and sample-origin records now referenced by user-created content are preserved.
 - Pristine sample room shells are removed only when nothing user-created is linked to them.
 - The existing Home object is retained so upgrading does not wipe user data.
+
+## v0.24 — Room Inches Normalization
+
+- Feet-based room dimensions now safely accept total inches in the inches field.
+- Entries such as 38 inches normalize to 3 ft 2 in when leaving the field.
+- Entries such as 74 inches normalize to 6 ft 2 in.
+- Raw typing is preserved while editing so SwiftUI does not reformat the field mid-entry.
