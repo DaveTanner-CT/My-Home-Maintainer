@@ -289,7 +289,7 @@ struct RoomDetailView: View {
                 LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
                 if warrantyAlerts > 0 { Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark").foregroundStyle(.orange) }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
-                Text("Use + above to add a project, task, system, device, fixture, or finish already connected to this area.")
+                Text("Use the Add controls in each section below, or the + menu above, to add records already connected to this room.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -309,6 +309,9 @@ struct RoomDetailView: View {
                         }
                     }
                 }
+                Button { showAddProject = true } label: {
+                    Label("Add Project to This Room", systemImage: "plus.circle.fill")
+                }
             }
 
             Section("Paint & Finishes") {
@@ -321,27 +324,42 @@ struct RoomDetailView: View {
                         }
                     }
                 }
+                Button { showAddPaint = true } label: {
+                    Label("Add Paint / Finish to This Room", systemImage: "plus.circle.fill")
+                }
             }
 
             Section("Home Systems") {
                 if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
                 ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
+                Button { showAddSystem = true } label: {
+                    Label("Add Home System to This Room", systemImage: "plus.circle.fill")
+                }
             }
 
             Section("Devices & Equipment") {
                 if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
+                Button { showAddAppliance = true } label: {
+                    Label("Add Device / Equipment to This Room", systemImage: "plus.circle.fill")
+                }
             }
 
             Section("Fixtures") {
                 if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
                 ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
+                Button { showAddFixture = true } label: {
+                    Label("Add Fixture to This Room", systemImage: "plus.circle.fill")
+                }
             }
 
             Section("Tasks") {
                 if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
+                }
+                Button { showAddTask = true } label: {
+                    Label("Add Task to This Room", systemImage: "plus.circle.fill")
                 }
             }
 
