@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct RoomFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -70,6 +71,9 @@ struct RoomFormView: View {
         if let systems = try? modelContext.fetch(FetchDescriptor<HomeSystem>()) {
             for item in systems where item.room?.persistentModelID == room.persistentModelID { item.location = newName }
         }
+        if let detectors = try? modelContext.fetch(FetchDescriptor<Detector>()) {
+            for item in detectors where item.room?.persistentModelID == room.persistentModelID { item.location = newName }
+        }
     }
 
     private func unlinkAllRecords(from room: Room) {
@@ -79,6 +83,8 @@ struct RoomFormView: View {
         if let values = try? modelContext.fetch(FetchDescriptor<PaintFinish>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<Project>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<MaintenanceTask>()) { for item in values where item.isDirectlyLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<Detector>()) { for item in values where item.room?.persistentModelID == room.persistentModelID { item.room = nil } }
+        if let values = try? modelContext.fetch(FetchDescriptor<Consumable>()) { for item in values where item.room?.persistentModelID == room.persistentModelID { item.room = nil } }
     }
     @ViewBuilder private func deleteSection(label: String) -> some View { Section { Button(label, role: .destructive) { showDelete = true } } }
     @ToolbarContentBuilder private func formToolbar(save: @escaping () -> Void) -> some ToolbarContent {
@@ -93,6 +99,7 @@ struct SystemFormView: View {
     @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
     @Query(sort: \Room.name) private var rooms: [Room]
     @Query(sort: \Project.title) private var projects: [Project]
+    @Query(sort: \HomeAttachment.createdAt, order: .reverse) private var allAttachments: [HomeAttachment]
     let existing: HomeSystem?
     @State private var name: String; @State private var type: String; @State private var manufacturer: String
     @State private var model: String; @State private var serial: String; @State private var location: String
@@ -242,6 +249,8 @@ struct PaintFormView: View {
     @State private var productLink: String
     @State private var notes: String
     @State private var showDelete = false
+    @State private var selectedMixingLabelPhoto: PhotosPickerItem?
+    @State private var mixingLabelPhotoData: Data?
 
     init(existing: PaintFinish? = nil, initialRoom: Room? = nil) {
         self.existing = existing
@@ -262,6 +271,15 @@ struct PaintFormView: View {
         _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
         _productLink = State(initialValue: existing?.productLink ?? "")
         _notes = State(initialValue: existing?.notes ?? "")
+    }
+
+    private var existingMixingLabel: HomeAttachment? {
+        guard let existing else { return nil }
+        return allAttachments.first { attachment in
+            attachment.paint?.persistentModelID == existing.persistentModelID &&
+            attachment.isImage &&
+            (attachment.name == "Mixing Label" || attachment.caption == "Paint mixing label")
+        }
     }
 
     var body: some View {
@@ -292,6 +310,16 @@ struct PaintFormView: View {
                 TextField("Cost", text: $cost).keyboardType(.decimalPad)
                 TextField("Product link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never)
             }
+            Section("Mixing Label") {
+                PhotosPicker(selection: $selectedMixingLabelPhoto, matching: .images) {
+                    Label((mixingLabelPhotoData != nil || existingMixingLabel != nil) ? "Replace Mixing Label Photo" : "Add Mixing Label Photo", systemImage: "camera")
+                }
+                if mixingLabelPhotoData != nil || existingMixingLabel != nil {
+                    Text("The mixing label photo will be saved with this paint record.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
             if existing != nil { Section { Button("Delete Paint Record", role: .destructive) { showDelete = true } } }
         }
@@ -301,6 +329,14 @@ struct PaintFormView: View {
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(selectedRoom == nil || colorName.isEmpty) }
         }
         .onAppear { resolveLegacyRoomIfNeeded() }
+        .onChange(of: selectedMixingLabelPhoto) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                if let data = try? await newValue.loadTransferable(type: Data.self) {
+                    await MainActor.run { mixingLabelPhotoData = data }
+                }
+            }
+        }
         .confirmationDialog("Delete this paint record?", isPresented: $showDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() }
@@ -334,6 +370,28 @@ struct PaintFormView: View {
         record.productLink = productLink
         record.notes = notes
         record.sourceProject = selectedProject
+        if let data = mixingLabelPhotoData {
+            if let attachment = existingMixingLabel {
+                attachment.fileData = data
+                attachment.fileName = "paint-mixing-label-\(Int(Date().timeIntervalSince1970)).jpg"
+                attachment.typeIdentifier = "image/jpeg"
+                attachment.name = "Mixing Label"
+                attachment.caption = "Paint mixing label"
+                attachment.category = "Photo"
+            } else {
+                let attachment = HomeAttachment(
+                    name: "Mixing Label",
+                    caption: "Paint mixing label",
+                    category: "Photo",
+                    fileName: "paint-mixing-label-\(Int(Date().timeIntervalSince1970)).jpg",
+                    typeIdentifier: "image/jpeg",
+                    fileData: data
+                )
+                attachment.paint = record
+                modelContext.insert(attachment)
+            }
+            mixingLabelPhotoData = nil
+        }
         try? modelContext.save()
         dismiss()
     }
@@ -362,43 +420,191 @@ struct VendorFormView: View {
 }
 
 struct DetectorFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
     let existing: Detector?
-    @State private var location: String; @State private var type: String; @State private var manufacturer: String; @State private var model: String; @State private var batteryType: String; @State private var isHardwired: Bool
-    @State private var hasManufactureDate: Bool; @State private var manufactureDate: Date; @State private var hasInstallDate: Bool; @State private var installDate: Date; @State private var notes: String; @State private var showDelete = false
+    @State private var selectedRoom: Room?
+    @State private var legacyLocation: String
+    @State private var type: String
+    @State private var manufacturer: String
+    @State private var model: String
+    @State private var batteryType: String
+    @State private var isHardwired: Bool
+    @State private var hasManufactureDate: Bool
+    @State private var manufactureDate: Date
+    @State private var hasInstallDate: Bool
+    @State private var installDate: Date
+    @State private var notes: String
+    @State private var showDelete = false
+
     init(existing: Detector? = nil) {
-        self.existing = existing; _location = State(initialValue: existing?.location ?? ""); _type = State(initialValue: existing?.type ?? "Combination"); _manufacturer = State(initialValue: existing?.manufacturer ?? ""); _model = State(initialValue: existing?.model ?? ""); _batteryType = State(initialValue: existing?.batteryType ?? ""); _isHardwired = State(initialValue: existing?.isHardwired ?? false)
-        _hasManufactureDate = State(initialValue: existing?.manufactureDate != nil); _manufactureDate = State(initialValue: existing?.manufactureDate ?? .now); _hasInstallDate = State(initialValue: existing?.installationDate != nil); _installDate = State(initialValue: existing?.installationDate ?? .now); _notes = State(initialValue: existing?.notes ?? "")
+        self.existing = existing
+        _selectedRoom = State(initialValue: existing?.room)
+        _legacyLocation = State(initialValue: existing?.location ?? "")
+        _type = State(initialValue: existing?.type ?? "Combination")
+        _manufacturer = State(initialValue: existing?.manufacturer ?? "")
+        _model = State(initialValue: existing?.model ?? "")
+        _batteryType = State(initialValue: existing?.batteryType ?? "")
+        _isHardwired = State(initialValue: existing?.isHardwired ?? false)
+        _hasManufactureDate = State(initialValue: existing?.manufactureDate != nil)
+        _manufactureDate = State(initialValue: existing?.manufactureDate ?? .now)
+        _hasInstallDate = State(initialValue: existing?.installationDate != nil)
+        _installDate = State(initialValue: existing?.installationDate ?? .now)
+        _notes = State(initialValue: existing?.notes ?? "")
     }
+
     var body: some View {
         Form {
-            Section("Detector") { TextField("Location", text: $location); Picker("Type", selection: $type) { ForEach(["Smoke","CO","Combination"], id: \.self) { Text($0).tag($0) } }; TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); Toggle("Hardwired", isOn: $isHardwired); TextField("Battery type", text: $batteryType) }
-            Section("Dates") { Toggle("Manufacture date", isOn: $hasManufactureDate); if hasManufactureDate { DatePicker("Manufactured", selection: $manufactureDate, displayedComponents: .date) }; Toggle("Installation date", isOn: $hasInstallDate); if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) } }
+            Section("Location") {
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("Choose room / area").tag(nil as Room?)
+                    ForEach(rooms) { Text($0.name).tag(Optional($0)) }
+                }
+                if selectedRoom == nil && !legacyLocation.isEmpty {
+                    Text("Previous location: \(legacyLocation)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section("Detector") {
+                Picker("Type", selection: $type) { ForEach(["Smoke","CO","Combination"], id: \.self) { Text($0).tag($0) } }
+                TextField("Manufacturer", text: $manufacturer)
+                TextField("Model", text: $model)
+                Toggle("Hardwired", isOn: $isHardwired)
+                TextField("Battery type", text: $batteryType)
+            }
+            Section("Dates") {
+                Toggle("Manufacture date", isOn: $hasManufactureDate)
+                if hasManufactureDate { DatePicker("Manufactured", selection: $manufactureDate, displayedComponents: .date) }
+                Toggle("Installation date", isOn: $hasInstallDate)
+                if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) }
+            }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
             if existing != nil { Section { Button("Delete Detector", role: .destructive) { showDelete = true } } }
-        }.navigationTitle(existing == nil ? "Add Detector" : "Edit Detector")
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(location.isEmpty) } }
-        .confirmationDialog("Delete this detector?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+        }
+        .navigationTitle(existing == nil ? "Add Detector" : "Edit Detector")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(selectedRoom == nil) }
+        }
+        .onAppear {
+            if selectedRoom == nil, !legacyLocation.isEmpty {
+                selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyLocation) == .orderedSame }
+            }
+        }
+        .confirmationDialog("Delete this detector?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }
+            Button("Cancel", role: .cancel) { }
+        }
     }
-    private func save() { let r = existing ?? Detector(location: location); if existing == nil { modelContext.insert(r) }; r.location = location; r.type = type; r.manufacturer = manufacturer; r.model = model; r.manufactureDate = hasManufactureDate ? manufactureDate : nil; r.installationDate = hasInstallDate ? installDate : nil; r.batteryType = batteryType; r.isHardwired = isHardwired; r.replacementDate = Detector.calculateReplacementDate(manufactureDate: r.manufactureDate, installationDate: r.installationDate); r.notes = notes; try? modelContext.save(); dismiss() }
+
+    private func save() {
+        guard let room = selectedRoom else { return }
+        let r = existing ?? Detector(location: room.name, room: room)
+        if existing == nil { modelContext.insert(r) }
+        r.room = room
+        r.location = room.name
+        r.type = type
+        r.manufacturer = manufacturer
+        r.model = model
+        r.manufactureDate = hasManufactureDate ? manufactureDate : nil
+        r.installationDate = hasInstallDate ? installDate : nil
+        r.batteryType = batteryType
+        r.isHardwired = isHardwired
+        r.replacementDate = Detector.calculateReplacementDate(manufactureDate: r.manufactureDate, installationDate: r.installationDate)
+        r.notes = notes
+        try? modelContext.save()
+        dismiss()
+    }
 }
 
 struct ConsumableFormView: View {
-    @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.name) private var rooms: [Room]
     let existing: Consumable?
-    @State private var name: String; @State private var type: String; @State private var size: String; @State private var manufacturer: String; @State private var partNumber: String; @State private var purchaseLink: String; @State private var intervalMonths: Int; @State private var hasLastReplaced: Bool; @State private var lastReplaced: Date; @State private var notes: String; @State private var showDelete = false
-    init(existing: Consumable? = nil) { self.existing = existing; _name = State(initialValue: existing?.name ?? ""); _type = State(initialValue: existing?.type ?? ""); _size = State(initialValue: existing?.size ?? ""); _manufacturer = State(initialValue: existing?.manufacturer ?? ""); _partNumber = State(initialValue: existing?.modelPartNumber ?? ""); _purchaseLink = State(initialValue: existing?.purchaseLink ?? ""); _intervalMonths = State(initialValue: existing?.replacementIntervalMonths ?? 0); _hasLastReplaced = State(initialValue: existing?.lastReplaced != nil); _lastReplaced = State(initialValue: existing?.lastReplaced ?? .now); _notes = State(initialValue: existing?.notes ?? "") }
+    @State private var selectedRoom: Room?
+    @State private var name: String
+    @State private var type: String
+    @State private var size: String
+    @State private var manufacturer: String
+    @State private var partNumber: String
+    @State private var purchaseLink: String
+    @State private var intervalMonths: Int
+    @State private var hasLastReplaced: Bool
+    @State private var lastReplaced: Date
+    @State private var notes: String
+    @State private var showDelete = false
+
+    init(existing: Consumable? = nil) {
+        self.existing = existing
+        _selectedRoom = State(initialValue: existing?.room)
+        _name = State(initialValue: existing?.name ?? "")
+        _type = State(initialValue: existing?.type ?? "")
+        _size = State(initialValue: existing?.size ?? "")
+        _manufacturer = State(initialValue: existing?.manufacturer ?? "")
+        _partNumber = State(initialValue: existing?.modelPartNumber ?? "")
+        _purchaseLink = State(initialValue: existing?.purchaseLink ?? "")
+        _intervalMonths = State(initialValue: existing?.replacementIntervalMonths ?? 0)
+        _hasLastReplaced = State(initialValue: existing?.lastReplaced != nil)
+        _lastReplaced = State(initialValue: existing?.lastReplaced ?? .now)
+        _notes = State(initialValue: existing?.notes ?? "")
+    }
+
     var body: some View {
         Form {
-            Section("Consumable") { TextField("Name", text: $name); TextField("Type", text: $type); TextField("Size", text: $size); TextField("Manufacturer", text: $manufacturer); TextField("Model / part number", text: $partNumber); TextField("Purchase link", text: $purchaseLink).keyboardType(.URL).textInputAutocapitalization(.never) }
-            Section("Replacement") { Stepper("Interval: \(intervalMonths == 0 ? "Not set" : "\(intervalMonths) months")", value: $intervalMonths, in: 0...120); Toggle("Last replacement date", isOn: $hasLastReplaced); if hasLastReplaced { DatePicker("Last replaced", selection: $lastReplaced, displayedComponents: .date) } }
+            Section("Location") {
+                Picker("Room / Area", selection: $selectedRoom) {
+                    Text("Choose room / area").tag(nil as Room?)
+                    ForEach(rooms) { Text($0.name).tag(Optional($0)) }
+                }
+            }
+            Section("Consumable") {
+                TextField("Name", text: $name)
+                TextField("Type", text: $type)
+                TextField("Size", text: $size)
+                TextField("Manufacturer", text: $manufacturer)
+                TextField("Model / part number", text: $partNumber)
+                TextField("Purchase link", text: $purchaseLink).keyboardType(.URL).textInputAutocapitalization(.never)
+            }
+            Section("Replacement") {
+                Stepper("Interval: \(intervalMonths == 0 ? "Not set" : "\(intervalMonths) months")", value: $intervalMonths, in: 0...120)
+                Toggle("Last replacement date", isOn: $hasLastReplaced)
+                if hasLastReplaced { DatePicker("Last replaced", selection: $lastReplaced, displayedComponents: .date) }
+            }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
             if existing != nil { Section { Button("Delete Consumable", role: .destructive) { showDelete = true } } }
-        }.navigationTitle(existing == nil ? "Add Consumable" : "Edit Consumable")
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.isEmpty) } }
-        .confirmationDialog("Delete this consumable?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } }
+        }
+        .navigationTitle(existing == nil ? "Add Consumable" : "Edit Consumable")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.isEmpty || selectedRoom == nil) }
+        }
+        .confirmationDialog("Delete this consumable?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }
+            Button("Cancel", role: .cancel) { }
+        }
     }
-    private func save() { let r = existing ?? Consumable(name: name); if existing == nil { modelContext.insert(r) }; r.name = name; r.type = type; r.size = size; r.manufacturer = manufacturer; r.modelPartNumber = partNumber; r.purchaseLink = purchaseLink; r.replacementIntervalMonths = intervalMonths == 0 ? nil : intervalMonths; r.lastReplaced = hasLastReplaced ? lastReplaced : nil; if let months = r.replacementIntervalMonths, let last = r.lastReplaced { r.nextReplacement = Calendar.current.date(byAdding: .month, value: months, to: last) } else { r.nextReplacement = nil }; r.notes = notes; try? modelContext.save(); dismiss() }
+
+    private func save() {
+        guard let room = selectedRoom else { return }
+        let r = existing ?? Consumable(name: name, room: room)
+        if existing == nil { modelContext.insert(r) }
+        r.room = room
+        r.name = name
+        r.type = type
+        r.size = size
+        r.manufacturer = manufacturer
+        r.modelPartNumber = partNumber
+        r.purchaseLink = purchaseLink
+        r.replacementIntervalMonths = intervalMonths == 0 ? nil : intervalMonths
+        r.lastReplaced = hasLastReplaced ? lastReplaced : nil
+        if let months = r.replacementIntervalMonths, let last = r.lastReplaced { r.nextReplacement = Calendar.current.date(byAdding: .month, value: months, to: last) } else { r.nextReplacement = nil }
+        r.notes = notes
+        try? modelContext.save()
+        dismiss()
+    }
 }
 
 struct MaintenanceRecordFormView: View {

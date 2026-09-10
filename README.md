@@ -174,3 +174,10 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Shared records can belong to multiple rooms without duplication (for example, one mini-split serving two rooms).
 - Related tasks inherit room context through linked systems/devices/fixtures/projects.
 - Detail views, transfer archives, exports, room rename/delete behavior, and primary-room editing now preserve the expanded relationships.
+
+## v0.26 — Paint Mixing Labels & Room-Based Safety/Consumable Locations
+
+- Paint/Finish records can capture or choose a photo of the paint mixing label directly during Add/Edit.
+- Smoke & CO Detectors now select their location from the existing Rooms / Areas list.
+- Filters & Consumables now have the same Room / Area location selector.
+- Detector and Consumable room assignments appear in list/detail views and are preserved in export/transfer data.

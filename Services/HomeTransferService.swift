@@ -44,8 +44,8 @@ struct TransferProjectItem: Codable { let id, projectID, title, category, compar
 struct TransferMeasurement: Codable { let id, projectID, name, unit, notes: String; let value: Double }
 struct TransferTask: Codable { let id, title, taskDescription, category, recurrence, recurrenceAnchor, notes, instructions, contactName, phone, email, website: String; let dueDate, completedDate: Date?; let leadTimeDays, priority: Int; let isCompleted: Bool; let roomID, systemID, applianceID, fixtureID, projectID, vendorID: String?; var additionalRoomIDs: [String]? = nil }
 struct TransferHistory: Codable { let id, title, notes, vendorName, taskTitle, relatedItemName, eventType: String; let date: Date; let cost: Double?; let roomID, systemID, applianceID, fixtureID, projectID, vendorID: String? }
-struct TransferDetector: Codable { let id, location, type, manufacturer, model, batteryType, notes: String; let manufactureDate, installationDate, replacementDate: Date?; let isHardwired: Bool }
-struct TransferConsumable: Codable { let id, name, type, size, manufacturer, modelPartNumber, purchaseLink, notes: String; let replacementIntervalMonths: Int?; let lastReplaced, nextReplacement: Date? }
+struct TransferDetector: Codable { let id, location, type, manufacturer, model, batteryType, notes: String; let manufactureDate, installationDate, replacementDate: Date?; let isHardwired: Bool; var roomID: String? = nil }
+struct TransferConsumable: Codable { let id, name, type, size, manufacturer, modelPartNumber, purchaseLink, notes: String; let replacementIntervalMonths: Int?; let lastReplaced, nextReplacement: Date?; var roomID: String? = nil }
 struct TransferAttachment: Codable { let id, name, caption, category, fileName, typeIdentifier: String; let createdAt: Date; let fileData: Data; let ownerType: String; let ownerID: String? }
 
 struct TransferPreview {
@@ -148,6 +148,8 @@ enum HomeTransferService {
         guard archive.measurements.allSatisfy({ projectIDs.contains($0.projectID) }) else { throw TransferError.invalidArchive("A measurement points to a missing project.") }
         guard archive.tasks.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) && valid($0.systemID, in: systemIDs) && valid($0.applianceID, in: applianceIDs) && valid($0.fixtureID, in: fixtureIDs) && valid($0.projectID, in: projectIDs) && valid($0.vendorID, in: vendorIDs) }) else { throw TransferError.invalidArchive("A task relationship points to a missing record.") }
         guard archive.history.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.systemID, in: systemIDs) && valid($0.applianceID, in: applianceIDs) && valid($0.fixtureID, in: fixtureIDs) && valid($0.projectID, in: projectIDs) && valid($0.vendorID, in: vendorIDs) }) else { throw TransferError.invalidArchive("A history relationship points to a missing record.") }
+        guard archive.detectors.allSatisfy({ valid($0.roomID, in: roomIDs) }) else { throw TransferError.invalidArchive("A detector relationship points to a missing room.") }
+        guard archive.consumables.allSatisfy({ valid($0.roomID, in: roomIDs) }) else { throw TransferError.invalidArchive("A consumable relationship points to a missing room.") }
 
         let owners: [String: Set<String>] = [
             "room": roomIDs, "vendor": vendorIDs, "system": systemIDs, "appliance": applianceIDs,
@@ -245,11 +247,11 @@ enum HomeTransferService {
             context.insert(item); paints[p.id] = item
         }
         for d in archive.detectors {
-            let item = Detector(location: d.location, type: d.type, manufacturer: d.manufacturer, model: d.model, manufactureDate: d.manufactureDate, installationDate: d.installationDate, batteryType: d.batteryType, isHardwired: d.isHardwired, replacementDate: d.replacementDate, notes: d.notes)
+            let item = Detector(location: d.location, type: d.type, manufacturer: d.manufacturer, model: d.model, manufactureDate: d.manufactureDate, installationDate: d.installationDate, batteryType: d.batteryType, isHardwired: d.isHardwired, replacementDate: d.replacementDate, notes: d.notes, room: d.roomID.flatMap { rooms[$0] })
             context.insert(item); detectors[d.id] = item
         }
         for c in archive.consumables {
-            let item = Consumable(name: c.name, type: c.type, size: c.size, manufacturer: c.manufacturer, modelPartNumber: c.modelPartNumber, purchaseLink: c.purchaseLink, replacementIntervalMonths: c.replacementIntervalMonths, lastReplaced: c.lastReplaced, nextReplacement: c.nextReplacement, notes: c.notes)
+            let item = Consumable(name: c.name, type: c.type, size: c.size, manufacturer: c.manufacturer, modelPartNumber: c.modelPartNumber, purchaseLink: c.purchaseLink, replacementIntervalMonths: c.replacementIntervalMonths, lastReplaced: c.lastReplaced, nextReplacement: c.nextReplacement, notes: c.notes, room: c.roomID.flatMap { rooms[$0] })
             context.insert(item); consumables[c.id] = item
         }
         for i in archive.projectItems {
@@ -334,7 +336,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.25", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.26", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(
                 id: roomIDs[$0.persistentModelID]!,
                 name: $0.name,
@@ -356,8 +358,8 @@ enum HomeTransferService {
             measurements: measurements.map { .init(id: UUID().uuidString, projectID: rid($0.project, projectIDs) ?? "", name: $0.name, unit: $0.unit, notes: $0.notes, value: $0.value) },
             tasks: tasks.map { .init(id: taskIDs[$0.persistentModelID]!, title: $0.title, taskDescription: $0.taskDescription, category: $0.category.rawValue, recurrence: $0.recurrence.rawValue, recurrenceAnchor: $0.recurrenceAnchor.rawValue, notes: $0.notes, instructions: $0.instructions, contactName: $0.contactName, phone: $0.phone, email: $0.email, website: $0.website, dueDate: $0.dueDate, completedDate: $0.completedDate, leadTimeDays: $0.leadTimeDays, priority: $0.priority, isCompleted: $0.isCompleted, roomID: rid($0.room, roomIDs), systemID: rid($0.system, systemIDs), applianceID: rid($0.appliance, applianceIDs), fixtureID: rid($0.fixture, fixtureIDs), projectID: rid($0.project, projectIDs), vendorID: rid($0.vendor, vendorIDs), additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
             history: history.map { .init(id: historyIDs[$0.persistentModelID]!, title: $0.title, notes: $0.notes, vendorName: $0.vendorName, taskTitle: $0.taskTitle, relatedItemName: $0.relatedItemName, eventType: $0.eventType.rawValue, date: $0.date, cost: $0.cost, roomID: rid($0.room, roomIDs), systemID: rid($0.system, systemIDs), applianceID: rid($0.appliance, applianceIDs), fixtureID: rid($0.fixture, fixtureIDs), projectID: rid($0.project, projectIDs), vendorID: rid($0.vendor, vendorIDs)) },
-            detectors: detectors.map { .init(id: detectorIDs[$0.persistentModelID]!, location: $0.location, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, batteryType: $0.batteryType, notes: $0.notes, manufactureDate: $0.manufactureDate, installationDate: $0.installationDate, replacementDate: $0.replacementDate, isHardwired: $0.isHardwired) },
-            consumables: consumables.map { .init(id: consumableIDs[$0.persistentModelID]!, name: $0.name, type: $0.type, size: $0.size, manufacturer: $0.manufacturer, modelPartNumber: $0.modelPartNumber, purchaseLink: $0.purchaseLink, notes: $0.notes, replacementIntervalMonths: $0.replacementIntervalMonths, lastReplaced: $0.lastReplaced, nextReplacement: $0.nextReplacement) },
+            detectors: detectors.map { .init(id: detectorIDs[$0.persistentModelID]!, location: $0.location, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, batteryType: $0.batteryType, notes: $0.notes, manufactureDate: $0.manufactureDate, installationDate: $0.installationDate, replacementDate: $0.replacementDate, isHardwired: $0.isHardwired, roomID: rid($0.room, roomIDs)) },
+            consumables: consumables.map { .init(id: consumableIDs[$0.persistentModelID]!, name: $0.name, type: $0.type, size: $0.size, manufacturer: $0.manufacturer, modelPartNumber: $0.modelPartNumber, purchaseLink: $0.purchaseLink, notes: $0.notes, replacementIntervalMonths: $0.replacementIntervalMonths, lastReplaced: $0.lastReplaced, nextReplacement: $0.nextReplacement, roomID: rid($0.room, roomIDs)) },
             attachments: attachmentDTOs
         )
     }

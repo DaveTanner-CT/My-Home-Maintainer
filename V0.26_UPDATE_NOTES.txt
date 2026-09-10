@@ -1,0 +1,28 @@
+HomeMaintainer v0.26 - Paint Mixing Labels + Room Locations
+
+PAINT / FINISHES
+- Added PhotosPicker support directly in Add/Edit Paint.
+- New Mixing Label section allows a photo of the paint mixing label to be added while the paint record is being created.
+- Editing a paint can replace the existing Mixing Label photo rather than creating duplicates.
+- Mixing label is saved as a normal HomeAttachment owned by the PaintFinish record, so the existing attachment viewer/zoom behavior remains available.
+
+SMOKE & CO DETECTORS
+- Added a SwiftData Room relationship to Detector.
+- Add/Edit Detector now uses a Room / Area picker populated from the home's Room records.
+- Existing detector records with legacy free-text locations attempt to resolve automatically to a matching Room by name.
+- Detector list/detail views show the linked room.
+- Room renames keep the detector legacy location text synchronized.
+
+FILTERS & CONSUMABLES
+- Added a SwiftData Room relationship to Consumable.
+- Add/Edit Consumable now includes a Room / Area picker populated from the home's Room records.
+- Consumable list/detail views show the linked room.
+
+DATA INTEGRITY / PORTABILITY
+- Room deletion unlinks Detectors and Consumables instead of deleting those records.
+- Home Transfer preserves Detector and Consumable room relationships.
+- Home Export includes room names for Detector and Consumable snapshots.
+- App/build/export version updated to 0.26.
+
+VALIDATION
+- All Swift source files passed swiftc -parse.
