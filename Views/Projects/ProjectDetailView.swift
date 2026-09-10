@@ -10,8 +10,11 @@ struct ProjectDetailView: View {
     @Query private var fixtures: [Fixture]
     @Query private var systems: [HomeSystem]
     @Query private var paints: [PaintFinish]
+    @Query private var tasks: [MaintenanceTask]
     @State private var showAddItem = false
     @State private var showAddMeasurement = false
+    @State private var showAddTask = false
+    @State private var showLinkTask = false
 
     private var items: [ProjectItem] {
         allItems.filter { $0.project?.persistentModelID == project.persistentModelID }
@@ -36,6 +39,7 @@ struct ProjectDetailView: View {
     private var linkedSystems: [HomeSystem] { systems.filter { $0.sourceProject?.persistentModelID == project.persistentModelID } }
     private var linkedPaints: [PaintFinish] { paints.filter { $0.sourceProject?.persistentModelID == project.persistentModelID } }
     private var hasPermanentRecords: Bool { !linkedAppliances.isEmpty || !linkedFixtures.isEmpty || !linkedSystems.isEmpty || !linkedPaints.isEmpty }
+    private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.project?.persistentModelID == project.persistentModelID } }
 
     var body: some View {
         List {
@@ -92,6 +96,15 @@ struct ProjectDetailView: View {
                     Text("These items now live in the permanent home record. Open one to manage its room, warranty, tasks, documents, and history.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+            }
+
+            Section("Tasks") {
+                if linkedTasks.isEmpty { Text("No tasks linked to this project").foregroundStyle(.secondary) }
+                ForEach(linkedTasks) { task in
+                    NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
+                }
+                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
             }
 
             Section("Budget") {
@@ -161,6 +174,12 @@ struct ProjectDetailView: View {
         }
         .sheet(isPresented: $showAddMeasurement) {
             NavigationStack { ProjectMeasurementFormView(project: project) }
+        }
+        .sheet(isPresented: $showAddTask) {
+            NavigationStack { TaskFormView(initialRoom: project.room, initialProject: project) }
+        }
+        .sheet(isPresented: $showLinkTask) {
+            NavigationStack { ExistingTaskLinkView(target: .project(project)) }
         }
     }
 

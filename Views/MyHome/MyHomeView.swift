@@ -295,6 +295,8 @@ struct RoomDetailView: View {
     @Query private var projects: [Project]
     @Query private var systems: [HomeSystem]
     @Query private var fixtures: [Fixture]
+    @Query private var detectors: [Detector]
+    @Query private var consumables: [Consumable]
     @Query private var history: [MaintenanceRecord]
     @State private var showAddProject = false
     @State private var showAddPaint = false
@@ -302,6 +304,8 @@ struct RoomDetailView: View {
     @State private var showAddFixture = false
     @State private var showAddSystem = false
     @State private var showAddTask = false
+    @State private var showAddDetector = false
+    @State private var showAddConsumable = false
     @State private var showLinkProject = false
     @State private var showLinkPaint = false
     @State private var showLinkAppliance = false
@@ -330,6 +334,8 @@ struct RoomDetailView: View {
         }
     }
     private var roomFixtures: [Fixture] { fixtures.filter { $0.isLinked(to: room) } }
+    private var roomDetectors: [Detector] { detectors.filter { $0.room?.persistentModelID == room.persistentModelID } }
+    private var roomConsumables: [Consumable] { consumables.filter { $0.room?.persistentModelID == room.persistentModelID } }
     private var openRoomTasks: [MaintenanceTask] { roomTasks.filter { !$0.isCompleted }.sorted { $0.dueDate < $1.dueDate } }
     private var roomHistory: [MaintenanceRecord] {
         history.filter { record in
@@ -383,6 +389,12 @@ struct RoomDetailView: View {
                 }
                 NavigationLink { RoomAssetsSummaryView(room: room, systems: roomSystems, appliances: roomAppliances, fixtures: roomFixtures) } label: {
                     LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
+                }
+                if !roomDetectors.isEmpty {
+                    LabeledContent("Smoke / CO detectors", value: "\(roomDetectors.count)")
+                }
+                if !roomConsumables.isEmpty {
+                    LabeledContent("Filters / consumables", value: "\(roomConsumables.count)")
                 }
                 if warrantyAlerts > 0 { Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark").foregroundStyle(.orange) }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
@@ -445,6 +457,34 @@ struct RoomDetailView: View {
                 Button { showLinkFixture = true } label: { Label("Link Existing Fixture", systemImage: "link") }
             }
 
+            Section("Smoke & CO Detectors") {
+                if roomDetectors.isEmpty { Text("No detectors assigned to this room").foregroundStyle(.secondary) }
+                ForEach(roomDetectors) { detector in
+                    NavigationLink { DetectorDetailView(detector: detector) } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(detector.type).font(.headline)
+                            Text([detector.manufacturer, detector.model].filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Button { showAddDetector = true } label: { Label("Add Detector to This Room", systemImage: "plus.circle.fill") }
+            }
+
+            Section("Filters & Consumables") {
+                if roomConsumables.isEmpty { Text("No filters or consumables assigned to this room").foregroundStyle(.secondary) }
+                ForEach(roomConsumables) { item in
+                    NavigationLink { ConsumableDetailView(item: item) } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.name).font(.headline)
+                            Text([item.type, item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Button { showAddConsumable = true } label: { Label("Add Filter / Consumable to This Room", systemImage: "plus.circle.fill") }
+            }
+
             Section("Tasks") {
                 if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
                 ForEach(roomTasks) { task in
@@ -474,6 +514,8 @@ struct RoomDetailView: View {
                     Button { showAddAppliance = true } label: { Label("Device / Equipment", systemImage: "refrigerator") }
                     Button { showAddFixture = true } label: { Label("Fixture", systemImage: "lightbulb") }
                     Button { showAddPaint = true } label: { Label("Paint / Finish", systemImage: "paintbrush") }
+                    Button { showAddDetector = true } label: { Label("Smoke / CO Detector", systemImage: "sensor.tag.radiowaves.forward") }
+                    Button { showAddConsumable = true } label: { Label("Filter / Consumable", systemImage: "shippingbox") }
                     Divider()
                     Menu("Link Existing") {
                         Button("Project") { showLinkProject = true }
@@ -495,6 +537,8 @@ struct RoomDetailView: View {
         .sheet(isPresented: $showAddFixture) { NavigationStack { FixtureFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddSystem) { NavigationStack { SystemFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddDetector) { NavigationStack { DetectorFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddConsumable) { NavigationStack { ConsumableFormView(initialRoom: room) } }
         .sheet(isPresented: $showLinkProject) { NavigationStack { RoomLinkExistingView(room: room, category: .projects) } }
         .sheet(isPresented: $showLinkPaint) { NavigationStack { RoomLinkExistingView(room: room, category: .paints) } }
         .sheet(isPresented: $showLinkAppliance) { NavigationStack { RoomLinkExistingView(room: room, category: .appliances) } }
@@ -723,6 +767,7 @@ struct SystemDetailView: View {
     @Query private var history: [MaintenanceRecord]
     @State private var showEdit = false
     @State private var showAddTask = false
+    @State private var showLinkTask = false
     private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.system?.persistentModelID == system.persistentModelID } }
     private var linkedHistory: [MaintenanceRecord] { history.filter { $0.relatedItemName.localizedCaseInsensitiveContains(system.name) } }
     var body: some View {
@@ -756,13 +801,19 @@ struct SystemDetailView: View {
                 if let vendor = system.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !system.website.isEmpty, let url = normalizedURL(system.website) { Link(destination: url) { Label("Open Website", systemImage: "safari") } }
             }
-            Section("Tasks") { if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }; ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }; Button { showAddTask = true } label: { Label("Add Task for This System", systemImage: "plus") } }
+            Section("Tasks") {
+                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+                ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            }
             Section("Home History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
             AttachmentSection(owner: .system(system))
             if !system.notes.isEmpty { Section("Notes") { Text(system.notes) } }
         }.navigationTitle(system.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { SystemFormView(existing: system) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: system.room, initialSystem: system, initialProject: system.sourceProject) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .system(system)) } }
     }
 }
 
@@ -785,6 +836,7 @@ struct ApplianceDetailView: View {
     @Query private var history: [MaintenanceRecord]
     @State private var showEdit = false
     @State private var showAddTask = false
+    @State private var showLinkTask = false
     private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.appliance?.persistentModelID == appliance.persistentModelID } }
     private var linkedHistory: [MaintenanceRecord] { history.filter { $0.relatedItemName.localizedCaseInsensitiveContains(appliance.name) } }
     var body: some View {
@@ -811,13 +863,19 @@ struct ApplianceDetailView: View {
                 if !appliance.manufacturerWebsite.isEmpty, let url = normalizedURL(appliance.manufacturerWebsite) { Link("Manufacturer Website", destination: url) }
                 if !appliance.productRegistrationLink.isEmpty, let url = normalizedURL(appliance.productRegistrationLink) { Link("Product Registration", destination: url) }
             }
-            Section("Tasks") { if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }; ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }; Button { showAddTask = true } label: { Label("Add Task for This Device", systemImage: "plus") } }
+            Section("Tasks") {
+                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+                ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            }
             Section("Home History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
             AttachmentSection(owner: .appliance(appliance))
             if !appliance.notes.isEmpty { Section("Notes") { Text(appliance.notes) } }
         }.navigationTitle(appliance.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ApplianceFormView(existing: appliance) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .appliance(appliance)) } }
     }
 }
 
@@ -913,10 +971,15 @@ struct VendorDetailView: View {
     let vendor: Vendor
     @Environment(\.openURL) private var openURL
     @Query private var systems: [HomeSystem]
+    @Query private var appliances: [Appliance]
+    @Query private var fixtures: [Fixture]
     @Query private var tasks: [MaintenanceTask]
     @Query private var history: [MaintenanceRecord]
+    @State private var showLinkTask = false
 
     private var vendorSystems: [HomeSystem] { systems.filter { $0.vendor?.persistentModelID == vendor.persistentModelID } }
+    private var vendorAppliances: [Appliance] { appliances.filter { $0.purchasedFrom.localizedCaseInsensitiveContains(vendor.businessName) } }
+    private var vendorFixtures: [Fixture] { fixtures.filter { $0.vendor?.persistentModelID == vendor.persistentModelID || $0.purchasedFrom.localizedCaseInsensitiveContains(vendor.businessName) } }
     private var vendorTasks: [MaintenanceTask] { tasks.filter { $0.vendor?.persistentModelID == vendor.persistentModelID } }
     private var vendorHistory: [MaintenanceRecord] { history.filter { $0.vendorName.localizedCaseInsensitiveContains(vendor.businessName) } }
     private var totalSpending: Double { vendorHistory.compactMap(\.cost).reduce(0,+) }
@@ -949,10 +1012,16 @@ struct VendorDetailView: View {
                     ForEach(vendorSystems) { item in NavigationLink(item.name) { SystemDetailView(system: item) } }
                 }
             }
-            if !vendorTasks.isEmpty {
-                Section("Tasks") {
-                    ForEach(vendorTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+            if !vendorAppliances.isEmpty || !vendorFixtures.isEmpty {
+                Section("Related Equipment & Fixtures") {
+                    ForEach(vendorAppliances) { item in NavigationLink { ApplianceDetailView(appliance: item) } label: { Label(item.name, systemImage: "refrigerator") } }
+                    ForEach(vendorFixtures) { item in NavigationLink { FixtureDetailView(fixture: item) } label: { Label(item.name, systemImage: "lightbulb") } }
                 }
+            }
+            Section("Tasks") {
+                if vendorTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+                ForEach(vendorTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
             }
             Section("Work History") {
                 if vendorHistory.isEmpty { Text("No recorded work").foregroundStyle(.secondary) }
@@ -964,6 +1033,7 @@ struct VendorDetailView: View {
         }
         .navigationTitle(vendor.businessName)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { VendorFormView(existing: vendor) } } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .vendor(vendor)) } }
     }
 }
 

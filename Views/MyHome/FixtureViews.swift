@@ -33,6 +33,7 @@ struct FixtureDetailView: View {
     @Query private var tasks: [MaintenanceTask]
     @Query private var history: [MaintenanceRecord]
     @State private var showAddTask = false
+    @State private var showLinkTask = false
 
     private var linkedTasks: [MaintenanceTask] {
         tasks.filter { $0.fixture?.persistentModelID == fixture.persistentModelID }
@@ -75,7 +76,8 @@ struct FixtureDetailView: View {
             Section("Connected Tasks") {
                 if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
                 ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
-                Button { showAddTask = true } label: { Label("Add Task for This Fixture", systemImage: "plus") }
+                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
             }
             Section("Home History") {
                 if linkedHistory.isEmpty { Text("No maintenance or installation history yet").foregroundStyle(.secondary) }
@@ -87,6 +89,7 @@ struct FixtureDetailView: View {
         .navigationTitle(fixture.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { FixtureFormView(existing: fixture) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .fixture(fixture)) } }
     }
 }
 

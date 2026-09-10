@@ -181,3 +181,12 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Smoke & CO Detectors now select their location from the existing Rooms / Areas list.
 - Filters & Consumables now have the same Room / Area location selector.
 - Detector and Consumable room assignments appear in list/detail views and are preserved in export/transfer data.
+
+## v0.27 — Relationship & Navigation Audit
+
+- Room pages now surface Smoke & CO Detectors and Filters & Consumables, with room context preselected when adding new records.
+- Project pages now show linked tasks and support creating or linking an existing task.
+- System, Device/Equipment, and Fixture pages now support safe existing-task linking.
+- Existing-task linking never silently reassigns a task already linked to a different record of the same type.
+- Vendor pages now expose related devices/equipment and fixtures, plus direct existing-task linking.
+- Home page, Settings, transfer, and export metadata report version 0.27.

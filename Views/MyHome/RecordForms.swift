@@ -438,9 +438,9 @@ struct DetectorFormView: View {
     @State private var notes: String
     @State private var showDelete = false
 
-    init(existing: Detector? = nil) {
+    init(existing: Detector? = nil, initialRoom: Room? = nil) {
         self.existing = existing
-        _selectedRoom = State(initialValue: existing?.room)
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
         _legacyLocation = State(initialValue: existing?.location ?? "")
         _type = State(initialValue: existing?.type ?? "Combination")
         _manufacturer = State(initialValue: existing?.manufacturer ?? "")
@@ -537,9 +537,9 @@ struct ConsumableFormView: View {
     @State private var notes: String
     @State private var showDelete = false
 
-    init(existing: Consumable? = nil) {
+    init(existing: Consumable? = nil, initialRoom: Room? = nil) {
         self.existing = existing
-        _selectedRoom = State(initialValue: existing?.room)
+        _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
         _name = State(initialValue: existing?.name ?? "")
         _type = State(initialValue: existing?.type ?? "")
         _size = State(initialValue: existing?.size ?? "")
