@@ -34,9 +34,9 @@ enum LegacySampleDataCleanup {
         var measurements = try context.fetch(FetchDescriptor<ProjectMeasurement>())
         var records = try context.fetch(FetchDescriptor<MaintenanceRecord>())
         var vendors = try context.fetch(FetchDescriptor<Vendor>())
-        var detectors = try context.fetch(FetchDescriptor<Detector>())
-        var consumables = try context.fetch(FetchDescriptor<Consumable>())
-        var rooms = try context.fetch(FetchDescriptor<Room>())
+        let detectors = try context.fetch(FetchDescriptor<Detector>())
+        let consumables = try context.fetch(FetchDescriptor<Consumable>())
+        let rooms = try context.fetch(FetchDescriptor<Room>())
         let homes = try context.fetch(FetchDescriptor<Home>())
 
         func hasAttachment(_ ownerID: PersistentIdentifier, keyPath: KeyPath<HomeAttachment, PersistentIdentifier?>) -> Bool {

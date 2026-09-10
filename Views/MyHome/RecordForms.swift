@@ -99,7 +99,6 @@ struct SystemFormView: View {
     @Query(sort: \Vendor.businessName) private var vendors: [Vendor]
     @Query(sort: \Room.name) private var rooms: [Room]
     @Query(sort: \Project.title) private var projects: [Project]
-    @Query(sort: \HomeAttachment.createdAt, order: .reverse) private var allAttachments: [HomeAttachment]
     let existing: HomeSystem?
     @State private var name: String; @State private var type: String; @State private var manufacturer: String
     @State private var model: String; @State private var serial: String; @State private var location: String
@@ -228,6 +227,7 @@ struct PaintFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.name) private var rooms: [Room]
     @Query(sort: \Project.title) private var projects: [Project]
+    @Query(sort: \HomeAttachment.createdAt, order: .reverse) private var allAttachments: [HomeAttachment]
 
     let existing: PaintFinish?
     let initialRoom: Room?
