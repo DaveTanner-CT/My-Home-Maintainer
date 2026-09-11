@@ -85,6 +85,8 @@ struct RoomFormView: View {
         if let values = try? modelContext.fetch(FetchDescriptor<MaintenanceTask>()) { for item in values where item.isDirectlyLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<Detector>()) { for item in values where item.room?.persistentModelID == room.persistentModelID { item.room = nil } }
         if let values = try? modelContext.fetch(FetchDescriptor<Consumable>()) { for item in values where item.room?.persistentModelID == room.persistentModelID { item.room = nil } }
+        if let values = try? modelContext.fetch(FetchDescriptor<MaintenanceRecord>()) { for item in values where item.room?.persistentModelID == room.persistentModelID { item.room = nil } }
+        if let values = try? modelContext.fetch(FetchDescriptor<HomeAttachment>()) { for item in values where item.room?.persistentModelID == room.persistentModelID { item.room = nil } }
     }
     @ViewBuilder private func deleteSection(label: String) -> some View { Section { Button(label, role: .destructive) { showDelete = true } } }
     @ToolbarContentBuilder private func formToolbar(save: @escaping () -> Void) -> some ToolbarContent {

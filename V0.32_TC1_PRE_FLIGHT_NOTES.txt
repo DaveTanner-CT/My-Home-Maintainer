@@ -1,0 +1,24 @@
+HomeMaintainer v0.32 TC1 - Pre-Flight Hardening
+
+Purpose
+-------
+This build freezes major feature work and hardens the current app for a full end-to-end test.
+
+Hardening changes
+-----------------
+1. Task deletion now cancels all pending lead/due/overdue local notifications for that task.
+2. Project deletion now has explicit data behavior:
+   - project planning items and measurements are deleted;
+   - project-only and project-item attachments are deleted;
+   - linked tasks, systems, devices/equipment, fixtures, paint/finishes, and Home History are retained and unlinked.
+3. Room deletion explicitly clears direct room references from Home History and room attachments in addition to the existing linked-record cleanup.
+4. Consumable 'Mark Replaced Today' now reports a save failure instead of silently ignoring it.
+5. Version markers updated to 0.32 TC1.
+
+Pre-flight validation
+---------------------
+- Full Swift source syntax parse
+- Unknown legacy appliance.vendor regression search
+- Relationship helper/search pass for multi-room records
+- Transfer/export version and multi-room relationship presence checks
+- ZIP integrity test

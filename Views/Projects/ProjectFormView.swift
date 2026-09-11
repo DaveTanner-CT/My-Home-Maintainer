@@ -21,6 +21,7 @@ struct ProjectFormView: View {
     @State private var coverPhotoData: Data?
     @State private var selectedCoverPhoto: PhotosPickerItem?
     @State private var showDelete = false
+    @State private var deleteError: String?
     @State private var didResolveLegacyRoom = false
 
     init(existing: Project? = nil, initialRoom: Room? = nil) {
@@ -103,16 +104,59 @@ struct ProjectFormView: View {
             }
         }
         .confirmationDialog("Delete this project?", isPresented: $showDelete, titleVisibility: .visible) {
-            Button("Delete Project", role: .destructive) {
-                if let existing {
-                    modelContext.delete(existing)
-                    try? modelContext.save()
-                    dismiss()
-                }
-            }
+            Button("Delete Project", role: .destructive) { deleteProject() }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("Project items linked to this project may also become unavailable.")
+            Text("Project planning items, measurements, and project-only attachments will be deleted. Tasks, home records, and Home History entries will be kept and unlinked from the project.")
+        }
+        .alert("Could Not Delete Project", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK", role: .cancel) { deleteError = nil }
+        } message: { Text(deleteError ?? "The project could not be deleted.") }
+    }
+
+    private func deleteProject() {
+        guard let existing else { return }
+        let projectID = existing.persistentModelID
+
+        if let tasks = try? modelContext.fetch(FetchDescriptor<MaintenanceTask>()) {
+            for task in tasks where task.project?.persistentModelID == projectID { task.project = nil }
+        }
+        if let systems = try? modelContext.fetch(FetchDescriptor<HomeSystem>()) {
+            for system in systems where system.sourceProject?.persistentModelID == projectID { system.sourceProject = nil }
+        }
+        if let appliances = try? modelContext.fetch(FetchDescriptor<Appliance>()) {
+            for appliance in appliances where appliance.sourceProject?.persistentModelID == projectID { appliance.sourceProject = nil }
+        }
+        if let fixtures = try? modelContext.fetch(FetchDescriptor<Fixture>()) {
+            for fixture in fixtures where fixture.sourceProject?.persistentModelID == projectID { fixture.sourceProject = nil }
+        }
+        if let paints = try? modelContext.fetch(FetchDescriptor<PaintFinish>()) {
+            for paint in paints where paint.sourceProject?.persistentModelID == projectID { paint.sourceProject = nil }
+        }
+        if let history = try? modelContext.fetch(FetchDescriptor<MaintenanceRecord>()) {
+            for record in history where record.project?.persistentModelID == projectID { record.project = nil }
+        }
+
+        let projectItems = (try? modelContext.fetch(FetchDescriptor<ProjectItem>()))?.filter { $0.project?.persistentModelID == projectID } ?? []
+        let itemIDs = Set(projectItems.map { $0.persistentModelID })
+        if let attachments = try? modelContext.fetch(FetchDescriptor<HomeAttachment>()) {
+            for attachment in attachments {
+                let belongsToProject = attachment.project?.persistentModelID == projectID
+                let belongsToProjectItem = attachment.projectItem.map { itemIDs.contains($0.persistentModelID) } ?? false
+                if belongsToProject || belongsToProjectItem { modelContext.delete(attachment) }
+            }
+        }
+        for item in projectItems { modelContext.delete(item) }
+        if let measurements = try? modelContext.fetch(FetchDescriptor<ProjectMeasurement>()) {
+            for measurement in measurements where measurement.project?.persistentModelID == projectID { modelContext.delete(measurement) }
+        }
+
+        modelContext.delete(existing)
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            deleteError = error.localizedDescription
         }
     }
 

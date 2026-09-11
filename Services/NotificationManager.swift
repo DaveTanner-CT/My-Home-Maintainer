@@ -40,6 +40,12 @@ actor NotificationManager {
         }
     }
 
+    func cancel(forTaskIdentifier taskIdentifier: String) {
+        let center = UNUserNotificationCenter.current()
+        let base = "task-\(taskIdentifier)"
+        center.removePendingNotificationRequests(withIdentifiers: ["\(base)-lead", "\(base)-due", "\(base)-overdue"])
+    }
+
     private func add(identifier: String, title: String, body: String, date: Date, hour: Int) async {
         let fireDate = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: date) ?? date
         guard fireDate > .now else { return }

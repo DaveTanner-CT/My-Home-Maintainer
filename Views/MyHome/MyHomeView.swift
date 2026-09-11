@@ -1181,6 +1181,7 @@ struct ConsumableDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showReplaceConfirm = false
     @State private var showHistory = false
+    @State private var replaceError: String?
 
     var body: some View {
         List {
@@ -1236,6 +1237,9 @@ struct ConsumableDetailView: View {
                 )
             }
         }
+        .alert("Could Not Record Replacement", isPresented: Binding(get: { replaceError != nil }, set: { if !$0 { replaceError = nil } })) {
+            Button("OK", role: .cancel) { replaceError = nil }
+        } message: { Text(replaceError ?? "The replacement could not be saved.") }
     }
 
     private func markReplacedToday() {
@@ -1255,7 +1259,11 @@ struct ConsumableDetailView: View {
             room: item.room
         )
         modelContext.insert(history)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            replaceError = error.localizedDescription
+        }
     }
 }
 

@@ -228,9 +228,18 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Updated visible and export/transfer build metadata to 0.30.
 
 
-## v0.31.1 — Maintenance Action Workflow
+## v0.32 TC1 — Pre-Flight Hardening Test Candidate
 
 - Added one-tap consumable replacement recording with automatic next-date calculation and Home History logging.
 - Added direct replacement reminders from detector and consumable detail pages.
 - Added prefilled Home History actions for detectors and consumables.
 - Updated visible and export/transfer build metadata to 0.31.
+
+
+### v0.32 TC1 pre-flight hardening
+- Cancels pending local notifications when a task is deleted.
+- Makes project deletion deterministic: project planning items/measurements and project-only attachments are deleted, while linked tasks, home records, and history are preserved and unlinked.
+- Explicitly clears room references from history and attachments when a room is deleted.
+- Surfaces save errors when recording a consumable replacement.
+- Build/export/transfer metadata updated to 0.32 TC1.
+- Intended as a feature-freeze test candidate for full workflow testing.

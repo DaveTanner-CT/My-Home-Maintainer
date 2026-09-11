@@ -6,6 +6,7 @@ struct TaskDetailView: View {
     let task: MaintenanceTask
     @State private var showComplete = false
     @State private var showDelete = false
+    @State private var deleteError: String?
 
     var body: some View {
         List {
@@ -45,6 +46,24 @@ struct TaskDetailView: View {
         .navigationTitle(task.title).navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { TaskFormView(existingTask: task) } } }
         .sheet(isPresented: $showComplete) { NavigationStack { CompleteTaskView(task: task) } }
-        .confirmationDialog("Delete this task?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Task", role: .destructive) { modelContext.delete(task); try? modelContext.save(); dismiss() }; Button("Cancel", role: .cancel) { } } message: { Text("Existing maintenance history will not be deleted.") }
+        .confirmationDialog("Delete this task?", isPresented: $showDelete, titleVisibility: .visible) {
+            Button("Delete Task", role: .destructive) { deleteTask() }
+            Button("Cancel", role: .cancel) { }
+        } message: { Text("Existing maintenance history will not be deleted. Any pending reminders for this task will be cancelled.") }
+        .alert("Could Not Delete Task", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK", role: .cancel) { deleteError = nil }
+        } message: { Text(deleteError ?? "The task could not be deleted.") }
+    }
+
+    private func deleteTask() {
+        let taskIdentifier = "\(task.persistentModelID)"
+        modelContext.delete(task)
+        do {
+            try modelContext.save()
+            Task { await NotificationManager.shared.cancel(forTaskIdentifier: taskIdentifier) }
+            dismiss()
+        } catch {
+            deleteError = error.localizedDescription
+        }
     }
 }
