@@ -198,3 +198,10 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Existing primary-room relationships are preserved for compatibility while additional rooms remain linked.
 - Selecting or removing rooms from a form updates the same relationships used by Room pages and detail pages.
 - Version metadata updated to 0.28.
+
+
+## v0.28.1 — Build Fix
+- Fixed the multi-room selector compile error caused by mixing `.tint` and `.secondary` shape styles in a ternary expression.
+- Uses explicit `Color.accentColor` / `Color.secondary` values for compiler-safe styling.
+- Cleaned two non-fatal sample-data cleanup warnings.
+- Version metadata updated to 0.28.1.

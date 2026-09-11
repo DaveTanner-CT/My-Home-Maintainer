@@ -30,7 +30,7 @@ struct MultiRoomSelectionSection: View {
                             }
                             Spacer()
                             Image(systemName: isSelected(room) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(isSelected(room) ? .tint : .secondary)
+                                .foregroundStyle(isSelected(room) ? Color.accentColor : Color.secondary)
                         }
                         .contentShape(Rectangle())
                     }

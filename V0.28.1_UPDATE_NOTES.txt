@@ -1,0 +1,12 @@
+HomeMaintainer v0.28.1 - Build Fix
+
+Fixed:
+- MultiRoomSelectionSection.swift failed archive compilation because Swift could not infer a common ShapeStyle type from `.tint` and `.secondary` in a ternary expression.
+- Replaced that expression with explicit Color.accentColor and Color.secondary values.
+- Changed two never-mutated variables in LegacySampleDataCleanup.swift to constants.
+
+Preserved:
+- All v0.28 multi-room editing features for Home Systems, Devices & Equipment, Fixtures, Paint / Finish, Projects, and Tasks.
+- All prior room, photo, detector, consumable, relationship, and navigation improvements.
+
+Version metadata updated to 0.28.1.
