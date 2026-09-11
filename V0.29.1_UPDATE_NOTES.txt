@@ -1,0 +1,6 @@
+HomeMaintainer v0.29.1 - My Home Tab Label
+
+- Changed the main navigation tab label from Home Setup back to My Home.
+- The My Home tab continues to open HomeSetupView, preserving the consolidated Home Setup functionality introduced in v0.29.
+- No record models, forms, relationships, or Home Setup content were removed or changed.
+- Visible/build/export/transfer version metadata updated to 0.29.1.

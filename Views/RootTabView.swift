@@ -20,7 +20,7 @@ struct RootTabView: View {
             NavigationStack {
                 HomeSetupView()
             }
-            .tabItem { Label("Home Setup", systemImage: "checklist.checked") }
+            .tabItem { Label("My Home", systemImage: "checklist.checked") }
 
             NavigationStack {
                 ProjectsView()

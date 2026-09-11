@@ -213,3 +213,9 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Preserved My Home-only functionality by adding Home History, Vendors, and the Add Home History Event action to Home Setup.
 - Updated navigation copy that still directed users to My Home.
 - Updated visible and export/transfer build metadata to 0.29.
+
+
+## v0.29.1 — My Home Tab Label
+- Renamed the main-tab label from `Home Setup` back to `My Home`.
+- The tab still opens `HomeSetupView`; all v0.29 consolidation remains intact.
+- Updated visible and export/transfer build metadata to 0.29.1.
