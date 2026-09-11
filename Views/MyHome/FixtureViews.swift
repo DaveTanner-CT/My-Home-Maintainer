@@ -108,6 +108,7 @@ struct FixtureFormView: View {
     @State private var partNumber: String
     @State private var finishColor: String
     @State private var selectedRoom: Room?
+    @State private var selectedRooms: [Room]
     @State private var selectedVendor: Vendor?
     @State private var selectedProject: Project?
     @State private var hasInstallDate: Bool
@@ -131,6 +132,7 @@ struct FixtureFormView: View {
         _partNumber = State(initialValue: existing?.partNumber ?? "")
         _finishColor = State(initialValue: existing?.finishColor ?? "")
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedRooms = State(initialValue: existing?.linkedRooms ?? [initialRoom].compactMap { $0 })
         _selectedVendor = State(initialValue: existing?.vendor)
         _selectedProject = State(initialValue: existing?.sourceProject)
         _hasInstallDate = State(initialValue: existing?.installationDate != nil)
@@ -150,12 +152,12 @@ struct FixtureFormView: View {
             Section("Fixture") {
                 TextField("Name", text: $name)
                 TextField("Category", text: $category)
-                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
                 TextField("Manufacturer", text: $manufacturer)
                 TextField("Model", text: $model)
                 TextField("Part / replacement number", text: $partNumber)
                 TextField("Finish / color", text: $finishColor)
             }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas")
             Section("Purchase & Installation") {
                 Toggle("Installation date", isOn: $hasInstallDate)
                 if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) }
@@ -195,6 +197,7 @@ struct FixtureFormView: View {
         record.partNumber = partNumber
         record.finishColor = finishColor
         record.setPrimaryRoom(selectedRoom)
+        record.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }
         record.vendor = selectedVendor
         record.sourceProject = selectedProject
         record.installationDate = hasInstallDate ? installDate : nil

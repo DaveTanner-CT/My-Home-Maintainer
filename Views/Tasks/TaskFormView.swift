@@ -29,6 +29,7 @@ struct TaskFormView: View {
     @State private var website: String
     @State private var selectedVendor: Vendor?
     @State private var selectedRoom: Room?
+    @State private var selectedRooms: [Room]
     @State private var selectedSystem: HomeSystem?
     @State private var selectedAppliance: Appliance?
     @State private var selectedFixture: Fixture?
@@ -71,6 +72,8 @@ struct TaskFormView: View {
         _selectedProject = State(initialValue: existingTask?.project ?? initialProject)
         let inferredRoom = initialRoom ?? initialFixture?.room ?? initialAppliance?.room ?? initialSystem?.room ?? initialProject?.room
         _selectedRoom = State(initialValue: existingTask?.room ?? inferredRoom)
+        let inferredRooms = initialFixture?.linkedRooms ?? initialAppliance?.linkedRooms ?? initialSystem?.linkedRooms ?? initialProject?.linkedRooms ?? [inferredRoom].compactMap { $0 }
+        _selectedRooms = State(initialValue: existingTask?.linkedRooms ?? inferredRooms)
     }
 
     var body: some View {
@@ -87,8 +90,8 @@ struct TaskFormView: View {
                 Picker("Repeat", selection: $recurrence) { ForEach(RecurrenceRule.allCases) { Text($0.rawValue).tag($0) } }
                 if recurrence != .oneTime { Picker("Repeat from", selection: $recurrenceAnchor) { ForEach(RecurrenceAnchor.allCases) { Text($0.rawValue).tag($0) } } }
             }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas")
             Section("Related Home Records") {
-                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
                 Picker("Fixture", selection: $selectedFixture) { Text("None").tag(nil as Fixture?); ForEach(fixtures) { Text($0.name).tag(Optional($0)) } }
                 Picker("Device / Equipment", selection: $selectedAppliance) { Text("None").tag(nil as Appliance?); ForEach(appliances) { Text($0.name).tag(Optional($0)) } }
                 Picker("System", selection: $selectedSystem) { Text("None").tag(nil as HomeSystem?); ForEach(systems) { Text($0.name).tag(Optional($0)) } }
@@ -111,10 +114,10 @@ struct TaskFormView: View {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
         }
-        .onChange(of: selectedFixture) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
-        .onChange(of: selectedAppliance) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
-        .onChange(of: selectedSystem) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
-        .onChange(of: selectedProject) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
+        .onChange(of: selectedFixture) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
+        .onChange(of: selectedAppliance) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
+        .onChange(of: selectedSystem) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
+        .onChange(of: selectedProject) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
     }
 
     private func save() {
@@ -125,6 +128,7 @@ struct TaskFormView: View {
         task.contactName = contactName; task.phone = phone; task.email = email; task.website = website
         task.vendor = selectedVendor; task.system = selectedSystem; task.appliance = selectedAppliance; task.fixture = selectedFixture; task.project = selectedProject
         task.setPrimaryRoom(selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room)
+        task.additionalRooms = selectedRooms.filter { $0.persistentModelID != task.room?.persistentModelID }
         try? modelContext.save(); Task { await NotificationManager.shared.schedule(for: task) }; dismiss()
     }
 }

@@ -106,7 +106,7 @@ struct SystemFormView: View {
     @State private var hasInstallDate: Bool; @State private var installDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date
     @State private var purchaseCost: String; @State private var serviceLife: Int
-    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var selectedProject: Project?; @State private var showDelete = false
+    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var selectedRooms: [Room]; @State private var selectedProject: Project?; @State private var showDelete = false
 
     init(existing: HomeSystem? = nil, initialRoom: Room? = nil) {
         self.existing = existing
@@ -120,6 +120,7 @@ struct SystemFormView: View {
         _serviceLife = State(initialValue: existing?.expectedServiceLifeYears ?? 0)
         _selectedVendor = State(initialValue: existing?.vendor)
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedRooms = State(initialValue: existing?.linkedRooms ?? [initialRoom].compactMap { $0 })
         _selectedProject = State(initialValue: existing?.sourceProject)
     }
 
@@ -128,9 +129,9 @@ struct SystemFormView: View {
             Section("System") {
                 TextField("Name", text: $name); TextField("Type", text: $type); TextField("Manufacturer", text: $manufacturer)
                 TextField("Model", text: $model); TextField("Serial number", text: $serial)
-                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
-                if selectedRoom == nil { TextField("Location", text: $location) }
+                if selectedRooms.isEmpty { TextField("Location", text: $location) }
             }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas Served")
             Section("Ownership") {
                 Toggle("Installation date", isOn: $hasInstallDate); if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) }
                 TextField("Purchase / installation cost", text: $purchaseCost).keyboardType(.decimalPad)
@@ -151,7 +152,7 @@ struct SystemFormView: View {
     private func save() {
         let record = existing ?? HomeSystem(name: name, type: type); if existing == nil { modelContext.insert(record) }
         record.name = name; record.type = type; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial
-        record.setPrimaryRoom(selectedRoom); record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
+        record.setPrimaryRoom(selectedRoom); record.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }; record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
         record.purchaseCost = Double(purchaseCost); record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
         record.expectedServiceLifeYears = serviceLife == 0 ? nil : serviceLife; record.vendor = selectedVendor; record.sourceProject = selectedProject
         try? modelContext.save(); dismiss()
@@ -170,7 +171,7 @@ struct ApplianceFormView: View {
     @State private var name: String; @State private var category: String; @State private var manufacturer: String; @State private var model: String; @State private var serial: String
     @State private var purchasedFrom: String; @State private var price: String; @State private var hasPurchaseDate: Bool; @State private var purchaseDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date; @State private var manufacturerWebsite: String; @State private var registrationLink: String
-    @State private var notes: String; @State private var selectedRoom: Room?; @State private var selectedProject: Project?; @State private var showDelete = false
+    @State private var notes: String; @State private var selectedRoom: Room?; @State private var selectedRooms: [Room]; @State private var selectedProject: Project?; @State private var showDelete = false
     private let standardCategories = ["Appliance", "Electronics", "Home Technology", "Outdoor Equipment", "Tool", "Other"]
 
     init(existing: Appliance? = nil, initialRoom: Room? = nil) {
@@ -180,7 +181,7 @@ struct ApplianceFormView: View {
         _price = State(initialValue: existing?.purchasePrice.map { String($0) } ?? ""); _hasPurchaseDate = State(initialValue: existing?.purchaseDate != nil); _purchaseDate = State(initialValue: existing?.purchaseDate ?? .now)
         _hasWarrantyDate = State(initialValue: existing?.warrantyExpiration != nil); _warrantyDate = State(initialValue: existing?.warrantyExpiration ?? .now)
         _manufacturerWebsite = State(initialValue: existing?.manufacturerWebsite ?? ""); _registrationLink = State(initialValue: existing?.productRegistrationLink ?? "")
-        _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room ?? initialRoom); _selectedProject = State(initialValue: existing?.sourceProject)
+        _notes = State(initialValue: existing?.notes ?? ""); _selectedRoom = State(initialValue: existing?.room ?? initialRoom); _selectedRooms = State(initialValue: existing?.linkedRooms ?? [initialRoom].compactMap { $0 }); _selectedProject = State(initialValue: existing?.sourceProject)
     }
     var body: some View {
         Form {
@@ -190,9 +191,9 @@ struct ApplianceFormView: View {
                     ForEach(categoryOptions, id: \.self) { Text($0).tag($0) }
                 }
                 TextField("Manufacturer", text: $manufacturer); TextField("Model", text: $model); TextField("Serial number", text: $serial)
-                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
                 Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
             }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas Served")
             Section("Purchase & Warranty") {
                 Toggle("Purchase date", isOn: $hasPurchaseDate); if hasPurchaseDate { DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date) }
                 TextField("Purchase price", text: $price).keyboardType(.decimalPad); TextField("Purchased from", text: $purchasedFrom)
@@ -215,7 +216,7 @@ struct ApplianceFormView: View {
     }
     private func save() {
         let record = existing ?? Appliance(name: name, category: category); if existing == nil { modelContext.insert(record) }
-        record.name = name; record.category = category; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial; record.setPrimaryRoom(selectedRoom)
+        record.name = name; record.category = category; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial; record.setPrimaryRoom(selectedRoom); record.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }
         record.purchaseDate = hasPurchaseDate ? purchaseDate : nil; record.purchasePrice = Double(price); record.purchasedFrom = purchasedFrom
         record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil; record.manufacturerWebsite = manufacturerWebsite; record.productRegistrationLink = registrationLink; record.notes = notes; record.sourceProject = selectedProject
         try? modelContext.save(); dismiss()
@@ -233,6 +234,7 @@ struct PaintFormView: View {
     let initialRoom: Room?
 
     @State private var selectedRoom: Room?
+    @State private var selectedRooms: [Room]
     @State private var selectedProject: Project?
     @State private var surface: String
     @State private var brand: String
@@ -256,6 +258,7 @@ struct PaintFormView: View {
         self.existing = existing
         self.initialRoom = initialRoom
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedRooms = State(initialValue: existing?.linkedRooms ?? [initialRoom].compactMap { $0 })
         _selectedProject = State(initialValue: existing?.sourceProject)
         _surface = State(initialValue: existing?.surface ?? "Walls")
         _brand = State(initialValue: existing?.brand ?? "")
@@ -284,11 +287,8 @@ struct PaintFormView: View {
 
     var body: some View {
         Form {
-            Section("Location") {
-                Picker("Room / Area", selection: $selectedRoom) {
-                    Text("Choose room / area").tag(nil as Room?)
-                    ForEach(rooms) { Text($0.name).tag(Optional($0)) }
-                }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas")
+            Section("Location & Surface") {
                 Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
                 Picker("Surface", selection: $surface) {
                     ForEach(["Walls","Ceiling","Trim","Doors","Cabinets","Built-ins","Flooring / Finish","Exterior Siding","Exterior Trim","Deck / Stain"], id: \.self) { Text($0).tag($0) }
@@ -326,7 +326,7 @@ struct PaintFormView: View {
         .navigationTitle(existing == nil ? "Add Paint" : "Edit Paint")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(selectedRoom == nil || colorName.isEmpty) }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(selectedRooms.isEmpty || colorName.isEmpty) }
         }
         .onAppear { resolveLegacyRoomIfNeeded() }
         .onChange(of: selectedMixingLabelPhoto) { _, newValue in
@@ -348,6 +348,7 @@ struct PaintFormView: View {
     private func resolveLegacyRoomIfNeeded() {
         guard selectedRoom == nil, let existing, !existing.roomName.isEmpty else { return }
         selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(existing.roomName) == .orderedSame }
+        if let selectedRoom, !selectedRooms.contains(where: { $0.persistentModelID == selectedRoom.persistentModelID }) { selectedRooms.append(selectedRoom) }
     }
 
     private func save() {
@@ -355,6 +356,7 @@ struct PaintFormView: View {
         let record = existing ?? PaintFinish(room: room, surface: surface)
         if existing == nil { modelContext.insert(record) }
         record.setPrimaryRoom(room)
+        record.additionalRooms = selectedRooms.filter { $0.persistentModelID != room.persistentModelID }
         record.roomName = room.name
         record.surface = surface
         record.brand = brand

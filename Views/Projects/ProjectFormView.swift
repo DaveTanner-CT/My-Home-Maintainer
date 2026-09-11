@@ -13,6 +13,7 @@ struct ProjectFormView: View {
     @State private var description: String
     @State private var stage: ProjectStage
     @State private var selectedRoom: Room?
+    @State private var selectedRooms: [Room]
     @State private var budgetText: String
     @State private var hasTargetDate: Bool
     @State private var targetDate: Date
@@ -28,6 +29,7 @@ struct ProjectFormView: View {
         _description = State(initialValue: existing?.projectDescription ?? "")
         _stage = State(initialValue: existing?.stage ?? .idea)
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedRooms = State(initialValue: existing?.linkedRooms ?? [initialRoom].compactMap { $0 })
         _budgetText = State(initialValue: existing?.budget.map { String($0) } ?? "")
         _hasTargetDate = State(initialValue: existing?.targetDate != nil)
         _targetDate = State(initialValue: existing?.targetDate ?? .now)
@@ -43,20 +45,9 @@ struct ProjectFormView: View {
                 Picker("Stage", selection: $stage) {
                     ForEach(ProjectStage.allCases) { Text($0.rawValue).tag($0) }
                 }
-                Picker("Room / Area", selection: $selectedRoom) {
-                    Text("None").tag(nil as Room?)
-                    ForEach(HomeAreaType.allCases) { type in
-                        let matching = rooms.filter { $0.areaType == type }
-                        if !matching.isEmpty {
-                            Section(type.rawValue) {
-                                ForEach(matching) { room in
-                                    Text(room.name).tag(Optional(room))
-                                }
-                            }
-                        }
-                    }
-                }
             }
+
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas")
 
             Section("Cover Photo") {
                 if let data = coverPhotoData, let image = UIImage(data: data) {
@@ -101,6 +92,7 @@ struct ProjectFormView: View {
             didResolveLegacyRoom = true
             if selectedRoom == nil, let legacyName = existing?.roomName, !legacyName.isEmpty {
                 selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyName) == .orderedSame }
+                if let selectedRoom, !selectedRooms.contains(where: { $0.persistentModelID == selectedRoom.persistentModelID }) { selectedRooms.append(selectedRoom) }
             }
         }
         .onChange(of: selectedCoverPhoto) { _, newValue in
@@ -131,7 +123,8 @@ struct ProjectFormView: View {
         project.projectDescription = description
         project.stage = stage
         project.setPrimaryRoom(selectedRoom)
-        project.roomName = selectedRoom?.name ?? ""
+        project.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }
+        project.roomName = selectedRoom?.name ?? selectedRooms.first?.name ?? ""
         project.budget = Double(budgetText)
         project.targetDate = hasTargetDate ? targetDate : nil
         project.notes = notes

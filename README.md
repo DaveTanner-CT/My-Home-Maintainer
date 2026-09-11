@@ -190,3 +190,11 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Existing-task linking never silently reassigns a task already linked to a different record of the same type.
 - Vendor pages now expose related devices/equipment and fixtures, plus direct existing-task linking.
 - Home page, Settings, transfer, and export metadata report version 0.27.
+
+
+## v0.28 — Multi-Room Editing
+- Home Systems can now select every room/area they serve directly in Add/Edit.
+- Devices & Equipment, Fixtures, Paint/Finish, Projects, and Tasks use the same multi-room editor for consistent relationship management.
+- Existing primary-room relationships are preserved for compatibility while additional rooms remain linked.
+- Selecting or removing rooms from a form updates the same relationships used by Room pages and detail pages.
+- Version metadata updated to 0.28.
