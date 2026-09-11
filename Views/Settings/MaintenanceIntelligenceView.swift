@@ -268,7 +268,7 @@ struct RecommendedMaintenanceView: View {
             if let next = consumable.nextReplacement {
                 result.append(.init(
                     id: "consumable-\(consumable.persistentModelID)", title: "Replace \(consumable.name)",
-                    detail: "Replace the recorded consumable and update its replacement date in My Home.",
+                    detail: "Replace the recorded consumable and update its replacement date in Home Setup.",
                     reason: "Next replacement is recorded as \(next.formatted(date: .abbreviated, time: .omitted)).",
                     category: .general, recurrence: recurrence(forMonths: consumable.replacementIntervalMonths), leadDays: 7,
                     suggestedDue: next, priority: 1, target: .none
@@ -303,13 +303,13 @@ struct RecommendedMaintenanceView: View {
                 .padding(.vertical, 2)
 
                 NavigationLink { MyHomeView() } label: {
-                    Label("Review My Home Inventory", systemImage: "house")
+                    Label("Review Home Setup", systemImage: "house")
                 }
             }
 
             Section("Recommended for This Home") {
                 if recommendations.isEmpty {
-                    Text("Add systems, devices, fixtures, and exterior/property areas in My Home to receive personalized recommendations.")
+                    Text("Add systems, devices, fixtures, and exterior/property areas in Home Setup to receive personalized recommendations.")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(recommendations) { recommendation in

@@ -18,9 +18,9 @@ struct RootTabView: View {
             .tabItem { Label("Tasks", systemImage: "checklist") }
 
             NavigationStack {
-                MyHomeView()
+                HomeSetupView()
             }
-            .tabItem { Label("My Home", systemImage: "wrench.and.screwdriver") }
+            .tabItem { Label("Home Setup", systemImage: "checklist.checked") }
 
             NavigationStack {
                 ProjectsView()

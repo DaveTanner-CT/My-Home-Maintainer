@@ -205,3 +205,11 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Uses explicit `Color.accentColor` / `Color.secondary` values for compiler-safe styling.
 - Cleaned two non-fatal sample-data cleanup warnings.
 - Version metadata updated to 0.28.1.
+
+
+## v0.29 — Home Setup Navigation Consolidation
+- Replaced the main-tab `My Home` entry with `Home Setup`.
+- The third main tab now opens `HomeSetupView` directly between Tasks and Projects.
+- Preserved My Home-only functionality by adding Home History, Vendors, and the Add Home History Event action to Home Setup.
+- Updated navigation copy that still directed users to My Home.
+- Updated visible and export/transfer build metadata to 0.29.

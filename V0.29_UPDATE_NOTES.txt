@@ -1,0 +1,8 @@
+HomeMaintainer v0.29 - Home Setup Navigation Consolidation
+
+- Main navigation is now Home > Tasks > Home Setup > Projects.
+- The former My Home tab now opens HomeSetupView directly and is labeled Home Setup.
+- Home History and Vendors are available from Home Setup.
+- Home Setup toolbar includes Add Home History Event and Home Profile.
+- Old navigation copy directing users to My Home has been updated.
+- Version metadata updated to 0.29.

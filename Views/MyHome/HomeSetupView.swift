@@ -40,6 +40,8 @@ struct HomeSetupView: View {
     @Query private var vendors: [Vendor]
     @Query private var detectors: [Detector]
     @Query private var tasks: [MaintenanceTask]
+    @Query private var records: [MaintenanceRecord]
+    @State private var showAddHistory = false
 
     private var profileComplete: Bool {
         guard let home = homes.first else { return false }
@@ -247,15 +249,38 @@ struct HomeSetupView: View {
                 NavigationLink { PaintListView() } label: {
                     optionalRow(title: "Paint & Finishes", count: paints.count, subtitle: "Save colors and product details you may need again.", icon: "paintbrush")
                 }
-                NavigationLink { VendorsListView() } label: {
-                    optionalRow(title: "Vendors", count: vendors.count, subtitle: "Keep trusted contractors and service providers connected to the home record.", icon: "person.2")
-                }
                 NavigationLink { HomeCareView() } label: {
                     optionalRow(title: "Home Care", count: nil, subtitle: "Review recommendations, warranties, safety, and replacement planning once your inventory is in place.", icon: "heart.text.clipboard")
                 }
             }
+
+            Section("Records & People") {
+                NavigationLink { HomeHistoryView() } label: {
+                    optionalRow(title: "Home History", count: records.count, subtitle: "Repairs, purchases, installations, replacements, inspections, and completed projects.", icon: "clock.arrow.circlepath")
+                }
+                NavigationLink { VendorsListView() } label: {
+                    optionalRow(title: "Vendors", count: vendors.count, subtitle: "Keep trusted contractors and service providers connected to the home record.", icon: "person.2")
+                }
+            }
         }
         .navigationTitle("Home Setup")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button { showAddHistory = true } label: {
+                        Label("Home History Event", systemImage: "clock.badge.plus")
+                    }
+                    NavigationLink { HomeProfileView() } label: {
+                        Label("Home Profile", systemImage: "house")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddHistory) {
+            NavigationStack { MaintenanceRecordFormView() }
+        }
     }
 
     @ViewBuilder
