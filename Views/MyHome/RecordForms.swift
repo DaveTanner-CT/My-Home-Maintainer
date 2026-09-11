@@ -636,22 +636,36 @@ struct MaintenanceRecordFormView: View {
     @State private var selectedVendor: Vendor?
     @State private var showDelete = false
 
-    init(existing: MaintenanceRecord? = nil) {
+    init(
+        existing: MaintenanceRecord? = nil,
+        initialRoom: Room? = nil,
+        initialSystem: HomeSystem? = nil,
+        initialAppliance: Appliance? = nil,
+        initialFixture: Fixture? = nil,
+        initialProject: Project? = nil,
+        initialVendor: Vendor? = nil,
+        initialTitle: String = "",
+        initialRelatedItemName: String = "",
+        initialTaskTitle: String = "",
+        initialEventType: HomeEventType = .maintenance
+    ) {
         self.existing = existing
+        let suggestedRoom = initialRoom ?? initialFixture?.room ?? initialAppliance?.room ?? initialSystem?.room ?? initialProject?.room
+        let suggestedRelatedItem = initialFixture?.name ?? initialAppliance?.name ?? initialSystem?.name ?? initialProject?.title ?? initialRelatedItemName
         _date = State(initialValue: existing?.date ?? .now)
-        _title = State(initialValue: existing?.title ?? "")
+        _title = State(initialValue: existing?.title ?? initialTitle)
         _cost = State(initialValue: existing?.cost.map { String($0) } ?? "")
-        _eventType = State(initialValue: existing?.eventType ?? .maintenance)
-        _vendorName = State(initialValue: existing?.vendorName ?? "")
-        _taskTitle = State(initialValue: existing?.taskTitle ?? "")
-        _relatedItemName = State(initialValue: existing?.relatedItemName ?? "")
+        _eventType = State(initialValue: existing?.eventType ?? initialEventType)
+        _vendorName = State(initialValue: existing?.vendorName ?? initialVendor?.businessName ?? "")
+        _taskTitle = State(initialValue: existing?.taskTitle ?? initialTaskTitle)
+        _relatedItemName = State(initialValue: existing?.relatedItemName ?? suggestedRelatedItem)
         _notes = State(initialValue: existing?.notes ?? "")
-        _selectedRoom = State(initialValue: existing?.room)
-        _selectedSystem = State(initialValue: existing?.system)
-        _selectedAppliance = State(initialValue: existing?.appliance)
-        _selectedFixture = State(initialValue: existing?.fixture)
-        _selectedProject = State(initialValue: existing?.project)
-        _selectedVendor = State(initialValue: existing?.vendor)
+        _selectedRoom = State(initialValue: existing?.room ?? suggestedRoom)
+        _selectedSystem = State(initialValue: existing?.system ?? initialSystem)
+        _selectedAppliance = State(initialValue: existing?.appliance ?? initialAppliance)
+        _selectedFixture = State(initialValue: existing?.fixture ?? initialFixture)
+        _selectedProject = State(initialValue: existing?.project ?? initialProject)
+        _selectedVendor = State(initialValue: existing?.vendor ?? initialVendor)
     }
 
     var body: some View {

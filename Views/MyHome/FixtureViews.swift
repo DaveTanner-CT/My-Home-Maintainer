@@ -34,6 +34,7 @@ struct FixtureDetailView: View {
     @Query private var history: [MaintenanceRecord]
     @State private var showAddTask = false
     @State private var showLinkTask = false
+    @State private var showAddHistory = false
 
     private var linkedTasks: [MaintenanceTask] {
         tasks.filter { $0.fixture?.persistentModelID == fixture.persistentModelID }
@@ -82,6 +83,7 @@ struct FixtureDetailView: View {
             Section("Home History") {
                 if linkedHistory.isEmpty { Text("No maintenance or installation history yet").foregroundStyle(.secondary) }
                 ForEach(linkedHistory.prefix(6)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
+                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
             }
             AttachmentSection(owner: .fixture(fixture))
             if !fixture.notes.isEmpty { Section("Notes") { Text(fixture.notes) } }
@@ -90,6 +92,7 @@ struct FixtureDetailView: View {
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { FixtureFormView(existing: fixture) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject) } }
         .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .fixture(fixture)) } }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject, initialVendor: fixture.vendor, initialTitle: "Maintenance: \(fixture.name)") } }
     }
 }
 

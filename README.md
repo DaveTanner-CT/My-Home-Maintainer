@@ -219,3 +219,18 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Renamed the main-tab label from `Home Setup` back to `My Home`.
 - The tab still opens `HomeSetupView`; all v0.29 consolidation remains intact.
 - Updated visible and export/transfer build metadata to 0.29.1.
+
+## v0.30 — Connected History & Actionable Room Summaries
+- Added prefilled Home History creation directly from Room, Home System, Device/Equipment, Fixture, and Project detail pages.
+- Home History matching for systems and devices now prefers direct SwiftData relationships while preserving legacy name-based records.
+- Project detail now surfaces its connected Home History records.
+- Room detector, consumable, and warranty summary counts now open the exact records behind the count.
+- Updated visible and export/transfer build metadata to 0.30.
+
+
+## v0.31 — Maintenance Action Workflow
+
+- Added one-tap consumable replacement recording with automatic next-date calculation and Home History logging.
+- Added direct replacement reminders from detector and consumable detail pages.
+- Added prefilled Home History actions for detectors and consumables.
+- Updated visible and export/transfer build metadata to 0.31.

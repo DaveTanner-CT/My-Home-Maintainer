@@ -1,0 +1,8 @@
+HomeMaintainer v0.30 - Connected History & Actionable Room Summaries
+
+- Adds prefilled Add History Event actions directly from Room, Home System, Device/Equipment, Fixture, and Project detail pages.
+- Maintenance history matching now prefers typed SwiftData relationships for systems/devices while retaining legacy-name fallback.
+- Project detail now includes its connected Home History records.
+- Room At a Glance detector and consumable counts are now tappable and open the exact related records.
+- Room warranty warnings are now tappable and open the exact systems/devices/fixtures needing attention.
+- Preserves all v0.29.1 functionality and updates visible/internal version metadata to v0.30.

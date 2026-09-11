@@ -11,10 +11,12 @@ struct ProjectDetailView: View {
     @Query private var systems: [HomeSystem]
     @Query private var paints: [PaintFinish]
     @Query private var tasks: [MaintenanceTask]
+    @Query private var history: [MaintenanceRecord]
     @State private var showAddItem = false
     @State private var showAddMeasurement = false
     @State private var showAddTask = false
     @State private var showLinkTask = false
+    @State private var showAddHistory = false
 
     private var items: [ProjectItem] {
         allItems.filter { $0.project?.persistentModelID == project.persistentModelID }
@@ -40,6 +42,12 @@ struct ProjectDetailView: View {
     private var linkedPaints: [PaintFinish] { paints.filter { $0.sourceProject?.persistentModelID == project.persistentModelID } }
     private var hasPermanentRecords: Bool { !linkedAppliances.isEmpty || !linkedFixtures.isEmpty || !linkedSystems.isEmpty || !linkedPaints.isEmpty }
     private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.project?.persistentModelID == project.persistentModelID } }
+    private var linkedHistory: [MaintenanceRecord] {
+        history.filter {
+            $0.project?.persistentModelID == project.persistentModelID ||
+            ($0.project == nil && $0.relatedItemName.localizedCaseInsensitiveContains(project.title))
+        }.sorted { $0.date > $1.date }
+    }
 
     var body: some View {
         List {
@@ -151,6 +159,14 @@ struct ProjectDetailView: View {
                 }
             }
 
+            Section("Home History") {
+                if linkedHistory.isEmpty { Text("No history recorded for this project yet").foregroundStyle(.secondary) }
+                ForEach(linkedHistory.prefix(8)) { record in
+                    NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) }
+                }
+                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
+            }
+
             AttachmentSection(owner: .project(project))
 
             if !project.notes.isEmpty {
@@ -180,6 +196,9 @@ struct ProjectDetailView: View {
         }
         .sheet(isPresented: $showLinkTask) {
             NavigationStack { ExistingTaskLinkView(target: .project(project)) }
+        }
+        .sheet(isPresented: $showAddHistory) {
+            NavigationStack { MaintenanceRecordFormView(initialRoom: project.room, initialProject: project, initialTitle: "Project update: \(project.title)", initialEventType: .project) }
         }
     }
 

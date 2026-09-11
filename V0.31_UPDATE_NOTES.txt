@@ -1,0 +1,11 @@
+HomeMaintainer v0.31 - Maintenance Action Workflow
+
+- Consumable detail pages now include Mark Replaced Today.
+- Marking a consumable replaced updates Last Replaced and calculates Next Replacement from the saved interval.
+- The same action automatically creates a Home History record so replacements are not lost as silent date changes.
+- Consumables can create a replacement reminder task directly from the item page when a next replacement date is known.
+- Detector detail pages can create a replacement reminder directly from the recorded replacement date.
+- Detector and consumable detail pages can create a prefilled Home History event without navigating away to the general history screen.
+- MaintenanceRecordFormView now accepts a prefilled related-item name/task title for record types that do not have their own direct history relationship yet.
+- Preserves all v0.30 relationship, multi-room, setup, photo, and history improvements.
+- Visible/internal build metadata updated to v0.31.
