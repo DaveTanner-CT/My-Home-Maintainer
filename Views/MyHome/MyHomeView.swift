@@ -289,6 +289,37 @@ private struct FeetInchesDimensionRow: View {
     }
 }
 
+
+private struct RoomSectionHeader: View {
+    let title: String
+    let addAccessibilityLabel: String
+    let linkAccessibilityLabel: String?
+    let addAction: () -> Void
+    let linkAction: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+            Spacer()
+            Button(action: addAction) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(addAccessibilityLabel)
+
+            if let linkAction, let linkAccessibilityLabel {
+                Button(action: linkAction) {
+                    Image(systemName: "link")
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(linkAccessibilityLabel)
+            }
+        }
+    }
+}
+
 struct RoomDetailView: View {
     @Environment(\.modelContext) private var modelContext
     let room: Room
@@ -417,12 +448,12 @@ struct RoomDetailView: View {
                     }
                 }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
-                Text("Use the Add controls in each section below, or the + menu above, to add records already connected to this room.")
+                Text("Use + to create a new item or the link icon to connect an existing item to this room.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Projects") {
+            Section {
                 if roomProjects.isEmpty { Text("No linked projects").foregroundStyle(.secondary) }
                 ForEach(roomProjects) { project in
                     NavigationLink { ProjectDetailView(project: project) } label: {
@@ -437,11 +468,17 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddProject = true } label: { Label("Create New Project", systemImage: "plus.circle.fill") }
-                Button { showLinkProject = true } label: { Label("Link Existing Project", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Projects",
+                    addAccessibilityLabel: "Create New Project",
+                    linkAccessibilityLabel: "Link Existing Project",
+                    addAction: { showAddProject = true },
+                    linkAction: { showLinkProject = true }
+                )
             }
 
-            Section("Paint & Finishes") {
+            Section {
                 if roomPaints.isEmpty { Text("No paint records").foregroundStyle(.secondary) }
                 ForEach(roomPaints) { paint in
                     NavigationLink { PaintDetailView(paint: paint) } label: {
@@ -451,39 +488,69 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddPaint = true } label: { Label("Create New Paint / Finish", systemImage: "plus.circle.fill") }
-                Button { showLinkPaint = true } label: { Label("Link Existing Paint / Finish", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Paint & Finishes",
+                    addAccessibilityLabel: "Create New Paint or Finish",
+                    linkAccessibilityLabel: "Link Existing Paint or Finish",
+                    addAction: { showAddPaint = true },
+                    linkAction: { showLinkPaint = true }
+                )
             }
 
-            Section("Home Systems") {
+            Section {
                 if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
                 ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
-                Button { showAddSystem = true } label: { Label("Create New Home System", systemImage: "plus.circle.fill") }
-                Button { showLinkSystem = true } label: { Label("Link Existing Home System", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Home Systems",
+                    addAccessibilityLabel: "Create New Home System",
+                    linkAccessibilityLabel: "Link Existing Home System",
+                    addAction: { showAddSystem = true },
+                    linkAction: { showLinkSystem = true }
+                )
             }
 
-            Section("Devices & Equipment") {
+            Section {
                 if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
-                Button { showAddAppliance = true } label: { Label("Create New Device / Equipment", systemImage: "plus.circle.fill") }
-                Button { showLinkAppliance = true } label: { Label("Link Existing Device / Equipment", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Devices & Equipment",
+                    addAccessibilityLabel: "Create New Device or Equipment",
+                    linkAccessibilityLabel: "Link Existing Device or Equipment",
+                    addAction: { showAddAppliance = true },
+                    linkAction: { showLinkAppliance = true }
+                )
             }
 
-            Section("Fixtures") {
+            Section {
                 if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
                 ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
-                Button { showAddFixture = true } label: { Label("Create New Fixture", systemImage: "plus.circle.fill") }
-                Button { showLinkFixture = true } label: { Label("Link Existing Fixture", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Fixtures",
+                    addAccessibilityLabel: "Create New Fixture",
+                    linkAccessibilityLabel: "Link Existing Fixture",
+                    addAction: { showAddFixture = true },
+                    linkAction: { showLinkFixture = true }
+                )
             }
 
-            Section("Furniture") {
+            Section {
                 if roomFurniture.isEmpty { Text("No linked furniture").foregroundStyle(.secondary) }
                 ForEach(roomFurniture) { item in NavigationLink(item.name) { FurnitureDetailView(furniture: item) } }
-                Button { showAddFurniture = true } label: { Label("Create New Furniture", systemImage: "plus.circle.fill") }
-                Button { showLinkFurniture = true } label: { Label("Link Existing Furniture", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Furniture",
+                    addAccessibilityLabel: "Create New Furniture",
+                    linkAccessibilityLabel: "Link Existing Furniture",
+                    addAction: { showAddFurniture = true },
+                    linkAction: { showLinkFurniture = true }
+                )
             }
 
-            Section("Smoke & CO Detectors") {
+            Section {
                 if roomDetectors.isEmpty { Text("No detectors assigned to this room").foregroundStyle(.secondary) }
                 ForEach(roomDetectors) { detector in
                     NavigationLink { DetectorDetailView(detector: detector) } label: {
@@ -494,10 +561,17 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddDetector = true } label: { Label("Add Detector to This Room", systemImage: "plus.circle.fill") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Smoke & CO Detectors",
+                    addAccessibilityLabel: "Add Detector to This Room",
+                    linkAccessibilityLabel: nil,
+                    addAction: { showAddDetector = true },
+                    linkAction: nil
+                )
             }
 
-            Section("Filters & Consumables") {
+            Section {
                 if roomConsumables.isEmpty { Text("No filters or consumables assigned to this room").foregroundStyle(.secondary) }
                 ForEach(roomConsumables) { item in
                     NavigationLink { ConsumableDetailView(item: item) } label: {
@@ -508,23 +582,43 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddConsumable = true } label: { Label("Add Filter / Consumable to This Room", systemImage: "plus.circle.fill") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Filters & Consumables",
+                    addAccessibilityLabel: "Add Filter or Consumable to This Room",
+                    linkAccessibilityLabel: nil,
+                    addAction: { showAddConsumable = true },
+                    linkAction: nil
+                )
             }
 
-            Section("Tasks") {
+            Section {
                 if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
                 }
-                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
-                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Tasks",
+                    addAccessibilityLabel: "Create New Task",
+                    linkAccessibilityLabel: "Link Existing Task",
+                    addAction: { showAddTask = true },
+                    linkAction: { showLinkTask = true }
+                )
             }
 
-            Section("Recent Home History") {
+            Section {
                 if roomHistory.isEmpty { Text("No history recorded for this area yet").foregroundStyle(.secondary) }
                 ForEach(roomHistory.prefix(5)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
-                Button { showAddHistory = true } label: { Label("Add History Event for This Room", systemImage: "clock.badge.plus") }
                 NavigationLink { HomeHistoryView() } label: { Label("View Full Home History", systemImage: "clock.arrow.circlepath") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Recent Home History",
+                    addAccessibilityLabel: "Add History Event for This Room",
+                    linkAccessibilityLabel: nil,
+                    addAction: { showAddHistory = true },
+                    linkAction: nil
+                )
             }
 
             AttachmentSection(owner: .room(room), showsPhotos: false)

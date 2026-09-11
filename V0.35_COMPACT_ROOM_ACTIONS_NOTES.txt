@@ -1,0 +1,10 @@
+HomeMaintainer v0.35 - Compact Room Section Actions
+
+Room detail UI cleanup:
+- Moved Create New and Link Existing actions from full-width rows into each section header.
+- + creates a new record already associated with the room.
+- link connects an existing compatible record to the room.
+- Projects, Paint & Finishes, Home Systems, Devices & Equipment, Fixtures, Furniture, and Tasks show both actions.
+- Smoke & CO Detectors, Filters & Consumables, and Recent Home History show + only because those record types currently have a single-room assignment or no link-existing workflow.
+- Kept the existing top-right + menu.
+- Added accessibility labels to all icon-only actions.

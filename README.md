@@ -250,3 +250,13 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Owner Transfer now includes an item-by-item "Items Staying With Home" selector for Furniture, Fixtures, and Devices & Equipment.
 - Unselected movable items and their owned attachments are omitted from the transfer package while shared home history/tasks remain available without broken direct links.
 - Build/export/transfer metadata updated to 0.34.
+
+
+## v0.35 — Compact Room Section Actions
+
+- Simplified Room page category actions to compact header icons.
+- Categories that support both workflows show a + button and link button beside the category title.
+- Removed repeated full-width Create New / Link Existing rows from room sections.
+- Detectors, Filters & Consumables, and Recent Home History show a compact + action because those sections do not currently support non-destructive multi-room linking.
+- Existing top-right + menu remains available as an alternate shortcut.
+- Build/export/transfer metadata updated to 0.35.
