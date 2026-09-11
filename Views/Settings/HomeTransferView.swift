@@ -10,6 +10,7 @@ struct HomeTransferView: View {
     @Query private var systems: [HomeSystem]
     @Query private var appliances: [Appliance]
     @Query private var fixtures: [Fixture]
+    @Query private var furniture: [Furniture]
     @Query private var paints: [PaintFinish]
     @Query private var projects: [Project]
     @Query private var projectItems: [ProjectItem]
@@ -28,9 +29,13 @@ struct HomeTransferView: View {
     @State private var importSucceeded = false
     @State private var exportSucceeded = false
     @State private var showImportConfirmation = false
+    @State private var showTransferItemSelection = false
+    @State private var selectedApplianceIDs: Set<PersistentIdentifier> = []
+    @State private var selectedFixtureIDs: Set<PersistentIdentifier> = []
+    @State private var selectedFurnitureIDs: Set<PersistentIdentifier> = []
 
     private var isEmpty: Bool {
-        homes.isEmpty && rooms.isEmpty && vendors.isEmpty && systems.isEmpty && appliances.isEmpty && fixtures.isEmpty && paints.isEmpty && projects.isEmpty && projectItems.isEmpty && measurements.isEmpty && tasks.isEmpty && history.isEmpty && detectors.isEmpty && consumables.isEmpty && attachments.isEmpty
+        homes.isEmpty && rooms.isEmpty && vendors.isEmpty && systems.isEmpty && appliances.isEmpty && fixtures.isEmpty && furniture.isEmpty && paints.isEmpty && projects.isEmpty && projectItems.isEmpty && measurements.isEmpty && tasks.isEmpty && history.isEmpty && detectors.isEmpty && consumables.isEmpty && attachments.isEmpty
     }
 
     var body: some View {
@@ -39,7 +44,7 @@ struct HomeTransferView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Move the home's digital record with the house", systemImage: "house.and.flag")
                         .font(.headline)
-                    Text("Create a Home Maintainer transfer package for a future owner. The package preserves stable links between rooms, projects, fixtures, appliances/electronics/equipment, systems, tasks, warranties, history, vendors, and stored documents.")
+                    Text("Create a Home Maintainer transfer package for a future owner. The package preserves stable links between rooms, projects, fixtures, furniture, devices/equipment, systems, tasks, warranties, history, vendors, and stored documents.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -52,15 +57,15 @@ struct HomeTransferView: View {
                     if !home.address.isEmpty { LabeledContent("Address", value: home.address) }
                 }
                 LabeledContent("Rooms & Areas", value: "\(rooms.count)")
-                LabeledContent("Installed Assets", value: "\(systems.count + appliances.count + fixtures.count)")
+                LabeledContent("Installed Assets", value: "\(systems.count + appliances.count + fixtures.count + furniture.count)")
                 LabeledContent("Projects", value: "\(projects.count)")
                 LabeledContent("Home History", value: "\(history.count)")
                 LabeledContent("Files", value: "\(attachments.count)")
             }
 
             Section("Seller / Current Owner") {
-                Button { createTransfer() } label: {
-                    Label("Create & Share New Owner Transfer", systemImage: "square.and.arrow.up")
+                Button { prepareTransferSelection() } label: {
+                    Label("Choose Items & Create Owner Transfer", systemImage: "checklist")
                 }
                 Text("Home Maintainer opens the standard iPhone Share sheet so you can choose Google Drive, Save to Files, Mail, AirDrop, Messages, or another compatible app.")
                     .font(.footnote)
@@ -68,7 +73,7 @@ struct HomeTransferView: View {
                 Text("For Google Drive, choose the Google Drive app directly in the Share sheet when possible. Save to Files → Google Drive relies on Apple's Files provider and may show a folder-contents error if that provider is unavailable or not responding.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                Text("Before sharing, review notes, vendor contacts, receipts, invoices, photos, and project records for information you do not want to pass to the buyer. The transfer package contains the home's current records and attachments.")
+                Text("Before sharing, choose which Furniture, Fixtures, and Devices & Equipment stay with the home. Other connected home records are included so the buyer receives a usable maintenance history and setup record.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -124,6 +129,21 @@ struct HomeTransferView: View {
                 shareItem = nil
             }
         }
+        .sheet(isPresented: $showTransferItemSelection) {
+            NavigationStack {
+                TransferItemSelectionView(
+                    appliances: appliances,
+                    fixtures: fixtures,
+                    furniture: furniture,
+                    selectedApplianceIDs: $selectedApplianceIDs,
+                    selectedFixtureIDs: $selectedFixtureIDs,
+                    selectedFurnitureIDs: $selectedFurnitureIDs
+                ) {
+                    showTransferItemSelection = false
+                    createTransfer()
+                }
+            }
+        }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
             switch result {
             case .success(let urls):
@@ -156,9 +176,21 @@ struct HomeTransferView: View {
         return "HomeMaintainer-Transfer-\(clean)-\(stamp).json"
     }
 
+    private func prepareTransferSelection() {
+        selectedApplianceIDs = Set(appliances.map(\.persistentModelID))
+        selectedFixtureIDs = Set(fixtures.map(\.persistentModelID))
+        selectedFurnitureIDs = Set(furniture.map(\.persistentModelID))
+        showTransferItemSelection = true
+    }
+
     private func createTransfer() {
         do {
-            let data = try HomeTransferService.encodedArchive(context: modelContext)
+            let data = try HomeTransferService.encodedArchive(
+                context: modelContext,
+                includedApplianceIDs: selectedApplianceIDs,
+                includedFixtureIDs: selectedFixtureIDs,
+                includedFurnitureIDs: selectedFurnitureIDs
+            )
             let url = try ExportShareFile.write(data: data, filename: transferFilename)
             shareItem = ExportShareItem(url: url)
         } catch {
@@ -174,10 +206,126 @@ struct HomeTransferView: View {
             self.pendingArchive = nil
             self.preview = nil
             importSucceeded = true
-            message = "The home transfer was imported successfully. Rooms, assets, projects, tasks, history, warranties, vendors, and files were reconnected using stable transfer IDs."
+            message = "The home transfer was imported successfully. Rooms, assets, furniture, projects, tasks, history, warranties, vendors, and files were reconnected using stable transfer IDs."
         } catch {
             importSucceeded = false
             message = error.localizedDescription
         }
+    }
+}
+
+
+private struct TransferItemSelectionView: View {
+    @Environment(\.dismiss) private var dismiss
+    let appliances: [Appliance]
+    let fixtures: [Fixture]
+    let furniture: [Furniture]
+    @Binding var selectedApplianceIDs: Set<PersistentIdentifier>
+    @Binding var selectedFixtureIDs: Set<PersistentIdentifier>
+    @Binding var selectedFurnitureIDs: Set<PersistentIdentifier>
+    let onCreate: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                Text("Choose the movable items that will stay with the home. Unchecked items remain in the current owner's app but are not placed in the transfer package. Rooms, systems, projects, history, and other home records continue to transfer normally.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                if furniture.isEmpty {
+                    Text("No furniture has been recorded.").foregroundStyle(.secondary)
+                } else {
+                    ForEach(furniture) { item in
+                        selectionRow(
+                            name: item.name,
+                            detail: [item.category, item.linkedRooms.map(\.name).joined(separator: ", ")].filter { !$0.isEmpty }.joined(separator: " · "),
+                            isSelected: selectedFurnitureIDs.contains(item.persistentModelID)
+                        ) {
+                            toggle(item.persistentModelID, in: &selectedFurnitureIDs)
+                        }
+                    }
+                }
+            } header: {
+                selectionHeader("Furniture", selected: selectedFurnitureIDs.count, total: furniture.count)
+            }
+
+            Section {
+                if fixtures.isEmpty {
+                    Text("No fixtures have been recorded.").foregroundStyle(.secondary)
+                } else {
+                    ForEach(fixtures) { item in
+                        selectionRow(
+                            name: item.name,
+                            detail: [item.category, item.linkedRooms.map(\.name).joined(separator: ", ")].filter { !$0.isEmpty }.joined(separator: " · "),
+                            isSelected: selectedFixtureIDs.contains(item.persistentModelID)
+                        ) {
+                            toggle(item.persistentModelID, in: &selectedFixtureIDs)
+                        }
+                    }
+                }
+            } header: {
+                selectionHeader("Fixtures", selected: selectedFixtureIDs.count, total: fixtures.count)
+            }
+
+            Section {
+                if appliances.isEmpty {
+                    Text("No devices or equipment have been recorded.").foregroundStyle(.secondary)
+                } else {
+                    ForEach(appliances) { item in
+                        selectionRow(
+                            name: item.name,
+                            detail: [item.category, item.linkedRooms.map(\.name).joined(separator: ", ")].filter { !$0.isEmpty }.joined(separator: " · "),
+                            isSelected: selectedApplianceIDs.contains(item.persistentModelID)
+                        ) {
+                            toggle(item.persistentModelID, in: &selectedApplianceIDs)
+                        }
+                    }
+                }
+            } header: {
+                selectionHeader("Devices & Equipment", selected: selectedApplianceIDs.count, total: appliances.count)
+            }
+
+            Section {
+                Button { onCreate() } label: {
+                    Label("Create Transfer with Selected Items", systemImage: "square.and.arrow.up")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+        }
+        .navigationTitle("Items Staying With Home")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+    }
+
+    @ViewBuilder
+    private func selectionHeader(_ title: String, selected: Int, total: Int) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            if total > 0 { Text("\(selected)/\(total)").font(.caption).foregroundStyle(.secondary) }
+        }
+    }
+
+    @ViewBuilder
+    private func selectionRow(name: String, detail: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name).foregroundStyle(.primary)
+                    if !detail.isEmpty { Text(detail).font(.caption).foregroundStyle(.secondary) }
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggle(_ id: PersistentIdentifier, in selection: inout Set<PersistentIdentifier>) {
+        if selection.contains(id) { selection.remove(id) }
+        else { selection.insert(id) }
     }
 }

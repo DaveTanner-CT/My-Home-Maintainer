@@ -130,6 +130,9 @@ struct ProjectFormView: View {
         if let fixtures = try? modelContext.fetch(FetchDescriptor<Fixture>()) {
             for fixture in fixtures where fixture.sourceProject?.persistentModelID == projectID { fixture.sourceProject = nil }
         }
+        if let furniture = try? modelContext.fetch(FetchDescriptor<Furniture>()) {
+            for item in furniture where item.sourceProject?.persistentModelID == projectID { item.sourceProject = nil }
+        }
         if let paints = try? modelContext.fetch(FetchDescriptor<PaintFinish>()) {
             for paint in paints where paint.sourceProject?.persistentModelID == projectID { paint.sourceProject = nil }
         }

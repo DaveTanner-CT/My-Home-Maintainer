@@ -7,6 +7,7 @@ struct ProjectCompletionView: View {
     @Query private var allItems: [ProjectItem]
     @Query private var appliances: [Appliance]
     @Query private var fixtures: [Fixture]
+    @Query private var furniture: [Furniture]
     @Query private var systems: [HomeSystem]
     @Query private var paints: [PaintFinish]
     @Query private var history: [MaintenanceRecord]
@@ -43,6 +44,7 @@ struct ProjectCompletionView: View {
                         Menu {
                             Button { addAppliance(item) } label: { Label("Device / Equipment", systemImage: "refrigerator") }
                             Button { addFixture(item) } label: { Label("Fixture", systemImage: "lightbulb") }
+                            Button { addFurniture(item) } label: { Label("Furniture", systemImage: "sofa") }
                             Button { addSystem(item) } label: { Label("Home System", systemImage: "wrench.and.screwdriver") }
                             Button { addPaint(item) } label: { Label("Paint / Finish", systemImage: "paintbrush") }
                             Button { addHistoryOnly(item) } label: { Label("History Only", systemImage: "clock.arrow.circlepath") }
@@ -87,6 +89,8 @@ struct ProjectCompletionView: View {
     private func installedItemLink(_ item: ProjectItem) -> some View {
         if let fixture = fixtures.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
             NavigationLink { FixtureDetailView(fixture: fixture) } label: { installedRow(item) }
+        } else if let furnitureItem = furniture.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
+            NavigationLink { FurnitureDetailView(furniture: furnitureItem) } label: { installedRow(item) }
         } else if let appliance = appliances.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
             NavigationLink { ApplianceDetailView(appliance: appliance) } label: { installedRow(item) }
         } else if let system = systems.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
@@ -114,6 +118,7 @@ struct ProjectCompletionView: View {
     private func alreadySaved(_ item: ProjectItem) -> Bool {
         appliances.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
             || fixtures.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
+            || furniture.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
             || systems.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
             || paints.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.colorName.caseInsensitiveCompare(item.title) == .orderedSame }
     }
@@ -133,6 +138,15 @@ struct ProjectCompletionView: View {
         modelContext.insert(record)
         copyPhoto(item, to: .fixture(record))
         addInstallHistory(item, fixture: record)
+        markInstalled(item)
+    }
+
+    private func addFurniture(_ item: ProjectItem) {
+        guard !alreadySaved(item) else { markInstalled(item); return }
+        let record = Furniture(name: item.title, category: item.category, brand: item.manufacturer, model: item.model, materialFinish: item.finishColor, dimensions: item.dimensions, purchaseDate: item.purchaseDate, purchasePrice: item.actualPurchaseCost ?? item.unitCost, purchasedFrom: item.store, productLink: item.website, notes: item.notes, room: project.room, sourceProject: project)
+        modelContext.insert(record)
+        copyPhoto(item, to: .furniture(record))
+        addInstallHistory(item)
         markInstalled(item)
     }
 

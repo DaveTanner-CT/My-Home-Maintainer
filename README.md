@@ -228,7 +228,7 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Updated visible and export/transfer build metadata to 0.30.
 
 
-## v0.32 TC1 — Pre-Flight Hardening Test Candidate
+## v0.33 — Pre-Flight Hardening Test Candidate
 
 - Added one-tap consumable replacement recording with automatic next-date calculation and Home History logging.
 - Added direct replacement reminders from detector and consumable detail pages.
@@ -236,10 +236,17 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Updated visible and export/transfer build metadata to 0.31.
 
 
-### v0.32 TC1 pre-flight hardening
+### v0.33 pre-flight hardening
 - Cancels pending local notifications when a task is deleted.
 - Makes project deletion deterministic: project planning items/measurements and project-only attachments are deleted, while linked tasks, home records, and history are preserved and unlinked.
 - Explicitly clears room references from history and attachments when a room is deleted.
 - Surfaces save errors when recording a consumable replacement.
-- Build/export/transfer metadata updated to 0.32 TC1.
+- Build/export/transfer metadata updated to 0.33.
 - Intended as a feature-freeze test candidate for full workflow testing.
+
+## v0.34 — Furniture + Selective Ownership Transfer
+- Added Furniture as a first-class Foundation record immediately after Fixtures.
+- Added room linking, photos/documents, purchase/warranty/reference details, vendor/project connections, search, export, and project-completion support for Furniture.
+- Owner Transfer now includes an item-by-item "Items Staying With Home" selector for Furniture, Fixtures, and Devices & Equipment.
+- Unselected movable items and their owned attachments are omitted from the transfer package while shared home history/tasks remain available without broken direct links.
+- Build/export/transfer metadata updated to 0.34.

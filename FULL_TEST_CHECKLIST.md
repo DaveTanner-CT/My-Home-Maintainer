@@ -48,3 +48,34 @@ Use this build as a feature-freeze test candidate. Test with real-looking throwa
 - Confirm destructive confirmations describe what will be retained vs deleted.
 
 Record any issue with: screen, exact taps, expected result, actual result, and whether it is reproducible.
+
+## Route Consistency (v0.33)
+For each record type below, test Add from its main list and Add from a related Room (where available). Confirm the form offers the same fields and photo option, with the Room route only preselecting context.
+
+- Fixture: main Fixtures list vs Room > Add Fixture
+- Home System: main Systems list vs Room > Add Home System
+- Device / Equipment: main Devices list vs Room > Add Device / Equipment
+- Paint / Finish: main Paint list vs Room > Add Paint / Finish
+- Task: main Tasks list vs Room/Project/System/Device/Fixture > Create New Task
+- Detector: main Detectors list vs Room > Add Detector
+- Consumable: main Consumables list vs Room > Add Filter / Consumable
+
+Photo checks:
+- Select a photo before saving a new Fixture, System, Device/Equipment, Detector, Consumable, Task, Vendor, and Home History Event.
+- After save, open the record and confirm the photo appears under Photos & Documents.
+- Edit an existing record, add another photo, save, and confirm both photos remain.
+- Confirm Room photos, Paint mixing-label photos, Project cover photos, and Project Item photos retain their specialized existing workflows.
+
+## Furniture + Ownership Transfer (v0.34)
+- [ ] Home Setup shows Furniture immediately after Fixtures.
+- [ ] Add Furniture from Home Setup and save a photo.
+- [ ] Add Furniture from a Room page; confirm the room is preselected.
+- [ ] Link one Furniture item to multiple Rooms / Areas.
+- [ ] Confirm Furniture appears in room asset summaries and Global Search.
+- [ ] Confirm a project purchase can be saved to My Home as Furniture.
+- [ ] Open Settings > Home Transfer and start a new owner transfer.
+- [ ] Confirm Furniture, Fixtures, and Devices & Equipment are shown item-by-item.
+- [ ] Confirm all movable items are selected by default.
+- [ ] Uncheck at least one item in each category and create a transfer.
+- [ ] Confirm excluded items and their photos/documents are not present in the transfer file.
+- [ ] Import the transfer into an empty test installation and confirm selected items import with room relationships intact.

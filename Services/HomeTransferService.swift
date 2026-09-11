@@ -14,6 +14,7 @@ struct HomeTransferArchive: Codable {
     let systems: [TransferSystem]
     let appliances: [TransferAppliance]
     let fixtures: [TransferFixture]
+    var furniture: [TransferFurniture]? = nil
     let paints: [TransferPaint]
     let projects: [TransferProject]
     let projectItems: [TransferProjectItem]
@@ -38,6 +39,7 @@ struct TransferVendor: Codable { let id, businessName, contactName, category, ph
 struct TransferSystem: Codable { let id, name, type, manufacturer, model, serialNumber, location, notes, website: String; let installationDate, warrantyExpiration: Date?; let purchaseCost: Double?; let expectedServiceLifeYears: Int?; let roomID, vendorID, sourceProjectID: String?; var additionalRoomIDs: [String]? = nil }
 struct TransferAppliance: Codable { let id, name, category, manufacturer, model, serialNumber, purchasedFrom, manufacturerWebsite, productRegistrationLink, notes: String; let purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double?; let roomID, sourceProjectID: String?; var additionalRoomIDs: [String]? = nil }
 struct TransferFixture: Codable { let id, name, category, manufacturer, model, partNumber, finishColor, purchasedFrom, productLink, notes: String; let installationDate, purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double?; let roomID, vendorID, sourceProjectID: String?; var additionalRoomIDs: [String]? = nil }
+struct TransferFurniture: Codable { let id, name, category, brand, model, serialNumber, materialFinish, dimensions, purchasedFrom, productLink, notes: String; let purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double?; let roomID, vendorID, sourceProjectID: String?; var additionalRoomIDs: [String]? = nil }
 struct TransferPaint: Codable { let id, roomName, surface, brand, productLine, colorName, colorCode, sheen, store, containerSize, notes, productLink: String; let purchaseDate: Date?; let quantity, cost: Double?; let roomID, sourceProjectID: String?; var additionalRoomIDs: [String]? = nil }
 struct TransferProject: Codable { let id, title, projectDescription, stage, notes, roomName: String; let targetDate: Date?; let budget: Double?; let roomID: String?; let coverPhotoData: Data?; var additionalRoomIDs: [String]? = nil }
 struct TransferProjectItem: Codable { let id, projectID, title, category, comparisonGroup, manufacturer, model, sku, finishColor, dimensions, store, website, notes, status: String; let unitCost, quantity, actualPurchaseCost: Double?; let purchaseDate, installedDate: Date?; let photoData: Data?; let isIdeaOnly: Bool }
@@ -63,8 +65,8 @@ struct TransferPreview {
 
 @MainActor
 enum HomeTransferService {
-    static func encodedArchive(context: ModelContext, packageType: String = "Owner Transfer") throws -> Data {
-        let archive = try makeArchive(context: context, packageType: packageType)
+    static func encodedArchive(context: ModelContext, packageType: String = "Owner Transfer", includedApplianceIDs: Set<PersistentIdentifier>? = nil, includedFixtureIDs: Set<PersistentIdentifier>? = nil, includedFurnitureIDs: Set<PersistentIdentifier>? = nil) throws -> Data {
+        let archive = try makeArchive(context: context, packageType: packageType, includedApplianceIDs: includedApplianceIDs, includedFixtureIDs: includedFixtureIDs, includedFurnitureIDs: includedFurnitureIDs)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -87,7 +89,7 @@ enum HomeTransferService {
             exportedAt: archive.exportedAt,
             packageType: archive.packageType,
             rooms: archive.rooms.count,
-            assets: archive.systems.count + archive.appliances.count + archive.fixtures.count + archive.paints.count + archive.detectors.count + archive.consumables.count,
+            assets: archive.systems.count + archive.appliances.count + archive.fixtures.count + (archive.furniture ?? []).count + archive.paints.count + archive.detectors.count + archive.consumables.count,
             projects: archive.projects.count,
             tasks: archive.tasks.count,
             history: archive.history.count,
@@ -118,6 +120,7 @@ enum HomeTransferService {
         try requireUnique(archive.systems.map(\.id), label: "systems")
         try requireUnique(archive.appliances.map(\.id), label: "devices and equipment")
         try requireUnique(archive.fixtures.map(\.id), label: "fixtures")
+        try requireUnique((archive.furniture ?? []).map(\.id), label: "furniture")
         try requireUnique(archive.paints.map(\.id), label: "paint and finishes")
         try requireUnique(archive.projectItems.map(\.id), label: "project items")
         try requireUnique(archive.tasks.map(\.id), label: "tasks")
@@ -130,6 +133,7 @@ enum HomeTransferService {
         let systemIDs = Set(archive.systems.map(\.id))
         let applianceIDs = Set(archive.appliances.map(\.id))
         let fixtureIDs = Set(archive.fixtures.map(\.id))
+        let furnitureIDs = Set((archive.furniture ?? []).map(\.id))
         let paintIDs = Set(archive.paints.map(\.id))
         let itemIDs = Set(archive.projectItems.map(\.id))
         let taskIDs = Set(archive.tasks.map(\.id))
@@ -142,6 +146,7 @@ enum HomeTransferService {
         guard archive.systems.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) && valid($0.vendorID, in: vendorIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A home-system relationship points to a missing record.") }
         guard archive.appliances.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A device or equipment relationship points to a missing record.") }
         guard archive.fixtures.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) && valid($0.vendorID, in: vendorIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A fixture relationship points to a missing record.") }
+        guard (archive.furniture ?? []).allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) && valid($0.vendorID, in: vendorIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A furniture relationship points to a missing record.") }
         guard archive.paints.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) && valid($0.sourceProjectID, in: projectIDs) }) else { throw TransferError.invalidArchive("A paint relationship points to a missing record.") }
         guard archive.projects.allSatisfy({ valid($0.roomID, in: roomIDs) && valid($0.additionalRoomIDs, in: roomIDs) }) else { throw TransferError.invalidArchive("A project points to a missing room or area.") }
         guard archive.projectItems.allSatisfy({ projectIDs.contains($0.projectID) }) else { throw TransferError.invalidArchive("A project item points to a missing project.") }
@@ -153,7 +158,7 @@ enum HomeTransferService {
 
         let owners: [String: Set<String>] = [
             "room": roomIDs, "vendor": vendorIDs, "system": systemIDs, "appliance": applianceIDs,
-            "fixture": fixtureIDs, "paint": paintIDs, "project": projectIDs, "projectItem": itemIDs,
+            "fixture": fixtureIDs, "furniture": furnitureIDs, "paint": paintIDs, "project": projectIDs, "projectItem": itemIDs,
             "task": taskIDs, "history": historyIDs, "detector": detectorIDs, "consumable": consumableIDs
         ]
         for attachment in archive.attachments where !attachment.ownerType.isEmpty {
@@ -171,6 +176,7 @@ enum HomeTransferService {
             try context.fetchCount(FetchDescriptor<HomeSystem>()),
             try context.fetchCount(FetchDescriptor<Appliance>()),
             try context.fetchCount(FetchDescriptor<Fixture>()),
+            try context.fetchCount(FetchDescriptor<Furniture>()),
             try context.fetchCount(FetchDescriptor<PaintFinish>()),
             try context.fetchCount(FetchDescriptor<Project>()),
             try context.fetchCount(FetchDescriptor<ProjectItem>()),
@@ -194,6 +200,7 @@ enum HomeTransferService {
         var systems: [String: HomeSystem] = [:]
         var appliances: [String: Appliance] = [:]
         var fixtures: [String: Fixture] = [:]
+        var furniture: [String: Furniture] = [:]
         var paints: [String: PaintFinish] = [:]
         var tasks: [String: MaintenanceTask] = [:]
         var history: [String: MaintenanceRecord] = [:]
@@ -241,6 +248,11 @@ enum HomeTransferService {
             item.additionalRooms = (f.additionalRoomIDs ?? []).compactMap { rooms[$0] }
             context.insert(item); fixtures[f.id] = item
         }
+        for f in archive.furniture ?? [] {
+            let item = Furniture(name: f.name, category: f.category, brand: f.brand, model: f.model, serialNumber: f.serialNumber, materialFinish: f.materialFinish, dimensions: f.dimensions, purchaseDate: f.purchaseDate, purchasePrice: f.purchasePrice, purchasedFrom: f.purchasedFrom, warrantyExpiration: f.warrantyExpiration, productLink: f.productLink, notes: f.notes, room: f.roomID.flatMap { rooms[$0] }, vendor: f.vendorID.flatMap { vendors[$0] }, sourceProject: f.sourceProjectID.flatMap { projects[$0] })
+            item.additionalRooms = (f.additionalRoomIDs ?? []).compactMap { rooms[$0] }
+            context.insert(item); furniture[f.id] = item
+        }
         for p in archive.paints {
             let item = PaintFinish(roomName: p.roomName, room: p.roomID.flatMap { rooms[$0] }, surface: p.surface, brand: p.brand, productLine: p.productLine, colorName: p.colorName, colorCode: p.colorCode, sheen: p.sheen, store: p.store, purchaseDate: p.purchaseDate, quantity: p.quantity, containerSize: p.containerSize, cost: p.cost, notes: p.notes, productLink: p.productLink, sourceProject: p.sourceProjectID.flatMap { projects[$0] })
             item.additionalRooms = (p.additionalRoomIDs ?? []).compactMap { rooms[$0] }
@@ -279,6 +291,7 @@ enum HomeTransferService {
             case "system": item.system = a.ownerID.flatMap { systems[$0] }
             case "appliance": item.appliance = a.ownerID.flatMap { appliances[$0] }
             case "fixture": item.fixture = a.ownerID.flatMap { fixtures[$0] }
+            case "furniture": item.furniture = a.ownerID.flatMap { furniture[$0] }
             case "paint": item.paint = a.ownerID.flatMap { paints[$0] }
             case "project": item.project = a.ownerID.flatMap { projects[$0] }
             case "projectItem": item.projectItem = a.ownerID.flatMap { projectItems[$0] }
@@ -293,14 +306,18 @@ enum HomeTransferService {
         try context.save()
     }
 
-    private static func makeArchive(context: ModelContext, packageType: String) throws -> HomeTransferArchive {
+    private static func makeArchive(context: ModelContext, packageType: String, includedApplianceIDs: Set<PersistentIdentifier>?, includedFixtureIDs: Set<PersistentIdentifier>?, includedFurnitureIDs: Set<PersistentIdentifier>?) throws -> HomeTransferArchive {
         let homes = try context.fetch(FetchDescriptor<Home>())
         let rooms = try context.fetch(FetchDescriptor<Room>())
         let vendors = try context.fetch(FetchDescriptor<Vendor>())
         let projects = try context.fetch(FetchDescriptor<Project>())
         let systems = try context.fetch(FetchDescriptor<HomeSystem>())
-        let appliances = try context.fetch(FetchDescriptor<Appliance>())
-        let fixtures = try context.fetch(FetchDescriptor<Fixture>())
+        let allAppliances = try context.fetch(FetchDescriptor<Appliance>())
+        let allFixtures = try context.fetch(FetchDescriptor<Fixture>())
+        let allFurniture = try context.fetch(FetchDescriptor<Furniture>())
+        let appliances = includedApplianceIDs.map { ids in allAppliances.filter { ids.contains($0.persistentModelID) } } ?? allAppliances
+        let fixtures = includedFixtureIDs.map { ids in allFixtures.filter { ids.contains($0.persistentModelID) } } ?? allFixtures
+        let furniture = includedFurnitureIDs.map { ids in allFurniture.filter { ids.contains($0.persistentModelID) } } ?? allFurniture
         let paints = try context.fetch(FetchDescriptor<PaintFinish>())
         let tasks = try context.fetch(FetchDescriptor<MaintenanceTask>())
         let history = try context.fetch(FetchDescriptor<MaintenanceRecord>())
@@ -313,18 +330,25 @@ enum HomeTransferService {
         func idMap<T: PersistentModel>(_ values: [T]) -> [PersistentIdentifier: String] {
             Dictionary(uniqueKeysWithValues: values.map { ($0.persistentModelID, UUID().uuidString) })
         }
-        let roomIDs = idMap(rooms), vendorIDs = idMap(vendors), projectIDs = idMap(projects), systemIDs = idMap(systems), applianceIDs = idMap(appliances), fixtureIDs = idMap(fixtures), paintIDs = idMap(paints), taskIDs = idMap(tasks), historyIDs = idMap(history), detectorIDs = idMap(detectors), consumableIDs = idMap(consumables), projectItemIDs = idMap(projectItems)
+        let roomIDs = idMap(rooms), vendorIDs = idMap(vendors), projectIDs = idMap(projects), systemIDs = idMap(systems), applianceIDs = idMap(appliances), fixtureIDs = idMap(fixtures), furnitureIDs = idMap(furniture), paintIDs = idMap(paints), taskIDs = idMap(tasks), historyIDs = idMap(history), detectorIDs = idMap(detectors), consumableIDs = idMap(consumables), projectItemIDs = idMap(projectItems)
         func rid<T: PersistentModel>(_ object: T?, _ map: [PersistentIdentifier: String]) -> String? { object.flatMap { map[$0.persistentModelID] } }
         func rids(_ values: [Room], _ map: [PersistentIdentifier: String]) -> [String] { values.compactMap { map[$0.persistentModelID] } }
 
         let h = homes.first.map { TransferHome(id: UUID().uuidString, name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) }
-        let attachmentDTOs = attachments.map { a -> TransferAttachment in
+        let transferAttachments = attachments.filter { a in
+            if let owner = a.appliance { return applianceIDs[owner.persistentModelID] != nil }
+            if let owner = a.fixture { return fixtureIDs[owner.persistentModelID] != nil }
+            if let owner = a.furniture { return furnitureIDs[owner.persistentModelID] != nil }
+            return true
+        }
+        let attachmentDTOs = transferAttachments.map { a -> TransferAttachment in
             var type = "", owner: String?
             if let v = a.room { type = "room"; owner = rid(v, roomIDs) }
             else if let v = a.vendor { type = "vendor"; owner = rid(v, vendorIDs) }
             else if let v = a.system { type = "system"; owner = rid(v, systemIDs) }
             else if let v = a.appliance { type = "appliance"; owner = rid(v, applianceIDs) }
             else if let v = a.fixture { type = "fixture"; owner = rid(v, fixtureIDs) }
+            else if let v = a.furniture { type = "furniture"; owner = rid(v, furnitureIDs) }
             else if let v = a.paint { type = "paint"; owner = rid(v, paintIDs) }
             else if let v = a.project { type = "project"; owner = rid(v, projectIDs) }
             else if let v = a.projectItem { type = "projectItem"; owner = rid(v, projectItemIDs) }
@@ -336,7 +360,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.32 TC1", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.34", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(
                 id: roomIDs[$0.persistentModelID]!,
                 name: $0.name,
@@ -352,6 +376,7 @@ enum HomeTransferService {
             systems: systems.map { .init(id: systemIDs[$0.persistentModelID]!, name: $0.name, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, location: $0.location, notes: $0.notes, website: $0.website, installationDate: $0.installationDate, warrantyExpiration: $0.warrantyExpiration, purchaseCost: $0.purchaseCost, expectedServiceLifeYears: $0.expectedServiceLifeYears, roomID: rid($0.room, roomIDs), vendorID: rid($0.vendor, vendorIDs), sourceProjectID: rid($0.sourceProject, projectIDs), additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
             appliances: appliances.map { .init(id: applianceIDs[$0.persistentModelID]!, name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, purchasedFrom: $0.purchasedFrom, manufacturerWebsite: $0.manufacturerWebsite, productRegistrationLink: $0.productRegistrationLink, notes: $0.notes, purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice, roomID: rid($0.room, roomIDs), sourceProjectID: rid($0.sourceProject, projectIDs), additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
             fixtures: fixtures.map { .init(id: fixtureIDs[$0.persistentModelID]!, name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, partNumber: $0.partNumber, finishColor: $0.finishColor, purchasedFrom: $0.purchasedFrom, productLink: $0.productLink, notes: $0.notes, installationDate: $0.installationDate, purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice, roomID: rid($0.room, roomIDs), vendorID: rid($0.vendor, vendorIDs), sourceProjectID: rid($0.sourceProject, projectIDs), additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
+            furniture: furniture.map { .init(id: furnitureIDs[$0.persistentModelID]!, name: $0.name, category: $0.category, brand: $0.brand, model: $0.model, serialNumber: $0.serialNumber, materialFinish: $0.materialFinish, dimensions: $0.dimensions, purchasedFrom: $0.purchasedFrom, productLink: $0.productLink, notes: $0.notes, purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice, roomID: rid($0.room, roomIDs), vendorID: rid($0.vendor, vendorIDs), sourceProjectID: rid($0.sourceProject, projectIDs), additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
             paints: paints.map { .init(id: paintIDs[$0.persistentModelID]!, roomName: $0.roomName, surface: $0.surface, brand: $0.brand, productLine: $0.productLine, colorName: $0.colorName, colorCode: $0.colorCode, sheen: $0.sheen, store: $0.store, containerSize: $0.containerSize, notes: $0.notes, productLink: $0.productLink, purchaseDate: $0.purchaseDate, quantity: $0.quantity, cost: $0.cost, roomID: rid($0.room, roomIDs), sourceProjectID: rid($0.sourceProject, projectIDs), additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
             projects: projects.map { .init(id: projectIDs[$0.persistentModelID]!, title: $0.title, projectDescription: $0.projectDescription, stage: $0.stage.rawValue, notes: $0.notes, roomName: $0.roomName, targetDate: $0.targetDate, budget: $0.budget, roomID: rid($0.room, roomIDs), coverPhotoData: $0.coverPhotoData, additionalRoomIDs: rids($0.additionalRooms, roomIDs)) },
             projectItems: projectItems.map { .init(id: projectItemIDs[$0.persistentModelID]!, projectID: rid($0.project, projectIDs) ?? "", title: $0.title, category: $0.category, comparisonGroup: $0.comparisonGroup ?? "", manufacturer: $0.manufacturer, model: $0.model, sku: $0.sku, finishColor: $0.finishColor, dimensions: $0.dimensions, store: $0.store, website: $0.website, notes: $0.notes, status: $0.status.rawValue, unitCost: $0.unitCost, quantity: $0.quantity, actualPurchaseCost: $0.actualPurchaseCost, purchaseDate: $0.purchaseDate, installedDate: $0.installedDate, photoData: $0.photoData, isIdeaOnly: $0.isIdeaOnly) },

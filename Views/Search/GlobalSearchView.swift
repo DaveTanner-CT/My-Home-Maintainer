@@ -10,6 +10,7 @@ struct GlobalSearchView: View {
     @Query private var vendors: [Vendor]
     @Query private var paints: [PaintFinish]
     @Query private var fixtures: [Fixture]
+    @Query private var furniture: [Furniture]
     @Query private var detectors: [Detector]
     @Query private var consumables: [Consumable]
     @Query private var projects: [Project]
@@ -22,7 +23,7 @@ struct GlobalSearchView: View {
     var body: some View {
         List {
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                ContentUnavailableView("Search your home", systemImage: "magnifyingglass", description: Text("Find tasks, systems, appliances, fixtures, rooms, paint colors, vendors, projects, and maintenance history."))
+                ContentUnavailableView("Search your home", systemImage: "magnifyingglass", description: Text("Find tasks, systems, devices, fixtures, furniture, rooms, paint colors, vendors, projects, and maintenance history."))
             } else {
                 searchSections
             }
@@ -79,6 +80,17 @@ struct GlobalSearchView: View {
                 ForEach(matchingFixtures) { fixture in
                     NavigationLink { FixtureDetailView(fixture: fixture) } label: {
                         SearchResultRow(icon: "lightbulb", title: fixture.name, subtitle: [fixture.category, fixture.room?.name ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
+                    }
+                }
+            }
+        }
+
+        let matchingFurniture = furniture.filter { contains(q, [$0.name, $0.category, $0.brand, $0.model, $0.serialNumber, $0.materialFinish, $0.dimensions, $0.purchasedFrom, $0.notes, $0.room?.name ?? ""]) }
+        if !matchingFurniture.isEmpty {
+            Section("Furniture") {
+                ForEach(matchingFurniture) { item in
+                    NavigationLink { FurnitureDetailView(furniture: item) } label: {
+                        SearchResultRow(icon: "sofa", title: item.name, subtitle: [item.category, item.room?.name ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
                     }
                 }
             }

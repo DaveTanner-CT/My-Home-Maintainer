@@ -1,0 +1,34 @@
+HomeMaintainer v0.34 - Furniture + Ownership Transfer Selection
+
+NEW FURNITURE FOUNDATION CATEGORY
+- Added Furniture immediately after Fixtures in Home Setup > Foundation.
+- Furniture supports:
+  - category
+  - brand / maker
+  - model / collection
+  - serial / inventory ID
+  - material / finish
+  - dimensions
+  - purchase date / price / store
+  - warranty expiration
+  - product/reference link
+  - notes
+  - multiple Rooms / Areas
+  - vendor
+  - related project
+  - photos and documents
+  - Home History entries
+- Furniture can be created or linked from a Room page.
+- Furniture appears in room asset summaries, room history context, warranty alerts, global search, Home Setup connection checks, project completion, standard export, and Home Transfer.
+
+OWNER TRANSFER ITEM SELECTION
+- Creating an Owner Transfer now opens an "Items Staying With Home" screen first.
+- Furniture, Fixtures, and Devices & Equipment are listed item-by-item with checkboxes.
+- All items are selected by default; the current owner can uncheck any item that will not stay with the home.
+- Excluded movable records are omitted from the transfer package.
+- Photos/documents owned by excluded movable records are also omitted.
+- Tasks and Home History are retained for continuity, but their direct link to an excluded movable item is not exported.
+- Older transfer files remain compatible because Furniture is an optional transfer-array field.
+
+VERSION
+- Home page, Settings, normal export, and transfer metadata updated to v0.34.

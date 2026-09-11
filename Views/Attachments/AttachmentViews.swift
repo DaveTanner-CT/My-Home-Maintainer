@@ -104,6 +104,73 @@ struct AttachmentSection: View {
 }
 
 
+struct PendingRecordPhotoSection: View {
+    @Binding var photoData: Data?
+    var title: String = "Photo"
+    var addLabel: String = "Add Photo"
+
+    @State private var selectedPhoto: PhotosPickerItem?
+
+    var body: some View {
+        Section(title) {
+            if let data = photoData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 180)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Label(photoData == nil ? addLabel : "Change Selected Photo", systemImage: "photo")
+            }
+
+            if photoData != nil {
+                Button("Remove Selected Photo", role: .destructive) {
+                    photoData = nil
+                    selectedPhoto = nil
+                }
+            }
+
+            Text("The photo will be saved with this record when you tap Save.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .onChange(of: selectedPhoto) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                let data = try? await newValue.loadTransferable(type: Data.self)
+                await MainActor.run {
+                    photoData = data
+                    selectedPhoto = nil
+                }
+            }
+        }
+    }
+}
+
+@MainActor
+func savePendingRecordPhoto(
+    _ data: Data?,
+    owner: AttachmentOwnerReference,
+    modelContext: ModelContext,
+    name: String = "Photo",
+    caption: String = ""
+) {
+    guard let data else { return }
+    let attachment = HomeAttachment(
+        name: name,
+        caption: caption,
+        category: "Photo",
+        fileName: "photo-\(Int(Date().timeIntervalSince1970)).jpg",
+        typeIdentifier: "image/jpeg",
+        fileData: data
+    )
+    owner.assign(to: attachment)
+    modelContext.insert(attachment)
+}
+
+
 struct RoomPhotoGridSection: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass

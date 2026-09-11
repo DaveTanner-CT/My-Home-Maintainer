@@ -124,6 +124,7 @@ struct FixtureFormView: View {
     @State private var warrantyDate: Date
     @State private var productLink: String
     @State private var notes: String
+    @State private var pendingPhotoData: Data?
     @State private var showDelete = false
 
     init(existing: Fixture? = nil, initialRoom: Room? = nil) {
@@ -177,6 +178,7 @@ struct FixtureFormView: View {
                 TextField("Product / replacement link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never)
                 TextField("Notes", text: $notes, axis: .vertical)
             }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Fixture", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Fixture" : "Edit Fixture")
@@ -210,6 +212,7 @@ struct FixtureFormView: View {
         record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
         record.productLink = productLink
         record.notes = notes
+        savePendingRecordPhoto(pendingPhotoData, owner: .fixture(record), modelContext: modelContext)
         try? modelContext.save()
         dismiss()
     }

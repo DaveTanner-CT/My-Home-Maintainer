@@ -34,6 +34,7 @@ struct TaskFormView: View {
     @State private var selectedAppliance: Appliance?
     @State private var selectedFixture: Fixture?
     @State private var selectedProject: Project?
+    @State private var pendingPhotoData: Data?
 
     init(
         existingTask: MaintenanceTask? = nil,
@@ -107,6 +108,7 @@ struct TaskFormView: View {
                 TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never)
             }
             Section("Instructions & Notes") { TextField("Instructions", text: $instructions, axis: .vertical); TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existingTask == nil ? "Add Photo" : "Add Another Photo")
         }
         .navigationTitle(existingTask == nil ? "New Task" : "Edit Task")
         .navigationBarTitleDisplayMode(.inline)
@@ -129,6 +131,7 @@ struct TaskFormView: View {
         task.vendor = selectedVendor; task.system = selectedSystem; task.appliance = selectedAppliance; task.fixture = selectedFixture; task.project = selectedProject
         task.setPrimaryRoom(selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room)
         task.additionalRooms = selectedRooms.filter { $0.persistentModelID != task.room?.persistentModelID }
+        savePendingRecordPhoto(pendingPhotoData, owner: .task(task), modelContext: modelContext)
         try? modelContext.save(); Task { await NotificationManager.shared.schedule(for: task) }; dismiss()
     }
 }

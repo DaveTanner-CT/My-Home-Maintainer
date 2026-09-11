@@ -36,6 +36,7 @@ struct HomeSetupView: View {
     @Query private var systems: [HomeSystem]
     @Query private var appliances: [Appliance]
     @Query private var fixtures: [Fixture]
+    @Query private var furniture: [Furniture]
     @Query private var paints: [PaintFinish]
     @Query private var vendors: [Vendor]
     @Query private var detectors: [Detector]
@@ -56,6 +57,7 @@ struct HomeSetupView: View {
             SetupStep(title: "Home systems", subtitle: "Record major built-in systems such as HVAC, water, electrical, plumbing, and generators.", icon: "wrench.and.screwdriver", complete: !systems.isEmpty, destination: .systems),
             SetupStep(title: "Devices & equipment", subtitle: "Record appliances, electronics, tools, and outdoor equipment you want to maintain or track.", icon: "refrigerator", complete: !appliances.isEmpty, destination: .appliances),
             SetupStep(title: "Fixtures", subtitle: "Record installed items such as faucets, lights, fans, and hardware when their details matter.", icon: "lightbulb", complete: !fixtures.isEmpty, destination: .fixtures),
+            SetupStep(title: "Furniture", subtitle: "Record furniture that belongs with the home, including rooms, photos, purchase details, and warranties.", icon: "sofa", complete: !furniture.isEmpty, destination: .furniture),
             SetupStep(title: "Safety", subtitle: "Record smoke and CO detectors so replacement dates can be monitored.", icon: "sensor.tag.radiowaves.forward", complete: !detectors.isEmpty, destination: .detectors)
         ]
     }
@@ -68,6 +70,7 @@ struct HomeSetupView: View {
     }
     private var unassignedAppliances: Int { appliances.filter { $0.room == nil }.count }
     private var unassignedFixtures: Int { fixtures.filter { $0.room == nil }.count }
+    private var unassignedFurniture: Int { furniture.filter { $0.room == nil }.count }
     private var unassignedPaint: Int {
         paints.filter { $0.room == nil && $0.roomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
     }
@@ -86,6 +89,9 @@ struct HomeSetupView: View {
     private var fixturesMissingIdentity: Int {
         fixtures.filter { $0.manufacturer.isEmpty || $0.model.isEmpty || ($0.installationDate == nil && $0.purchaseDate == nil) }.count
     }
+    private var furnitureMissingIdentity: Int {
+        furniture.filter { $0.brand.isEmpty || $0.purchaseDate == nil }.count
+    }
     private var detectorsMissingDates: Int {
         detectors.filter { $0.manufactureDate == nil && $0.installationDate == nil }.count
     }
@@ -103,6 +109,11 @@ struct HomeSetupView: View {
     private var unassignedFixtureItems: [SetupIssueItem] {
         fixtures.filter { $0.room == nil }.map {
             .init(id: "fixture-\($0.persistentModelID)", title: $0.name, subtitle: "No Room / Area assigned", destination: AnyView(FixtureDetailView(fixture: $0)))
+        }
+    }
+    private var unassignedFurnitureItems: [SetupIssueItem] {
+        furniture.filter { $0.room == nil }.map {
+            .init(id: "furniture-\($0.persistentModelID)", title: $0.name, subtitle: "No Room / Area assigned", destination: AnyView(FurnitureDetailView(furniture: $0)))
         }
     }
     private var unassignedPaintItems: [SetupIssueItem] {
@@ -131,6 +142,11 @@ struct HomeSetupView: View {
             .init(id: "fixture-detail-\($0.persistentModelID)", title: $0.name, subtitle: "Missing manufacturer, model, or date", destination: AnyView(FixtureDetailView(fixture: $0)))
         }
     }
+    private var furnitureMissingIdentityItems: [SetupIssueItem] {
+        furniture.filter { $0.brand.isEmpty || $0.purchaseDate == nil }.map {
+            .init(id: "furniture-detail-\($0.persistentModelID)", title: $0.name, subtitle: "Missing brand / maker or purchase date", destination: AnyView(FurnitureDetailView(furniture: $0)))
+        }
+    }
     private var detectorsMissingDateItems: [SetupIssueItem] {
         detectors.filter { $0.manufactureDate == nil && $0.installationDate == nil }.map {
             .init(id: "detector-detail-\($0.persistentModelID)", title: "\($0.type) detector", subtitle: $0.location.isEmpty ? "Missing manufacture / installation date" : "\($0.location) · Missing manufacture / installation date", destination: AnyView(DetectorDetailView(detector: $0)))
@@ -138,10 +154,10 @@ struct HomeSetupView: View {
     }
 
     private var relationshipIssueCount: Int {
-        unassignedSystems + unassignedAppliances + unassignedFixtures + unassignedPaint + unlinkedTasks
+        unassignedSystems + unassignedAppliances + unassignedFixtures + unassignedFurniture + unassignedPaint + unlinkedTasks
     }
     private var detailIssueCount: Int {
-        systemsMissingIdentity + appliancesMissingIdentity + fixturesMissingIdentity + detectorsMissingDates
+        systemsMissingIdentity + appliancesMissingIdentity + fixturesMissingIdentity + furnitureMissingIdentity + detectorsMissingDates
     }
 
     var body: some View {
@@ -202,6 +218,11 @@ struct HomeSetupView: View {
                             issueRow(count: unassignedFixtures, title: "Fixtures without a Room / Area", subtitle: "Assigning a room makes project, warranty, and history navigation much stronger.")
                         }
                     }
+                    if unassignedFurniture > 0 {
+                        NavigationLink { SetupIssueListView(title: "Unassigned Furniture", guidance: "These furniture records are not connected to a Room / Area.", items: unassignedFurnitureItems) } label: {
+                            issueRow(count: unassignedFurniture, title: "Furniture without a Room / Area", subtitle: "Assigning rooms makes furniture easier to find and transfer with the home.")
+                        }
+                    }
                     if unassignedPaint > 0 {
                         NavigationLink { SetupIssueListView(title: "Paint Without a Location", guidance: "These paint and finish records have no Room / Area.", items: unassignedPaintItems) } label: {
                             issueRow(count: unassignedPaint, title: "Paint records without a location", subtitle: "Connect each finish to a Room / Area when possible.")
@@ -235,6 +256,11 @@ struct HomeSetupView: View {
                     if fixturesMissingIdentity > 0 {
                         NavigationLink { SetupIssueListView(title: "Fixtures Missing Details", guidance: "Open a record to add model and installation or purchase details.", items: fixturesMissingIdentityItems) } label: {
                             issueRow(count: fixturesMissingIdentity, title: "Fixtures missing model or date details", subtitle: "Especially useful for faucets, lighting, fans, and replacement parts.")
+                        }
+                    }
+                    if furnitureMissingIdentity > 0 {
+                        NavigationLink { SetupIssueListView(title: "Furniture Missing Details", guidance: "Open a record to add maker, purchase, and reference details.", items: furnitureMissingIdentityItems) } label: {
+                            issueRow(count: furnitureMissingIdentity, title: "Furniture missing maker or purchase details", subtitle: "Useful for valuation, warranty, replacement, and ownership transfer.")
                         }
                     }
                     if detectorsMissingDates > 0 {
@@ -291,6 +317,7 @@ struct HomeSetupView: View {
         case .systems: SystemsListView()
         case .appliances: AppliancesListView()
         case .fixtures: FixturesListView()
+        case .furniture: FurnitureListView()
         case .detectors: DetectorsListView()
         }
     }
@@ -358,5 +385,6 @@ private enum SetupDestination {
     case systems
     case appliances
     case fixtures
+    case furniture
     case detectors
 }

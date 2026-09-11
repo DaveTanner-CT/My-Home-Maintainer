@@ -13,6 +13,7 @@ struct HomeArchive: Codable {
     var appliances: [ApplianceSnapshot]
     var paint: [PaintSnapshot]
     var fixtures: [FixtureSnapshot]
+    var furniture: [FurnitureSnapshot]
     var tasks: [TaskSnapshot]
     var maintenanceRecords: [MaintenanceRecordSnapshot]
     var detectors: [DetectorSnapshot]
@@ -36,6 +37,7 @@ struct VendorSnapshot: Codable { let businessName, contactName, category, phone,
 struct SystemSnapshot: Codable { let name, type, manufacturer, model, serialNumber, location, roomName, notes, website, vendorName, sourceProjectName: String; let installationDate, warrantyExpiration: Date?; let purchaseCost: Double?; let expectedServiceLifeYears: Int? }
 struct ApplianceSnapshot: Codable { let name, category, manufacturer, model, serialNumber, purchasedFrom, manufacturerWebsite, productRegistrationLink, notes, roomName, sourceProjectName: String; let purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double? }
 struct FixtureSnapshot: Codable { let name, category, manufacturer, model, partNumber, finishColor, purchasedFrom, productLink, notes, roomName, vendorName, sourceProjectName: String; let installationDate, purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double? }
+struct FurnitureSnapshot: Codable { let name, category, brand, model, serialNumber, materialFinish, dimensions, purchasedFrom, productLink, notes, roomName, vendorName, sourceProjectName: String; let purchaseDate, warrantyExpiration: Date?; let purchasePrice: Double? }
 struct PaintSnapshot: Codable { let roomName, surface, brand, productLine, colorName, colorCode, sheen, store, containerSize, notes, productLink, sourceProjectName: String; let purchaseDate: Date?; let quantity, cost: Double? }
 struct TaskSnapshot: Codable { let title, taskDescription, category, recurrence, recurrenceAnchor, notes, instructions, contactName, phone, email, website, roomName, systemName, applianceName, fixtureName, projectName, vendorName: String; let dueDate, completedDate: Date?; let leadTimeDays, priority: Int; let isCompleted: Bool }
 struct MaintenanceRecordSnapshot: Codable { let date: Date; let title, notes, vendorName, taskTitle, relatedItemName, eventType, roomName, systemName, applianceName, fixtureName, projectName: String; let cost: Double? }
@@ -56,6 +58,7 @@ enum HomeExportService {
         let appliances = try context.fetch(FetchDescriptor<Appliance>())
         let paints = try context.fetch(FetchDescriptor<PaintFinish>())
         let fixtures = try context.fetch(FetchDescriptor<Fixture>())
+        let furniture = try context.fetch(FetchDescriptor<Furniture>())
         let tasks = try context.fetch(FetchDescriptor<MaintenanceTask>())
         let records = try context.fetch(FetchDescriptor<MaintenanceRecord>())
         let detectors = try context.fetch(FetchDescriptor<Detector>())
@@ -67,7 +70,7 @@ enum HomeExportService {
 
         return HomeArchive(
             exportedAt: .now,
-            appVersion: "0.32 TC1",
+            appVersion: "0.34",
             homes: homes.map { .init(name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) },
             rooms: rooms.map { .init(
                 name: $0.name,
@@ -84,6 +87,7 @@ enum HomeExportService {
             appliances: appliances.map { .init(name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, serialNumber: $0.serialNumber, purchasedFrom: $0.purchasedFrom, manufacturerWebsite: $0.manufacturerWebsite, productRegistrationLink: $0.productRegistrationLink, notes: $0.notes, roomName: $0.linkedRooms.map(\.name).joined(separator: ", "), sourceProjectName: $0.sourceProject?.title ?? "", purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice) },
             paint: paints.map { .init(roomName: $0.linkedRooms.isEmpty ? $0.locationName : $0.linkedRooms.map(\.name).joined(separator: ", "), surface: $0.surface, brand: $0.brand, productLine: $0.productLine, colorName: $0.colorName, colorCode: $0.colorCode, sheen: $0.sheen, store: $0.store, containerSize: $0.containerSize, notes: $0.notes, productLink: $0.productLink, sourceProjectName: $0.sourceProject?.title ?? "", purchaseDate: $0.purchaseDate, quantity: $0.quantity, cost: $0.cost) },
             fixtures: fixtures.map { .init(name: $0.name, category: $0.category, manufacturer: $0.manufacturer, model: $0.model, partNumber: $0.partNumber, finishColor: $0.finishColor, purchasedFrom: $0.purchasedFrom, productLink: $0.productLink, notes: $0.notes, roomName: $0.linkedRooms.map(\.name).joined(separator: ", "), vendorName: $0.vendor?.businessName ?? "", sourceProjectName: $0.sourceProject?.title ?? "", installationDate: $0.installationDate, purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice) },
+            furniture: furniture.map { .init(name: $0.name, category: $0.category, brand: $0.brand, model: $0.model, serialNumber: $0.serialNumber, materialFinish: $0.materialFinish, dimensions: $0.dimensions, purchasedFrom: $0.purchasedFrom, productLink: $0.productLink, notes: $0.notes, roomName: $0.linkedRooms.map(\.name).joined(separator: ", "), vendorName: $0.vendor?.businessName ?? "", sourceProjectName: $0.sourceProject?.title ?? "", purchaseDate: $0.purchaseDate, warrantyExpiration: $0.warrantyExpiration, purchasePrice: $0.purchasePrice) },
             tasks: tasks.map { .init(title: $0.title, taskDescription: $0.taskDescription, category: $0.category.rawValue, recurrence: $0.recurrence.rawValue, recurrenceAnchor: $0.recurrenceAnchor.rawValue, notes: $0.notes, instructions: $0.instructions, contactName: $0.contactName, phone: $0.phone, email: $0.email, website: $0.website, roomName: $0.linkedRooms.map(\.name).joined(separator: ", "), systemName: $0.system?.name ?? "", applianceName: $0.appliance?.name ?? "", fixtureName: $0.fixture?.name ?? "", projectName: $0.project?.title ?? "", vendorName: $0.vendor?.businessName ?? "", dueDate: $0.dueDate, completedDate: $0.completedDate, leadTimeDays: $0.leadTimeDays, priority: $0.priority, isCompleted: $0.isCompleted) },
             maintenanceRecords: records.map { .init(date: $0.date, title: $0.title, notes: $0.notes, vendorName: $0.vendor?.businessName ?? $0.vendorName, taskTitle: $0.taskTitle, relatedItemName: $0.relatedItemName, eventType: $0.eventType.rawValue, roomName: $0.room?.name ?? "", systemName: $0.system?.name ?? "", applianceName: $0.appliance?.name ?? "", fixtureName: $0.fixture?.name ?? "", projectName: $0.project?.title ?? "", cost: $0.cost) },
             detectors: detectors.map { .init(location: $0.location, roomName: $0.room?.name ?? $0.location, type: $0.type, manufacturer: $0.manufacturer, model: $0.model, batteryType: $0.batteryType, notes: $0.notes, manufactureDate: $0.manufactureDate, installationDate: $0.installationDate, replacementDate: $0.replacementDate, isHardwired: $0.isHardwired) },
@@ -118,6 +122,7 @@ enum HomeExportService {
         if let value = attachment.detector { return ("Detector", value.room?.name ?? value.location) }
         if let value = attachment.consumable { return ("Consumable", value.name) }
         if let value = attachment.fixture { return ("Fixture", value.name) }
+        if let value = attachment.furniture { return ("Furniture", value.name) }
         return ("Unlinked", "")
     }
 }

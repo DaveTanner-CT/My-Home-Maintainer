@@ -80,6 +80,7 @@ struct RoomFormView: View {
         if let values = try? modelContext.fetch(FetchDescriptor<HomeSystem>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<Appliance>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<Fixture>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
+        if let values = try? modelContext.fetch(FetchDescriptor<Furniture>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<PaintFinish>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<Project>()) { for item in values where item.isLinked(to: room) { item.unlink(from: room) } }
         if let values = try? modelContext.fetch(FetchDescriptor<MaintenanceTask>()) { for item in values where item.isDirectlyLinked(to: room) { item.unlink(from: room) } }
@@ -108,7 +109,7 @@ struct SystemFormView: View {
     @State private var hasInstallDate: Bool; @State private var installDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date
     @State private var purchaseCost: String; @State private var serviceLife: Int
-    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var selectedRooms: [Room]; @State private var selectedProject: Project?; @State private var showDelete = false
+    @State private var selectedVendor: Vendor?; @State private var selectedRoom: Room?; @State private var selectedRooms: [Room]; @State private var selectedProject: Project?; @State private var pendingPhotoData: Data?; @State private var showDelete = false
 
     init(existing: HomeSystem? = nil, initialRoom: Room? = nil) {
         self.existing = existing
@@ -143,6 +144,7 @@ struct SystemFormView: View {
                 Picker("Related Project", selection: $selectedProject) { Text("None").tag(nil as Project?); ForEach(projects) { Text($0.title).tag(Optional($0)) } }
             }
             Section("Reference") { TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never); TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete System", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add System" : "Edit System")
@@ -157,6 +159,7 @@ struct SystemFormView: View {
         record.setPrimaryRoom(selectedRoom); record.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }; record.location = selectedRoom?.name ?? location; record.notes = notes; record.website = website; record.installationDate = hasInstallDate ? installDate : nil
         record.purchaseCost = Double(purchaseCost); record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
         record.expectedServiceLifeYears = serviceLife == 0 ? nil : serviceLife; record.vendor = selectedVendor; record.sourceProject = selectedProject
+        savePendingRecordPhoto(pendingPhotoData, owner: .system(record), modelContext: modelContext)
         try? modelContext.save(); dismiss()
     }
     @ToolbarContentBuilder private func editToolbar(save: @escaping () -> Void) -> some ToolbarContent {
@@ -173,7 +176,7 @@ struct ApplianceFormView: View {
     @State private var name: String; @State private var category: String; @State private var manufacturer: String; @State private var model: String; @State private var serial: String
     @State private var purchasedFrom: String; @State private var price: String; @State private var hasPurchaseDate: Bool; @State private var purchaseDate: Date
     @State private var hasWarrantyDate: Bool; @State private var warrantyDate: Date; @State private var manufacturerWebsite: String; @State private var registrationLink: String
-    @State private var notes: String; @State private var selectedRoom: Room?; @State private var selectedRooms: [Room]; @State private var selectedProject: Project?; @State private var showDelete = false
+    @State private var notes: String; @State private var selectedRoom: Room?; @State private var selectedRooms: [Room]; @State private var selectedProject: Project?; @State private var pendingPhotoData: Data?; @State private var showDelete = false
     private let standardCategories = ["Appliance", "Electronics", "Home Technology", "Outdoor Equipment", "Tool", "Other"]
 
     init(existing: Appliance? = nil, initialRoom: Room? = nil) {
@@ -206,6 +209,7 @@ struct ApplianceFormView: View {
                 TextField("Product registration link", text: $registrationLink).keyboardType(.URL).textInputAutocapitalization(.never)
                 TextField("Notes", text: $notes, axis: .vertical)
             }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Record", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Device / Equipment" : "Edit Device / Equipment")
@@ -221,6 +225,7 @@ struct ApplianceFormView: View {
         record.name = name; record.category = category; record.manufacturer = manufacturer; record.model = model; record.serialNumber = serial; record.setPrimaryRoom(selectedRoom); record.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }
         record.purchaseDate = hasPurchaseDate ? purchaseDate : nil; record.purchasePrice = Double(price); record.purchasedFrom = purchasedFrom
         record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil; record.manufacturerWebsite = manufacturerWebsite; record.productRegistrationLink = registrationLink; record.notes = notes; record.sourceProject = selectedProject
+        savePendingRecordPhoto(pendingPhotoData, owner: .appliance(record), modelContext: modelContext)
         try? modelContext.save(); dismiss()
     }
 }
@@ -404,7 +409,7 @@ struct PaintFormView: View {
 struct VendorFormView: View {
     @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
     let existing: Vendor?
-    @State private var businessName: String; @State private var contactName: String; @State private var category: String; @State private var phone: String; @State private var email: String; @State private var website: String; @State private var address: String; @State private var notes: String; @State private var favorite: Bool; @State private var showDelete = false
+    @State private var businessName: String; @State private var contactName: String; @State private var category: String; @State private var phone: String; @State private var email: String; @State private var website: String; @State private var address: String; @State private var notes: String; @State private var favorite: Bool; @State private var pendingPhotoData: Data?; @State private var showDelete = false
     init(existing: Vendor? = nil) {
         self.existing = existing; _businessName = State(initialValue: existing?.businessName ?? ""); _contactName = State(initialValue: existing?.contactName ?? ""); _category = State(initialValue: existing?.category ?? "")
         _phone = State(initialValue: existing?.phone ?? ""); _email = State(initialValue: existing?.email ?? ""); _website = State(initialValue: existing?.website ?? ""); _address = State(initialValue: existing?.address ?? ""); _notes = State(initialValue: existing?.notes ?? ""); _favorite = State(initialValue: existing?.isFavorite ?? false)
@@ -414,13 +419,14 @@ struct VendorFormView: View {
             Section("Vendor") { TextField("Business name", text: $businessName); TextField("Contact name", text: $contactName); TextField("Service category", text: $category); Toggle("Favorite", isOn: $favorite) }
             Section("Contact") { TextField("Phone", text: $phone).keyboardType(.phonePad); TextField("Email", text: $email).keyboardType(.emailAddress).textInputAutocapitalization(.never); TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never); TextField("Address", text: $address) }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Vendor", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Vendor" : "Edit Vendor")
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(businessName.isEmpty) } }
         .confirmationDialog("Delete this vendor?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Vendor", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } } message: { Text("Historical maintenance records retain vendor names already recorded.") }
     }
-    private func save() { let r = existing ?? Vendor(businessName: businessName); if existing == nil { modelContext.insert(r) }; r.businessName = businessName; r.contactName = contactName; r.category = category; r.phone = phone; r.email = email; r.website = website; r.address = address; r.notes = notes; r.isFavorite = favorite; try? modelContext.save(); dismiss() }
+    private func save() { let r = existing ?? Vendor(businessName: businessName); if existing == nil { modelContext.insert(r) }; r.businessName = businessName; r.contactName = contactName; r.category = category; r.phone = phone; r.email = email; r.website = website; r.address = address; r.notes = notes; r.isFavorite = favorite; savePendingRecordPhoto(pendingPhotoData, owner: .vendor(r), modelContext: modelContext); try? modelContext.save(); dismiss() }
 }
 
 struct DetectorFormView: View {
@@ -440,6 +446,7 @@ struct DetectorFormView: View {
     @State private var hasInstallDate: Bool
     @State private var installDate: Date
     @State private var notes: String
+    @State private var pendingPhotoData: Data?
     @State private var showDelete = false
 
     init(existing: Detector? = nil, initialRoom: Room? = nil) {
@@ -485,6 +492,7 @@ struct DetectorFormView: View {
                 if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) }
             }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Detector", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Detector" : "Edit Detector")
@@ -518,6 +526,7 @@ struct DetectorFormView: View {
         r.isHardwired = isHardwired
         r.replacementDate = Detector.calculateReplacementDate(manufactureDate: r.manufactureDate, installationDate: r.installationDate)
         r.notes = notes
+        savePendingRecordPhoto(pendingPhotoData, owner: .detector(r), modelContext: modelContext)
         try? modelContext.save()
         dismiss()
     }
@@ -539,6 +548,7 @@ struct ConsumableFormView: View {
     @State private var hasLastReplaced: Bool
     @State private var lastReplaced: Date
     @State private var notes: String
+    @State private var pendingPhotoData: Data?
     @State private var showDelete = false
 
     init(existing: Consumable? = nil, initialRoom: Room? = nil) {
@@ -578,6 +588,7 @@ struct ConsumableFormView: View {
                 if hasLastReplaced { DatePicker("Last replaced", selection: $lastReplaced, displayedComponents: .date) }
             }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Consumable", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Consumable" : "Edit Consumable")
@@ -606,6 +617,7 @@ struct ConsumableFormView: View {
         r.lastReplaced = hasLastReplaced ? lastReplaced : nil
         if let months = r.replacementIntervalMonths, let last = r.lastReplaced { r.nextReplacement = Calendar.current.date(byAdding: .month, value: months, to: last) } else { r.nextReplacement = nil }
         r.notes = notes
+        savePendingRecordPhoto(pendingPhotoData, owner: .consumable(r), modelContext: modelContext)
         try? modelContext.save()
         dismiss()
     }
@@ -636,6 +648,7 @@ struct MaintenanceRecordFormView: View {
     @State private var selectedFixture: Fixture?
     @State private var selectedProject: Project?
     @State private var selectedVendor: Vendor?
+    @State private var pendingPhotoData: Data?
     @State private var showDelete = false
 
     init(
@@ -689,6 +702,7 @@ struct MaintenanceRecordFormView: View {
                 TextField("Task (optional)", text: $taskTitle)
             }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Record", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Home History" : "Edit Home History")
@@ -723,6 +737,7 @@ struct MaintenanceRecordFormView: View {
         r.taskTitle = taskTitle
         r.relatedItemName = selectedFixture?.name ?? selectedAppliance?.name ?? selectedSystem?.name ?? selectedProject?.title ?? relatedItemName
         r.notes = notes
+        savePendingRecordPhoto(pendingPhotoData, owner: .maintenanceRecord(r), modelContext: modelContext)
         try? modelContext.save()
         dismiss()
     }
