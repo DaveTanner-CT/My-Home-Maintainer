@@ -909,7 +909,7 @@ struct ApplianceDetailView: View {
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ApplianceFormView(existing: appliance) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject) } }
         .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .appliance(appliance)) } }
-        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject, initialVendor: appliance.vendor, initialTitle: "Maintenance: \(appliance.name)") } }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject, initialTitle: "Maintenance: \(appliance.name)") } }
     }
 }
 

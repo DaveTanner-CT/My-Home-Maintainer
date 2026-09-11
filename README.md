@@ -228,7 +228,7 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Updated visible and export/transfer build metadata to 0.30.
 
 
-## v0.31 — Maintenance Action Workflow
+## v0.31.1 — Maintenance Action Workflow
 
 - Added one-tap consumable replacement recording with automatic next-date calculation and Home History logging.
 - Added direct replacement reminders from detector and consumable detail pages.

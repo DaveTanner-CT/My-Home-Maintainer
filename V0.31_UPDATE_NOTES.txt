@@ -1,4 +1,4 @@
-HomeMaintainer v0.31 - Maintenance Action Workflow
+HomeMaintainer v0.31.1 - Maintenance Action Workflow
 
 - Consumable detail pages now include Mark Replaced Today.
 - Marking a consumable replaced updates Last Replaced and calculates Next Replacement from the saved interval.
@@ -8,4 +8,4 @@ HomeMaintainer v0.31 - Maintenance Action Workflow
 - Detector and consumable detail pages can create a prefilled Home History event without navigating away to the general history screen.
 - MaintenanceRecordFormView now accepts a prefilled related-item name/task title for record types that do not have their own direct history relationship yet.
 - Preserves all v0.30 relationship, multi-room, setup, photo, and history improvements.
-- Visible/internal build metadata updated to v0.31.
+- Visible/internal build metadata updated to v0.31.1.
