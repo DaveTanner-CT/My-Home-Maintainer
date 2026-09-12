@@ -67,7 +67,7 @@ workflows:
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
-          - name: Verify built IPA icon
+      - name: Verify built IPA icon
         script: |
           cd "$CM_BUILD_DIR"
 
