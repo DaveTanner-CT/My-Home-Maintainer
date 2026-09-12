@@ -47,3 +47,61 @@ workflows:
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+
+  my-home-keeper-home-manager-testflight:
+    name: My-Home-Keeper-Home-Manager TestFlight Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: app_store_connect
+
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.scriptingforschools.HomeMaintainer
+      vars:
+        XCODE_PROJECT: "HomeKeeper.xcodeproj"
+        XCODE_SCHEME: "HomeKeeper"
+
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+
+      - name: Verify app entry point
+        script: |
+          cd "$CM_BUILD_DIR"
+          test -f App/HomeKeeperApp.swift
+          grep -q "@main" App/HomeKeeperApp.swift
+
+      - name: Generate Xcode project
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcodegen generate --spec project.yml
+          grep -q "HomeKeeperApp.swift" HomeKeeper.xcodeproj/project.pbxproj
+
+      - name: Set up code signing
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+
+      - name: Build signed IPA
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/**/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_app_store: false
