@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
 import UniformTypeIdentifiers
 import QuickLook
 
@@ -10,7 +9,6 @@ struct AttachmentSection: View {
 
     let owner: AttachmentOwnerReference
     var showsPhotos: Bool = true
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var showFileImporter = false
     @State private var importError: String?
 
@@ -46,7 +44,18 @@ struct AttachmentSection: View {
                 }
                 Spacer()
                 if showsPhotos {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    PhotoSourceButton { data in
+                        let attachment = HomeAttachment(
+                            name: "Photo",
+                            category: "Photo",
+                            fileName: "photo-\(Int(Date().timeIntervalSince1970)).jpg",
+                            typeIdentifier: "image/jpeg",
+                            fileData: data
+                        )
+                        owner.assign(to: attachment)
+                        modelContext.insert(attachment)
+                        try? modelContext.save()
+                    } label: {
                         Image(systemName: "photo.badge.plus")
                             .font(.title3)
                     }
@@ -61,26 +70,6 @@ struct AttachmentSection: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Add Document")
-            }
-        }
-        .onChange(of: selectedPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                if let data = try? await newValue.loadTransferable(type: Data.self) {
-                    await MainActor.run {
-                        let attachment = HomeAttachment(
-                            name: "Photo",
-                            category: "Photo",
-                            fileName: "photo-\(Int(Date().timeIntervalSince1970)).jpg",
-                            typeIdentifier: "image/jpeg",
-                            fileData: data
-                        )
-                        owner.assign(to: attachment)
-                        modelContext.insert(attachment)
-                        try? modelContext.save()
-                    }
-                }
-                await MainActor.run { selectedPhoto = nil }
             }
         }
         .fileImporter(
@@ -126,7 +115,6 @@ struct PendingRecordPhotoSection: View {
     var title: String = "Photo"
     var addLabel: String = "Add Photo"
 
-    @State private var selectedPhoto: PhotosPickerItem?
 
     var body: some View {
         Section(title) {
@@ -138,30 +126,21 @@ struct PendingRecordPhotoSection: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+            PhotoSourceButton { data in
+                photoData = data
+            } label: {
                 Label(photoData == nil ? addLabel : "Change Selected Photo", systemImage: "photo")
             }
 
             if photoData != nil {
                 Button("Remove Selected Photo", role: .destructive) {
                     photoData = nil
-                    selectedPhoto = nil
                 }
             }
 
             Text("The photo will be saved with this record when you tap Save.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-        }
-        .onChange(of: selectedPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                let data = try? await newValue.loadTransferable(type: Data.self)
-                await MainActor.run {
-                    photoData = data
-                    selectedPhoto = nil
-                }
-            }
         }
     }
 }
@@ -194,7 +173,6 @@ struct RoomPhotoGridSection: View {
     @Query(sort: \HomeAttachment.createdAt, order: .reverse) private var allAttachments: [HomeAttachment]
 
     let room: Room
-    @State private var selectedPhoto: PhotosPickerItem?
 
     private var photos: [HomeAttachment] {
         allAttachments.filter { attachment in
@@ -258,32 +236,23 @@ struct RoomPhotoGridSection: View {
                         .background(.quaternary, in: Capsule())
                 }
                 Spacer()
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                PhotoSourceButton { data in
+                    let attachment = HomeAttachment(
+                        name: "Room Photo",
+                        category: "Photo",
+                        fileName: "room-photo-\(Int(Date().timeIntervalSince1970)).jpg",
+                        typeIdentifier: "image/jpeg",
+                        fileData: data
+                    )
+                    attachment.room = room
+                    modelContext.insert(attachment)
+                    try? modelContext.save()
+                } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title3)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Add Room Photo")
-            }
-        }
-        .onChange(of: selectedPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                if let data = try? await newValue.loadTransferable(type: Data.self) {
-                    await MainActor.run {
-                        let attachment = HomeAttachment(
-                            name: "Room Photo",
-                            category: "Photo",
-                            fileName: "room-photo-\(Int(Date().timeIntervalSince1970)).jpg",
-                            typeIdentifier: "image/jpeg",
-                            fileData: data
-                        )
-                        attachment.room = room
-                        modelContext.insert(attachment)
-                        try? modelContext.save()
-                    }
-                }
-                await MainActor.run { selectedPhoto = nil }
             }
         }
     }

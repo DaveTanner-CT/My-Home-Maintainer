@@ -300,3 +300,11 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Added photo/document attachments to Home Profile.
 - Home Systems now show all linked rooms/areas in summary views.
 - Home Profile attachments are included in transfer/export.
+
+
+## v0.38 — Standardized Camera + Photo Library
+- Every photo-capable add/edit flow now uses the same photo-source chooser.
+- Users can take a photo directly with the iPhone camera or choose an existing image from Photos.
+- Photos & Documents sections keep the existing document/file importer alongside the standardized photo control.
+- Applies to Rooms, Home Profile attachments, Systems, Devices & Equipment, Fixtures, Furniture, Detectors, Consumables, Vendors, Tasks, Home History, Projects, Project Items, and Paint mixing labels.
+- Added the required iOS camera privacy description.

@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
 
 struct RoomFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -331,7 +330,6 @@ struct PaintFormView: View {
     @State private var productLink: String
     @State private var notes: String
     @State private var showDelete = false
-    @State private var selectedMixingLabelPhoto: PhotosPickerItem?
     @State private var mixingLabelPhotoData: Data?
 
     init(existing: PaintFinish? = nil, initialRoom: Room? = nil) {
@@ -391,7 +389,9 @@ struct PaintFormView: View {
                 TextField("Product link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never)
             }
             Section("Mixing Label") {
-                PhotosPicker(selection: $selectedMixingLabelPhoto, matching: .images) {
+                PhotoSourceButton { data in
+                    mixingLabelPhotoData = data
+                } label: {
                     Label((mixingLabelPhotoData != nil || existingMixingLabel != nil) ? "Replace Mixing Label Photo" : "Add Mixing Label Photo", systemImage: "camera")
                 }
                 if mixingLabelPhotoData != nil || existingMixingLabel != nil {
@@ -409,14 +409,6 @@ struct PaintFormView: View {
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(selectedRooms.isEmpty || colorName.isEmpty) }
         }
         .onAppear { resolveLegacyRoomIfNeeded() }
-        .onChange(of: selectedMixingLabelPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                if let data = try? await newValue.loadTransferable(type: Data.self) {
-                    await MainActor.run { mixingLabelPhotoData = data }
-                }
-            }
-        }
         .confirmationDialog("Delete this paint record?", isPresented: $showDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() }

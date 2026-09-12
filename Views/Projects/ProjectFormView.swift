@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
 import UIKit
 
 struct ProjectFormView: View {
@@ -19,7 +18,6 @@ struct ProjectFormView: View {
     @State private var targetDate: Date
     @State private var notes: String
     @State private var coverPhotoData: Data?
-    @State private var selectedCoverPhoto: PhotosPickerItem?
     @State private var showDelete = false
     @State private var deleteError: String?
     @State private var didResolveLegacyRoom = false
@@ -54,7 +52,9 @@ struct ProjectFormView: View {
                 if let data = coverPhotoData, let image = UIImage(data: data) {
                     ExpandablePhoto(image: image, height: 220, fill: false, cornerRadius: 12)
                 }
-                PhotosPicker(selection: $selectedCoverPhoto, matching: .images) {
+                PhotoSourceButton { data in
+                    coverPhotoData = data
+                } label: {
                     Label(coverPhotoData == nil ? "Add Cover Photo" : "Change Cover Photo", systemImage: "photo")
                 }
                 if coverPhotoData != nil {
@@ -94,13 +94,6 @@ struct ProjectFormView: View {
             if selectedRoom == nil, let legacyName = existing?.roomName, !legacyName.isEmpty {
                 selectedRoom = rooms.first { $0.name.caseInsensitiveCompare(legacyName) == .orderedSame }
                 if let selectedRoom, !selectedRooms.contains(where: { $0.persistentModelID == selectedRoom.persistentModelID }) { selectedRooms.append(selectedRoom) }
-            }
-        }
-        .onChange(of: selectedCoverPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                coverPhotoData = try? await newValue.loadTransferable(type: Data.self)
-                selectedCoverPhoto = nil
             }
         }
         .confirmationDialog("Delete this project?", isPresented: $showDelete, titleVisibility: .visible) {

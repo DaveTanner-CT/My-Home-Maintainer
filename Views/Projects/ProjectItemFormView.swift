@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct ProjectItemFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -24,7 +23,6 @@ struct ProjectItemFormView: View {
     @State private var purchaseDate: Date
     @State private var notes: String
     @State private var status: ProjectItemStatus
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
     @State private var showDelete = false
 
@@ -96,7 +94,9 @@ struct ProjectItemFormView: View {
             }
 
             Section("Photo & Notes") {
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                PhotoSourceButton { data in
+                    photoData = data
+                } label: {
                     Label(photoData == nil ? "Add Photo" : "Change Photo", systemImage: "photo")
                 }
                 if photoData != nil { Button("Remove Photo", role: .destructive) { photoData = nil } }
@@ -112,10 +112,6 @@ struct ProjectItemFormView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.isEmpty || (!isIdeaOnly && comparisonGroup.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)) }
-        }
-        .onChange(of: selectedPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task { photoData = try? await newValue.loadTransferable(type: Data.self) }
         }
         .confirmationDialog("Delete this project item?", isPresented: $showDelete, titleVisibility: .visible) {
             Button("Delete Item", role: .destructive) {

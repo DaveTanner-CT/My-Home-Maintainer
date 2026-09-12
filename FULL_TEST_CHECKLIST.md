@@ -101,3 +101,14 @@ Photo checks:
 - [ ] Systems, Devices & Equipment, Fixtures, Furniture, Projects, and Tasks use the same compact room selector pattern.
 - [ ] Multi-room records can still select more than one room and existing selections are retained.
 - [ ] Detectors and Consumables continue to use the standard Room / Area Picker.
+
+
+## v0.38 Camera / Photo Source Consistency
+- [ ] Add a Room photo using **Take Photo** and confirm it appears in the room grid.
+- [ ] Add a Room photo using **Choose from Photo Library**.
+- [ ] Add/edit a Home System, Device/Equipment, Fixture, Furniture item, Detector, Consumable, Vendor, Task, and Home History event using **Take Photo**.
+- [ ] Confirm the same forms can still choose an existing image from Photos.
+- [ ] Add a Paint mixing-label photo with both camera and library routes.
+- [ ] Add a Project cover photo and Project Item photo with both routes.
+- [ ] From a Photos & Documents section, confirm the photo button offers camera/library and the document button still opens Files.
+- [ ] Confirm camera permission is requested the first time Take Photo is used.

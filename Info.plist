@@ -4,6 +4,8 @@
 <dict>
     <key>CFBundleDisplayName</key>
     <string>HomeKeeper</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Home Maintainer lets you take photos of rooms, equipment, labels, receipts, vendors, and projects.</string>
     <key>NSContactsUsageDescription</key>
     <string>Home Maintainer lets you import vendor details from Contacts and add vendors to Contacts.</string>
     <key>UIApplicationSupportsIndirectInputEvents</key>
