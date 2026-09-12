@@ -1,0 +1,6 @@
+HomeMaintainer v0.37.2 - Contacts Integration Fix
+
+- Fixed Contacts -> Vendor import so selected contact values are converted to a plain Swift payload before the native picker dismisses, then applied to the Vendor form on the main thread.
+- Added an explicit Add to Contacts row inside every existing Vendor detail Contact section.
+- Removed the easy-to-miss toolbar-only contact-export icon; Edit remains in the toolbar.
+- Contact export still opens Apple's native new-contact editor with vendor values prefilled.

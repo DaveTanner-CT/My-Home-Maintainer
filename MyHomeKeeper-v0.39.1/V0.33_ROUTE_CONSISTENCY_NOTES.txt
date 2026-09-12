@@ -1,0 +1,22 @@
+HomeMaintainer v0.33 - Route Consistency & Photo Capture
+
+Purpose
+- Ensure record creation/editing exposes the same core capabilities no matter where the form is launched.
+
+Changes
+- Added reusable pending-photo picker to Add/Edit forms for:
+  * Fixtures
+  * Home Systems
+  * Devices & Equipment
+  * Smoke & CO Detectors
+  * Filters & Consumables
+  * Tasks
+  * Vendors
+  * Home History Events
+- Photos selected during creation are attached to the new record when Save is tapped.
+- Existing records can add another photo from Edit without requiring a detour to the detail page.
+- Room, Paint/Finish, Project, and Project Item retain their specialized existing photo workflows.
+- Verified room-launched forms and list-launched forms use the same underlying form types; room launch only preselects room context.
+
+Consistency rule
+If a record supports Photos & Documents on its detail page, the Add/Edit form now offers photo capture/selection as part of the same workflow.

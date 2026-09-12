@@ -1,0 +1,21 @@
+HomeMaintainer v0.21 - Room Inline Add Controls
+
+Base: HomeMaintainer v0.20 room dimensions + photo grid build.
+
+Room page correction:
+- Restored visible Add controls inside each room section.
+- Projects: Add Project to This Room
+- Paint & Finishes: Add Paint / Finish to This Room
+- Home Systems: Add Home System to This Room
+- Devices & Equipment: Add Device / Equipment to This Room
+- Fixtures: Add Fixture to This Room
+- Tasks: Add Task to This Room
+- The top-right + menu remains available as a shortcut.
+- All Add actions continue to pre-associate the new record with the open room.
+
+Preserved from v0.20:
+- Room dimensions with Feet / Meters selection
+- Length, Width, Ceiling Height, calculated area
+- Room photo thumbnail grid near the top of the room page
+- Enlarged / zoomable room photos and photo descriptions
+- Existing linked records, navigation, history, attachments, and edit controls

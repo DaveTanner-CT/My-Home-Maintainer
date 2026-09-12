@@ -1,0 +1,8 @@
+HomeMaintainer v0.37.4
+
+Home Setup clarity cleanup
+- Removed the misleading “X of 7” setup completion count.
+- Removed the setup progress bar.
+- Removed category completion checkmarks that treated one record as a completed category.
+- Foundation remains a clean navigation list.
+- Connections and Record Quality remain the meaningful, actionable completeness indicators.

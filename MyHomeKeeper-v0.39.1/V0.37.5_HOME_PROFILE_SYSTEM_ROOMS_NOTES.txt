@@ -1,0 +1,7 @@
+HomeMaintainer v0.37.5
+
+- Home Profile now supports photos and documents using the standard attachment workflow.
+- Home Profile attachments are preserved in Home Transfer and data export.
+- Home Systems list now displays every linked room/area, not only the primary room.
+- HomeSystem.locationName now summarizes all linked rooms so other screens using that helper stay consistent.
+- Build/version metadata updated to 0.37.5.

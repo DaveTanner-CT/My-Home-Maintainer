@@ -1,0 +1,7 @@
+HomeMaintainer v0.37.4 - Contacts + Room Selector Fix
+
+- Fixed the Vendor Contacts importer so one contact selection returns directly to the Vendor form.
+- Prevented the native Contacts picker from being immediately presented a second time while the first picker is dismissing.
+- Reworked MultiRoomSelectionSection into a compact drop-down/menu selector instead of an inline room list.
+- Paint, Systems, Devices & Equipment, Fixtures, Furniture, Projects, and Tasks now use the compact room selector while retaining multi-room support.
+- Existing single-room selectors (Detectors, Consumables, History, paint duplication) remain standard Picker controls.

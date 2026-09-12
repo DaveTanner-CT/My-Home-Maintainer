@@ -1,0 +1,30 @@
+HomeMaintainer v0.20
+Room Dimensions + Room Photo Grid
+
+Base: HomeMaintainer v0.19
+
+ROOM DETAIL CHANGES
+- Preserved all existing Room Detail sections and + menu actions:
+  Projects, Paint & Finishes, Home Systems, Devices & Equipment, Fixtures,
+  Tasks, Recent Home History, and Documents.
+- Added editable room dimensions directly inside the Area section:
+  Dimension Units (Feet or Meters), Length, Width, Ceiling Height.
+- Added calculated floor area (sq ft or m²).
+- Switching Feet/Meters converts existing saved room measurements.
+- Added Room Photos immediately below Area.
+- Room photos render as thumbnail-only grids: 2 columns on compact layouts,
+  3 columns on regular layouts.
+- Tapping a thumbnail opens the existing Attachment Detail / zoomable photo flow.
+- Photo captions/descriptions remain editable from photo details.
+- Room photos no longer repeat in the bottom attachment list; the bottom section
+  is now Documents for rooms.
+- Add Room Photo remains directly available from the Room Photos section.
+
+DATA / EXPORT
+- Added optional Room dimension fields to SwiftData for lightweight migration.
+- Home Transfer import/export now preserves room dimension unit and measurements.
+- Home Export archives now include room dimension unit and measurements.
+- Build number updated to 0.20 in Settings.
+
+VALIDATION
+- All Swift source files passed `swiftc -parse` syntax validation in the package.

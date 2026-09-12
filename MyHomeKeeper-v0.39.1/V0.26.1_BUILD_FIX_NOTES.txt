@@ -1,0 +1,14 @@
+HomeMaintainer v0.26.1 - Build Fix
+
+Fixes Codemagic/Xcode build failure from v0.26.
+
+Root cause:
+- The HomeAttachment @Query used by PaintFormView was accidentally declared inside SystemFormView.
+- PaintFormView therefore referenced allAttachments without having that query in scope.
+
+Correction:
+- Removed allAttachments query from SystemFormView.
+- Added allAttachments query to PaintFormView, where existingMixingLabel uses it.
+- Kept all v0.26 functionality: paint mixing-label photo, room dropdowns for detectors and consumables, room relationship/export logic.
+- Cleaned three non-fatal 'var was never mutated' warnings in LegacySampleDataCleanup.swift.
+- Build/version identifiers updated to 0.26.1.

@@ -1,0 +1,25 @@
+HomeMaintainer v0.22 - Dimensions + Connected Summary Flows
+
+Base: HomeMaintainer v0.21.
+
+ROOM DIMENSIONS
+- Feet mode now uses separate feet and inches fields for Length, Width, and Ceiling Height.
+- Inches normalize automatically (for example, 14 inches becomes 1 ft 2 in).
+- Meters remains decimal entry.
+- Existing decimal-feet values remain compatible and are displayed as feet/inches.
+- Switching between Feet and Meters continues to convert saved measurements.
+
+CONNECTED FLOW AUDIT
+- Home Outlook: missing dates, missing service-life estimates, and missing recorded costs are now tappable and show the exact records needing updates.
+- Home Setup: connection/detail warnings now open filtered lists of the exact affected records rather than a broad category list.
+- Home Insights: health counts now navigate to the relevant warranty, detector, consumable, project, attachment, or history records.
+- Home Dashboard: Overdue, Current, and Upcoming summary cards now open the exact tasks represented by each count.
+- Room At a Glance: project and task counts now open room-specific lists.
+
+PRESERVED
+- Room inline Add controls for projects, paint/finishes, systems, devices/equipment, fixtures, and tasks.
+- Room photo thumbnail grid and zoom/detail behavior.
+- Home Transfer/export support for room dimensions.
+
+VALIDATION
+- Swift source files parsed with swiftc -parse after changes.

@@ -1,0 +1,249 @@
+import SwiftUI
+import SwiftData
+
+struct HomeDashboardView: View {
+    @Query private var homes: [Home]
+    @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
+    @State private var showSearch = false
+    @State private var showAddTask = false
+    @State private var completionTask: MaintenanceTask?
+
+    private var activeTasks: [MaintenanceTask] { tasks.filter { !$0.isCompleted } }
+    private var overdue: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .overdue } }
+    private var current: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .current } }
+    private var upcoming: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .upcoming } }
+    private var attention: [MaintenanceTask] { overdue + current }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(homes.first?.name ?? "My Home")
+                        .font(.largeTitle.bold())
+                    Text("What needs your attention?")
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    showSearch = true
+                } label: {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                        Text("Search your home...")
+                        Spacer()
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+                    .background(.quaternary.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                HStack(spacing: 10) {
+                    NavigationLink { DashboardTaskListView(title: "Overdue Tasks", tasks: overdue) } label: {
+                        SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink { DashboardTaskListView(title: "Current Tasks", tasks: current) } label: {
+                        SummaryCard(title: "Current", count: current.count, tint: .orange)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink { DashboardTaskListView(title: "Upcoming Tasks", tasks: upcoming) } label: {
+                        SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                sectionTitle("Needs Attention")
+
+                if attention.isEmpty {
+                    EmptyCard(icon: "checkmark.circle", title: "You're caught up", subtitle: "No overdue or current maintenance tasks.")
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(attention.prefix(8)) { task in
+                            NavigationLink {
+                                TaskDetailView(task: task)
+                            } label: {
+                                TaskRowView(task: task) { completionTask = task }
+                            }
+                            .buttonStyle(.plain)
+                            Divider()
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .background(.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+                }
+
+                HStack {
+                    sectionTitle("Coming Soon")
+                    Spacer()
+                    NavigationLink("View All Tasks") { TasksHubView(initialSection: .all) }
+                        .font(.caption.weight(.semibold))
+                }
+                VStack(spacing: 0) {
+                    ForEach(upcoming.prefix(4)) { task in
+                        NavigationLink {
+                            TaskDetailView(task: task)
+                        } label: {
+                            TaskRowView(task: task) { completionTask = task }
+                        }
+                        .buttonStyle(.plain)
+                        Divider()
+                    }
+                }
+                .padding(.horizontal, 14)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+
+                sectionTitle("Shortcuts")
+                VStack(spacing: 10) {
+                    DashboardShortcut(
+                        title: "Rooms & Areas",
+                        subtitle: "Start with a place in your home.",
+                        icon: "door.left.hand.open",
+                        destination: AnyView(RoomsListView())
+                    )
+                    DashboardShortcut(
+                        title: "Home Care",
+                        subtitle: "Maintenance, warranties, safety, and planning.",
+                        icon: "heart.text.clipboard",
+                        destination: AnyView(HomeCareView())
+                    )
+                    DashboardShortcut(
+                        title: "Home History",
+                        subtitle: "See repairs, installs, purchases, and projects over time.",
+                        icon: "clock.arrow.circlepath",
+                        destination: AnyView(HomeHistoryView())
+                    )
+                }
+
+                Text("My Home Keeper v0.39.1")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+            }
+            .padding()
+        }
+        .background(Color(.systemGroupedBackground))
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                NavigationLink { AppSettingsView() } label: { Image(systemName: "gearshape") }
+                    .accessibilityLabel("Settings")
+                Button { showAddTask = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add Task")
+            }
+        }
+        .sheet(isPresented: $showSearch) { NavigationStack { GlobalSearchView() } }
+        .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView() } }
+        .sheet(item: $completionTask) { task in
+            NavigationStack { CompleteTaskView(task: task) }
+        }
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.secondary)
+            .tracking(0.8)
+    }
+}
+
+private struct SummaryCard: View {
+    let title: String
+    let count: Int
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("\(count)")
+                .font(.title2.bold())
+                .foregroundStyle(tint)
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+private struct DashboardShortcut: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let destination: AnyView
+
+    var body: some View {
+        NavigationLink {
+            destination
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .frame(width: 30)
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
+            .background(.background)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct EmptyCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon).font(.title2).foregroundStyle(.secondary)
+            Text(title).font(.headline)
+            Text(subtitle).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+
+private struct DashboardTaskListView: View {
+    let title: String
+    let tasks: [MaintenanceTask]
+
+    var body: some View {
+        List {
+            if tasks.isEmpty {
+                ContentUnavailableView("No tasks", systemImage: "checkmark.circle")
+            } else {
+                ForEach(tasks.sorted { $0.dueDate < $1.dueDate }) { task in
+                    NavigationLink { TaskDetailView(task: task) } label: {
+                        TaskRowView(task: task)
+                    }
+                }
+            }
+        }
+        .navigationTitle(title)
+    }
+}

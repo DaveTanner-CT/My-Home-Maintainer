@@ -1,0 +1,11 @@
+HomeMaintainer v0.38
+
+STANDARDIZED PHOTO CAPTURE
+- Add Photo now offers Take Photo and Choose from Photo Library consistently across the app.
+- Camera capture saves into the same existing photo/attachment pipeline as library photos.
+- Photos & Documents sections retain the separate document/file importer.
+- Paint mixing label, Project cover photo, Project Item photo, Room photos, and pending record photos all use the same source chooser.
+- Added NSCameraUsageDescription to Info.plist and project settings.
+
+VERSION
+- Home dashboard, Settings, export metadata, and transfer metadata updated to 0.38.

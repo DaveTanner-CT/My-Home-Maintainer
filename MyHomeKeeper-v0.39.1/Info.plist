@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>My Home Keeper</string>
+    <key>CFBundleName</key>
+    <string>My Home Keeper</string>
+    <key>NSCameraUsageDescription</key>
+    <string>My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts.</string>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+</dict>
+</plist>

@@ -1,0 +1,14 @@
+HomeMaintainer v0.28 - Multi-Room Editing
+
+WHAT CHANGED
+- Added a reusable Rooms / Areas multi-selection control.
+- Home Systems can now be assigned to multiple rooms directly from Add/Edit System.
+- Applied the same multi-room editing experience to Devices & Equipment, Fixtures, Paint / Finish, Projects, and Tasks.
+- The existing primary-room field remains internal for backward compatibility; users simply check every applicable room.
+- Removing the current primary room automatically promotes another selected room when available.
+- Existing multi-room relationships are loaded into the forms and preserved when editing.
+- Task room selection can inherit all rooms from a linked System, Device/Equipment, Fixture, or Project when no room has yet been selected.
+- Build/home/export/transfer version updated to 0.28.
+
+VALIDATION
+- All Swift source files pass swiftc -parse.

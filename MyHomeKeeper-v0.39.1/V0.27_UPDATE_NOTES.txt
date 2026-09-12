@@ -1,0 +1,15 @@
+HomeMaintainer v0.27 - Relationship & Navigation Audit
+
+Base: v0.26.1 build fix.
+
+Changes:
+- Room pages now include Smoke & CO Detectors and Filters & Consumables sections.
+- Detectors and consumables created from a room page start with that room preselected.
+- Project detail pages now show linked tasks and support both Create New Task and Link Existing Task.
+- System, Device/Equipment, and Fixture detail pages now support linking an existing task in addition to creating a new one.
+- Existing-task linking is safe: tasks already assigned to another record of the same type are not silently stolen or reassigned.
+- Vendor pages now surface related devices/equipment and fixtures in addition to systems, tasks, and work history.
+- Vendor pages can link existing tasks directly.
+- Build/home/export version updated to 0.27.
+
+The goal of this release is to reduce dead ends and make relationship navigation consistent across core home records.
