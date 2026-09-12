@@ -1,0 +1,23 @@
+HomeMaintainer v0.36 - UI Refinement + Consistent Room Editing
+
+ROOM EDITING
+- Room detail is read-only for room properties.
+- Edit Room now contains name, type, favorite, notes, dimension unit, length, width, ceiling height, and calculated area.
+- Feet mode continues to use feet + inches; meter mode uses decimal meters.
+- Unit conversion occurs in edit-state only and is committed only when Save is tapped.
+- Cancel leaves the stored Room unchanged.
+- Related-record actions (+ / link), room photos, and history actions remain available from the read-only Room page because they are relationship/content actions, not Room-property edits.
+
+VISUAL CLEANUP
+- Compact count badges on Room section headers.
+- Lighter empty-state rows on Room sections.
+- Room Photos add action moved into the section header.
+- Photos & Documents actions moved into compact section headers app-wide.
+- Project Tasks, Measurements, and Home History use compact header actions.
+- System, Device/Equipment, Fixture, and Furniture history/task areas use compact headers where applicable.
+- Common detail screens use tighter list-section spacing.
+- Home dashboard spacing reduced slightly.
+- Task Delete moved into an ellipsis menu.
+
+VERSION
+- Visible version, Settings build, export metadata, and transfer metadata: 0.36.

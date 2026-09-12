@@ -260,3 +260,17 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Detectors, Filters & Consumables, and Recent Home History show a compact + action because those sections do not currently support non-destructive multi-room linking.
 - Existing top-right + menu remains available as an alternate shortcut.
 - Build/export/transfer metadata updated to 0.35.
+
+
+## v0.36 — UI Refinement + Consistent Room Editing
+
+- Room detail is now read-only for room properties; the Edit button owns room name, type, favorite, notes, dimensions, and unit changes.
+- Room dimensions display as a concise read-only summary and are edited together with Save/Cancel in Room Edit.
+- Room photo adding moved into a compact section-header action.
+- Empty Room states use lighter rows instead of visually heavy cards.
+- Room category headers show small count badges and retain compact + / link actions.
+- Project, System, Device/Equipment, Fixture, Furniture, and attachment/history/task sections use the same compact header pattern where applicable.
+- Photos & Documents actions moved into compact section headers throughout the app.
+- Task deletion moved to a More menu so destructive actions do not compete with primary actions.
+- Dashboard/detail spacing tightened for faster scanning while preserving all workflows.
+- Build/export/transfer metadata updated to 0.36.

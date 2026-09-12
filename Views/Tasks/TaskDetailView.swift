@@ -41,10 +41,22 @@ struct TaskDetailView: View {
             }
             AttachmentSection(owner: .task(task))
             if !task.isCompleted { Section { Button { showComplete = true } label: { Label("Complete Task", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) } } }
-            Section { Button("Delete Task", role: .destructive) { showDelete = true } }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(task.title).navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { TaskFormView(existingTask: task) } } }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                NavigationLink("Edit") { TaskFormView(existingTask: task) }
+                Menu {
+                    Button(role: .destructive) { showDelete = true } label: {
+                        Label("Delete Task", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("More Task Actions")
+            }
+        }
         .sheet(isPresented: $showComplete) { NavigationStack { CompleteTaskView(task: task) } }
         .confirmationDialog("Delete this task?", isPresented: $showDelete, titleVisibility: .visible) {
             Button("Delete Task", role: .destructive) { deleteTask() }

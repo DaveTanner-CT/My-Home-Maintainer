@@ -204,7 +204,7 @@ struct RoomsListView: View {
     }
 }
 
-private struct FeetInchesDimensionRow: View {
+struct FeetInchesDimensionRow: View {
     let label: String
     @Binding var value: Double?
 
@@ -290,16 +290,25 @@ private struct FeetInchesDimensionRow: View {
 }
 
 
-private struct RoomSectionHeader: View {
+struct RoomSectionHeader: View {
     let title: String
+    var count: Int? = nil
     let addAccessibilityLabel: String
     let linkAccessibilityLabel: String?
     let addAction: () -> Void
     let linkAction: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Text(title)
+            if let count, count > 0 {
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(.quaternary, in: Capsule())
+            }
             Spacer()
             Button(action: addAction) {
                 Image(systemName: "plus.circle.fill")
@@ -317,6 +326,19 @@ private struct RoomSectionHeader: View {
                 .accessibilityLabel(linkAccessibilityLabel)
             }
         }
+    }
+}
+
+private struct CompactEmptyRow: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Label(text, systemImage: "minus")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 }
 
@@ -402,18 +424,20 @@ struct RoomDetailView: View {
                 LabeledContent("Type", value: room.areaType.rawValue)
                 if room.isFavorite { Label("Favorite", systemImage: "star.fill").foregroundStyle(.yellow) }
 
-                Picker("Dimension units", selection: dimensionUnitBinding) {
-                    ForEach(RoomDimensionUnit.allCases) { unit in
-                        Text(unit.rawValue).tag(unit)
+                if room.dimensionLength != nil || room.dimensionWidth != nil || room.ceilingHeight != nil {
+                    if let dimensions = formattedFloorDimensions {
+                        LabeledContent("Dimensions", value: dimensions)
                     }
-                }
-
-                dimensionRow("Length", value: dimensionBinding(\.dimensionLength))
-                dimensionRow("Width", value: dimensionBinding(\.dimensionWidth))
-                dimensionRow("Ceiling height", value: dimensionBinding(\.ceilingHeight))
-
-                if let area = room.calculatedArea {
-                    LabeledContent("Calculated area", value: "\(area.formatted(.number.precision(.fractionLength(0...2)))) \(room.dimensionUnit.areaAbbreviation)")
+                    if let height = formattedDimension(room.ceilingHeight) {
+                        LabeledContent("Ceiling height", value: height)
+                    }
+                    if let area = room.calculatedArea {
+                        LabeledContent("Area", value: "\(area.formatted(.number.precision(.fractionLength(0...2)))) \(room.dimensionUnit.areaAbbreviation)")
+                    }
+                } else {
+                    Text("No dimensions recorded")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
 
                 if !room.notes.isEmpty { Text(room.notes) }
@@ -448,13 +472,10 @@ struct RoomDetailView: View {
                     }
                 }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
-                Text("Use + to create a new item or the link icon to connect an existing item to this room.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
 
             Section {
-                if roomProjects.isEmpty { Text("No linked projects").foregroundStyle(.secondary) }
+                if roomProjects.isEmpty { CompactEmptyRow("No linked projects") }
                 ForEach(roomProjects) { project in
                     NavigationLink { ProjectDetailView(project: project) } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -471,6 +492,7 @@ struct RoomDetailView: View {
             } header: {
                 RoomSectionHeader(
                     title: "Projects",
+                    count: roomProjects.count,
                     addAccessibilityLabel: "Create New Project",
                     linkAccessibilityLabel: "Link Existing Project",
                     addAction: { showAddProject = true },
@@ -479,7 +501,7 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomPaints.isEmpty { Text("No paint records").foregroundStyle(.secondary) }
+                if roomPaints.isEmpty { CompactEmptyRow("No paint records") }
                 ForEach(roomPaints) { paint in
                     NavigationLink { PaintDetailView(paint: paint) } label: {
                         VStack(alignment: .leading) {
@@ -491,6 +513,7 @@ struct RoomDetailView: View {
             } header: {
                 RoomSectionHeader(
                     title: "Paint & Finishes",
+                    count: roomPaints.count,
                     addAccessibilityLabel: "Create New Paint or Finish",
                     linkAccessibilityLabel: "Link Existing Paint or Finish",
                     addAction: { showAddPaint = true },
@@ -499,11 +522,12 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
+                if roomSystems.isEmpty { CompactEmptyRow("No linked home systems") }
                 ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
             } header: {
                 RoomSectionHeader(
                     title: "Home Systems",
+                    count: roomSystems.count,
                     addAccessibilityLabel: "Create New Home System",
                     linkAccessibilityLabel: "Link Existing Home System",
                     addAction: { showAddSystem = true },
@@ -512,11 +536,12 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
+                if roomAppliances.isEmpty { CompactEmptyRow("No devices or equipment") }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
             } header: {
                 RoomSectionHeader(
                     title: "Devices & Equipment",
+                    count: roomAppliances.count,
                     addAccessibilityLabel: "Create New Device or Equipment",
                     linkAccessibilityLabel: "Link Existing Device or Equipment",
                     addAction: { showAddAppliance = true },
@@ -525,11 +550,12 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
+                if roomFixtures.isEmpty { CompactEmptyRow("No linked fixtures") }
                 ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
             } header: {
                 RoomSectionHeader(
                     title: "Fixtures",
+                    count: roomFixtures.count,
                     addAccessibilityLabel: "Create New Fixture",
                     linkAccessibilityLabel: "Link Existing Fixture",
                     addAction: { showAddFixture = true },
@@ -538,11 +564,12 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomFurniture.isEmpty { Text("No linked furniture").foregroundStyle(.secondary) }
+                if roomFurniture.isEmpty { CompactEmptyRow("No linked furniture") }
                 ForEach(roomFurniture) { item in NavigationLink(item.name) { FurnitureDetailView(furniture: item) } }
             } header: {
                 RoomSectionHeader(
                     title: "Furniture",
+                    count: roomFurniture.count,
                     addAccessibilityLabel: "Create New Furniture",
                     linkAccessibilityLabel: "Link Existing Furniture",
                     addAction: { showAddFurniture = true },
@@ -551,7 +578,7 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomDetectors.isEmpty { Text("No detectors assigned to this room").foregroundStyle(.secondary) }
+                if roomDetectors.isEmpty { CompactEmptyRow("No detectors assigned") }
                 ForEach(roomDetectors) { detector in
                     NavigationLink { DetectorDetailView(detector: detector) } label: {
                         VStack(alignment: .leading, spacing: 3) {
@@ -564,6 +591,7 @@ struct RoomDetailView: View {
             } header: {
                 RoomSectionHeader(
                     title: "Smoke & CO Detectors",
+                    count: roomDetectors.count,
                     addAccessibilityLabel: "Add Detector to This Room",
                     linkAccessibilityLabel: nil,
                     addAction: { showAddDetector = true },
@@ -572,7 +600,7 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomConsumables.isEmpty { Text("No filters or consumables assigned to this room").foregroundStyle(.secondary) }
+                if roomConsumables.isEmpty { CompactEmptyRow("No filters or consumables assigned") }
                 ForEach(roomConsumables) { item in
                     NavigationLink { ConsumableDetailView(item: item) } label: {
                         VStack(alignment: .leading, spacing: 3) {
@@ -585,6 +613,7 @@ struct RoomDetailView: View {
             } header: {
                 RoomSectionHeader(
                     title: "Filters & Consumables",
+                    count: roomConsumables.count,
                     addAccessibilityLabel: "Add Filter or Consumable to This Room",
                     linkAccessibilityLabel: nil,
                     addAction: { showAddConsumable = true },
@@ -593,13 +622,14 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+                if roomTasks.isEmpty { CompactEmptyRow("No linked tasks") }
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
                 }
             } header: {
                 RoomSectionHeader(
                     title: "Tasks",
+                    count: roomTasks.count,
                     addAccessibilityLabel: "Create New Task",
                     linkAccessibilityLabel: "Link Existing Task",
                     addAction: { showAddTask = true },
@@ -608,12 +638,13 @@ struct RoomDetailView: View {
             }
 
             Section {
-                if roomHistory.isEmpty { Text("No history recorded for this area yet").foregroundStyle(.secondary) }
+                if roomHistory.isEmpty { CompactEmptyRow("No history recorded yet") }
                 ForEach(roomHistory.prefix(5)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
                 NavigationLink { HomeHistoryView() } label: { Label("View Full Home History", systemImage: "clock.arrow.circlepath") }
             } header: {
                 RoomSectionHeader(
                     title: "Recent Home History",
+                    count: roomHistory.count,
                     addAccessibilityLabel: "Add History Event for This Room",
                     linkAccessibilityLabel: nil,
                     addAction: { showAddHistory = true },
@@ -623,6 +654,7 @@ struct RoomDetailView: View {
 
             AttachmentSection(owner: .room(room), showsPhotos: false)
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(room.name)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -674,68 +706,19 @@ struct RoomDetailView: View {
         .onAppear { connectLegacyRecords() }
     }
 
-    private var dimensionUnitBinding: Binding<RoomDimensionUnit> {
-        Binding(
-            get: { room.dimensionUnit },
-            set: { newUnit in
-                guard newUnit != room.dimensionUnit else { return }
-                convertDimensions(from: room.dimensionUnit, to: newUnit)
-                room.dimensionUnit = newUnit
-                try? modelContext.save()
-            }
-        )
+    private var formattedFloorDimensions: String? {
+        guard let length = formattedDimension(room.dimensionLength),
+              let width = formattedDimension(room.dimensionWidth) else { return nil }
+        return "\(length) × \(width)"
     }
 
-    @ViewBuilder
-    private func dimensionRow(_ label: String, value: Binding<Double?>) -> some View {
-        if room.dimensionUnit == .feet {
-            FeetInchesDimensionRow(label: label, value: value)
-        } else {
-            HStack {
-                Text(label)
-                Spacer()
-                TextField("—", text: decimalBinding(value))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 100)
-                Text("m")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 24, alignment: .leading)
-            }
+    private func formattedDimension(_ value: Double?) -> String? {
+        guard let value else { return nil }
+        if room.dimensionUnit == .meters {
+            return "\(value.formatted(.number.precision(.fractionLength(0...2)))) m"
         }
-    }
-
-    private func dimensionBinding(_ keyPath: ReferenceWritableKeyPath<Room, Double?>) -> Binding<Double?> {
-        Binding(
-            get: { room[keyPath: keyPath] },
-            set: { newValue in
-                room[keyPath: keyPath] = newValue
-                try? modelContext.save()
-            }
-        )
-    }
-
-
-    private func decimalBinding(_ value: Binding<Double?>) -> Binding<String> {
-        Binding(
-            get: {
-                guard let number = value.wrappedValue else { return "" }
-                return number.formatted(.number.precision(.fractionLength(0...2)).grouping(.never))
-            },
-            set: { text in
-                let normalized = text.replacingOccurrences(of: ",", with: ".")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                value.wrappedValue = normalized.isEmpty ? nil : Double(normalized)
-            }
-        )
-    }
-
-    private func convertDimensions(from oldUnit: RoomDimensionUnit, to newUnit: RoomDimensionUnit) {
-        guard oldUnit != newUnit else { return }
-        let factor = oldUnit == .feet ? 0.3048 : 3.280839895
-        if let value = room.dimensionLength { room.dimensionLength = value * factor }
-        if let value = room.dimensionWidth { room.dimensionWidth = value * factor }
-        if let value = room.ceilingHeight { room.ceilingHeight = value * factor }
+        let totalInches = max(0, Int((value * 12).rounded()))
+        return "\(totalInches / 12) ft \(totalInches % 12) in"
     }
 
     private func connectLegacyRecords() {
@@ -944,20 +927,37 @@ struct SystemDetailView: View {
                 if let vendor = system.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !system.website.isEmpty, let url = normalizedURL(system.website) { Link(destination: url) { Label("Open Website", systemImage: "safari") } }
             }
-            Section("Tasks") {
-                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No linked tasks") }
                 ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
-                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
-                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
             }
-            Section("Home History") {
-                if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No recorded maintenance", icon: "clock") }
                 ForEach(linkedHistory.prefix(8)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
-                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
             AttachmentSection(owner: .system(system))
             if !system.notes.isEmpty { Section("Notes") { Text(system.notes) } }
-        }.navigationTitle(system.name)
+        }
+        .listSectionSpacing(.compact)
+        .navigationTitle(system.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { SystemFormView(existing: system) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: system.room, initialSystem: system, initialProject: system.sourceProject) } }
         .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .system(system)) } }
@@ -1017,20 +1017,37 @@ struct ApplianceDetailView: View {
                 if !appliance.manufacturerWebsite.isEmpty, let url = normalizedURL(appliance.manufacturerWebsite) { Link("Manufacturer Website", destination: url) }
                 if !appliance.productRegistrationLink.isEmpty, let url = normalizedURL(appliance.productRegistrationLink) { Link("Product Registration", destination: url) }
             }
-            Section("Tasks") {
-                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No linked tasks") }
                 ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
-                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
-                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
             }
-            Section("Home History") {
-                if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No recorded maintenance", icon: "clock") }
                 ForEach(linkedHistory.prefix(8)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
-                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
             AttachmentSection(owner: .appliance(appliance))
             if !appliance.notes.isEmpty { Section("Notes") { Text(appliance.notes) } }
-        }.navigationTitle(appliance.name)
+        }
+        .listSectionSpacing(.compact)
+        .navigationTitle(appliance.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ApplianceFormView(existing: appliance) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject) } }
         .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .appliance(appliance)) } }

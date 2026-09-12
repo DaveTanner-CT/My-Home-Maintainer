@@ -79,3 +79,16 @@ Photo checks:
 - [ ] Uncheck at least one item in each category and create a transfer.
 - [ ] Confirm excluded items and their photos/documents are not present in the transfer file.
 - [ ] Import the transfer into an empty test installation and confirm selected items import with room relationships intact.
+
+## v0.36 UI Refinement / Room Edit Consistency
+- [ ] Room detail shows dimensions as read-only text (not editable fields).
+- [ ] Tapping Edit exposes Room name, type, favorite, notes, dimensions, and Feet/Meters.
+- [ ] Change Room fields and tap Cancel; verify no Room-property changes are saved.
+- [ ] Change Room fields and tap Save; verify all changes appear together on Room detail.
+- [ ] In Feet mode, total inches still normalize correctly (38 in -> 3 ft 2 in).
+- [ ] In Meters mode, decimal values save and display correctly.
+- [ ] Room section + / link actions still work without entering Edit mode.
+- [ ] Room photo + action appears in the Room Photos header and saves a photo.
+- [ ] Photos & Documents header icons add photos/documents on System, Device, Fixture, Furniture, Task, Project, and History detail pages.
+- [ ] Project Tasks/Measurements/History compact header actions still open the correct forms.
+- [ ] Task Delete is available from the ellipsis menu and still cancels pending task notifications.

@@ -106,13 +106,21 @@ struct ProjectDetailView: View {
                 }
             }
 
-            Section("Tasks") {
-                if linkedTasks.isEmpty { Text("No tasks linked to this project").foregroundStyle(.secondary) }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No tasks linked to this project") }
                 ForEach(linkedTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
                 }
-                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
-                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
             }
 
             Section("Budget") {
@@ -145,8 +153,8 @@ struct ProjectDetailView: View {
                 }
             }
 
-            Section("Measurements") {
-                if measurements.isEmpty { Text("No measurements yet").foregroundStyle(.secondary) }
+            Section {
+                if measurements.isEmpty { CompactEmptyStateRow("No measurements yet", icon: "ruler") }
                 ForEach(measurements) { measurement in
                     NavigationLink {
                         ProjectMeasurementDetailView(project: project, measurement: measurement)
@@ -154,17 +162,29 @@ struct ProjectDetailView: View {
                         LabeledContent(measurement.name, value: "\(measurement.value.formatted()) \(measurement.unit)")
                     }
                 }
-                Button { showAddMeasurement = true } label: {
-                    Label("Add Measurement", systemImage: "ruler")
-                }
+            } header: {
+                CompactSectionHeader(
+                    title: "Measurements",
+                    count: measurements.count,
+                    primarySystemImage: "plus.circle.fill",
+                    primaryAccessibilityLabel: "Add Measurement",
+                    primaryAction: { showAddMeasurement = true }
+                )
             }
 
-            Section("Home History") {
-                if linkedHistory.isEmpty { Text("No history recorded for this project yet").foregroundStyle(.secondary) }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No history recorded for this project yet", icon: "clock") }
                 ForEach(linkedHistory.prefix(8)) { record in
                     NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) }
                 }
-                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
 
             AttachmentSection(owner: .project(project))
@@ -173,6 +193,7 @@ struct ProjectDetailView: View {
                 Section("Notes") { Text(project.notes) }
             }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(project.title)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {

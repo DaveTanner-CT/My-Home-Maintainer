@@ -70,14 +70,22 @@ struct FurnitureDetailView: View {
                 if let vendor = furniture.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !furniture.productLink.isEmpty, let url = furnitureNormalizedURL(furniture.productLink) { Link("Product / Reference Link", destination: url) }
             }
-            Section("Home History") {
-                if linkedHistory.isEmpty { Text("No furniture history yet").foregroundStyle(.secondary) }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No furniture history yet", icon: "clock") }
                 ForEach(linkedHistory.prefix(6)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
-                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
             AttachmentSection(owner: .furniture(furniture))
             if !furniture.notes.isEmpty { Section("Notes") { Text(furniture.notes) } }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(furniture.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { FurnitureFormView(existing: furniture) } } }
         .sheet(isPresented: $showAddHistory) {

@@ -16,7 +16,7 @@ struct HomeDashboardView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(homes.first?.name ?? "My Home")
                         .font(.largeTitle.bold())
@@ -120,7 +120,7 @@ struct HomeDashboardView: View {
                     )
                 }
 
-                Text("HomeMaintainer v0.35")
+                Text("HomeMaintainer v0.36")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -168,7 +168,7 @@ private struct SummaryCard: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(10)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
@@ -201,7 +201,7 @@ private struct DashboardShortcut: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
-            .padding(14)
+            .padding(12)
             .background(.background)
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }

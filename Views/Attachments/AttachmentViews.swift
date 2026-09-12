@@ -21,10 +21,9 @@ struct AttachmentSection: View {
     }
 
     var body: some View {
-        Section(showsPhotos ? "Photos & Documents" : "Documents") {
+        Section {
             if attachments.isEmpty {
-                Text(showsPhotos ? "No photos or documents yet" : "No documents yet")
-                    .foregroundStyle(.secondary)
+                CompactEmptyStateRow(showsPhotos ? "No photos or documents yet" : "No documents yet", icon: showsPhotos ? "photo.on.rectangle" : "doc")
             }
 
             ForEach(attachments) { attachment in
@@ -34,16 +33,34 @@ struct AttachmentSection: View {
                     AttachmentRow(attachment: attachment)
                 }
             }
-
-            if showsPhotos {
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    Label("Add Photo", systemImage: "photo")
+        } header: {
+            HStack(spacing: 10) {
+                Text(showsPhotos ? "Photos & Documents" : "Documents")
+                if !attachments.isEmpty {
+                    Text("\(attachments.count)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(.quaternary, in: Capsule())
                 }
-            }
-            Button {
-                showFileImporter = true
-            } label: {
-                Label("Add Document", systemImage: "doc")
+                Spacer()
+                if showsPhotos {
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add Photo")
+                }
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Image(systemName: "doc.badge.plus")
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add Document")
             }
         }
         .onChange(of: selectedPhoto) { _, newValue in
@@ -190,10 +207,13 @@ struct RoomPhotoGridSection: View {
     }
 
     var body: some View {
-        Section("Room Photos") {
+        Section {
             if photos.isEmpty {
-                Text("No room photos yet")
+                Label("No room photos yet", systemImage: "photo")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             } else {
                 LazyVGrid(columns: columns, spacing: 10) {
                     ForEach(photos) { attachment in
@@ -226,8 +246,24 @@ struct RoomPhotoGridSection: View {
                 .padding(.vertical, 4)
             }
 
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label("Add Room Photo", systemImage: "photo.badge.plus")
+        } header: {
+            HStack(spacing: 10) {
+                Text("Room Photos")
+                if !photos.isEmpty {
+                    Text("\(photos.count)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(.quaternary, in: Capsule())
+                }
+                Spacer()
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add Room Photo")
             }
         }
         .onChange(of: selectedPhoto) { _, newValue in

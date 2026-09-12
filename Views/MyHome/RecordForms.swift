@@ -10,6 +10,10 @@ struct RoomFormView: View {
     @State private var notes: String
     @State private var favorite: Bool
     @State private var areaType: HomeAreaType
+    @State private var dimensionUnit: RoomDimensionUnit
+    @State private var dimensionLength: Double?
+    @State private var dimensionWidth: Double?
+    @State private var ceilingHeight: Double?
     @State private var showDelete = false
 
     init(existing: Room? = nil, initialAreaType: HomeAreaType = .interior) {
@@ -18,6 +22,10 @@ struct RoomFormView: View {
         _notes = State(initialValue: existing?.notes ?? "")
         _favorite = State(initialValue: existing?.isFavorite ?? false)
         _areaType = State(initialValue: existing?.areaType ?? initialAreaType)
+        _dimensionUnit = State(initialValue: existing?.dimensionUnit ?? .feet)
+        _dimensionLength = State(initialValue: existing?.dimensionLength)
+        _dimensionWidth = State(initialValue: existing?.dimensionWidth)
+        _ceilingHeight = State(initialValue: existing?.ceilingHeight)
     }
 
     var body: some View {
@@ -32,6 +40,26 @@ struct RoomFormView: View {
                 Toggle("Favorite", isOn: $favorite)
                 TextField("Notes", text: $notes, axis: .vertical)
             }
+
+            Section("Dimensions") {
+                Picker("Units", selection: $dimensionUnit) {
+                    ForEach(RoomDimensionUnit.allCases) { unit in
+                        Text(unit.rawValue).tag(unit)
+                    }
+                }
+                .onChange(of: dimensionUnit) { oldUnit, newUnit in
+                    convertDimensions(from: oldUnit, to: newUnit)
+                }
+
+                roomDimensionEditor("Length", value: $dimensionLength)
+                roomDimensionEditor("Width", value: $dimensionWidth)
+                roomDimensionEditor("Ceiling height", value: $ceilingHeight)
+
+                if let length = dimensionLength, let width = dimensionWidth, length > 0, width > 0 {
+                    LabeledContent("Calculated area", value: "\((length * width).formatted(.number.precision(.fractionLength(0...2)))) \(dimensionUnit.areaAbbreviation)")
+                }
+            }
+
             if existing != nil { deleteSection(label: "Delete Room / Area") }
         }
         .navigationTitle(existing == nil ? "Add Room / Area" : "Edit Room / Area")
@@ -51,9 +79,54 @@ struct RoomFormView: View {
         record.notes = notes
         record.isFavorite = favorite
         record.areaType = areaType
+        record.dimensionUnit = dimensionUnit
+        record.dimensionLength = dimensionLength
+        record.dimensionWidth = dimensionWidth
+        record.ceilingHeight = ceilingHeight
         if existing != nil && oldName != newName { syncLegacyLocationNames(for: record, newName: newName) }
         try? modelContext.save(); dismiss()
     }
+
+    @ViewBuilder
+    private func roomDimensionEditor(_ label: String, value: Binding<Double?>) -> some View {
+        if dimensionUnit == .feet {
+            FeetInchesDimensionRow(label: label, value: value)
+        } else {
+            HStack {
+                Text(label)
+                Spacer()
+                TextField("—", text: decimalBinding(value))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 110)
+                Text("m")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func decimalBinding(_ value: Binding<Double?>) -> Binding<String> {
+        Binding(
+            get: {
+                guard let number = value.wrappedValue else { return "" }
+                return number.formatted(.number.precision(.fractionLength(0...2)).grouping(.never))
+            },
+            set: { text in
+                let normalized = text.replacingOccurrences(of: ",", with: ".")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                value.wrappedValue = normalized.isEmpty ? nil : Double(normalized)
+            }
+        )
+    }
+
+    private func convertDimensions(from oldUnit: RoomDimensionUnit, to newUnit: RoomDimensionUnit) {
+        guard oldUnit != newUnit else { return }
+        let factor = oldUnit == .feet ? 0.3048 : 3.280839895
+        if let value = dimensionLength { dimensionLength = value * factor }
+        if let value = dimensionWidth { dimensionWidth = value * factor }
+        if let value = ceilingHeight { ceilingHeight = value * factor }
+    }
+
     private func delete() {
         guard let existing else { return }
         unlinkAllRecords(from: existing)

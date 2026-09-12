@@ -74,20 +74,36 @@ struct FixtureDetailView: View {
                 if let vendor = fixture.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !fixture.productLink.isEmpty, let url = fixtureNormalizedURL(fixture.productLink) { Link("Product / Replacement Link", destination: url) }
             }
-            Section("Connected Tasks") {
-                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No linked tasks") }
                 ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
-                Button { showAddTask = true } label: { Label("Create New Task", systemImage: "plus.circle.fill") }
-                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
             }
-            Section("Home History") {
-                if linkedHistory.isEmpty { Text("No maintenance or installation history yet").foregroundStyle(.secondary) }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No maintenance or installation history yet", icon: "clock") }
                 ForEach(linkedHistory.prefix(6)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
-                Button { showAddHistory = true } label: { Label("Add History Event", systemImage: "clock.badge.plus") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
             AttachmentSection(owner: .fixture(fixture))
             if !fixture.notes.isEmpty { Section("Notes") { Text(fixture.notes) } }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(fixture.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { FixtureFormView(existing: fixture) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject) } }
