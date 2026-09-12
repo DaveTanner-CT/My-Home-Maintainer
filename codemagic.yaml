@@ -29,7 +29,33 @@ workflows:
           cd "$CM_BUILD_DIR"
           xcodegen generate --spec project.yml
           grep -q "HomeKeeperApp.swift" HomeKeeper.xcodeproj/project.pbxproj
+            - name: Verify App Store icon configuration
+        script: |
+          cd "$CM_BUILD_DIR"
 
+          echo "===== PROJECT.YML LOCATION ====="
+          pwd
+          ls -la project.yml
+
+          echo "===== ICON SETTINGS IN PROJECT.YML ====="
+          grep -n "ASSETCATALOG_COMPILER_APPICON_NAME" project.yml
+          grep -n "CFBundleIconName" project.yml
+
+          echo "===== GENERATED INFO.PLIST ====="
+          plutil -p Info.plist
+
+          echo "===== CFBUNDLEICONNAME ====="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" Info.plist
+
+          echo "===== APPICON CONTENTS ====="
+          cat Resources/Assets.xcassets/AppIcon.appiconset/Contents.json
+
+          echo "===== ICON FILES ====="
+          ls -lh Resources/Assets.xcassets/AppIcon.appiconset/
+
+          echo "===== REQUIRED 120x120 ICON ====="
+          sips -g pixelWidth -g pixelHeight \
+            Resources/Assets.xcassets/AppIcon.appiconset/icon-60x60@2x.png
       - name: Set up code signing
         script: |
           cd "$CM_BUILD_DIR"
