@@ -67,7 +67,34 @@ workflows:
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
+          - name: Verify built IPA icon
+        script: |
+          cd "$CM_BUILD_DIR"
 
+          echo "===== FIND IPA ====="
+          IPA_PATH=$(find build -name "*.ipa" | head -1)
+          echo "$IPA_PATH"
+
+          rm -rf /tmp/mhk_ipa
+          mkdir -p /tmp/mhk_ipa
+          unzip -q "$IPA_PATH" -d /tmp/mhk_ipa
+
+          APP_PATH=$(find /tmp/mhk_ipa/Payload -maxdepth 1 -name "*.app" | head -1)
+
+          echo "===== APP PATH ====="
+          echo "$APP_PATH"
+
+          echo "===== FINAL BUILT INFO.PLIST ====="
+          plutil -p "$APP_PATH/Info.plist"
+
+          echo "===== CFBUNDLEICONNAME ====="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$APP_PATH/Info.plist" || true
+
+          echo "===== ICON KEYS ====="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons" "$APP_PATH/Info.plist" || true
+
+          echo "===== COMPILED ASSETS ====="
+          find "$APP_PATH" -maxdepth 2 \( -name "Assets.car" -o -name "*60x60*" -o -name "*AppIcon*" \) -print
     artifacts:
       - build/**/*.ipa
       - /tmp/xcodebuild_logs/*.log
