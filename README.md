@@ -308,3 +308,10 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Photos & Documents sections keep the existing document/file importer alongside the standardized photo control.
 - Applies to Rooms, Home Profile attachments, Systems, Devices & Equipment, Fixtures, Furniture, Detectors, Consumables, Vendors, Tasks, Home History, Projects, Project Items, and Paint mixing labels.
 - Added the required iOS camera privacy description.
+
+## v0.38.1 — Camera Presentation Stability Fix
+
+- Camera presentation now uses an explicit full-screen camera state instead of calling the parent SwiftUI dismiss action.
+- Taking or cancelling a photo no longer dismisses the Add/Edit screen underneath it.
+- Camera authorization is checked explicitly and denied/unavailable states show a user-facing alert.
+- A brief presentation handoff prevents the Add Photo action sheet and camera/photo-library picker from competing for presentation.

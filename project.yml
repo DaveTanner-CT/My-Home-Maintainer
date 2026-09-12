@@ -27,7 +27,7 @@ targets:
         TARGETED_DEVICE_FAMILY: '1'
         INFOPLIST_KEY_CFBundleDisplayName: Home Maintainer
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Home Maintainer lets you attach photos to home records and project ideas.
-        INFOPLIST_KEY_NSCameraUsageDescription: Home Maintainer lets you photograph equipment labels, paint cans, receipts, and project ideas.
+        INFOPLIST_KEY_NSCameraUsageDescription: My Home Keeper lets you photograph equipment labels, paint cans, receipts, and project ideas.
         INFOPLIST_KEY_NSContactsUsageDescription: Home Maintainer lets you import vendor details from Contacts and add vendors to Contacts.
 
     info:

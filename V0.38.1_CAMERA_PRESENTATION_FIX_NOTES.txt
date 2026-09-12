@@ -1,0 +1,16 @@
+My Home Keeper v0.38.1
+
+Camera stability fix
+- Replaced the camera's use of SwiftUI Environment dismiss with an explicit camera-only presentation binding.
+- Camera now uses a full-screen cover so closing it cannot dismiss the parent Add/Edit form.
+- Added a short presentation handoff after the Add Photo source dialog closes to avoid competing UIKit/SwiftUI presentations.
+- Added explicit AVFoundation camera authorization handling and an in-app alert for denied/restricted/unavailable camera access.
+- Added a completion guard so the camera callback can only finish once.
+- Photo Library remains available through the same standardized Add Photo menu.
+
+Expected behavior
+1. Tap Add Photo.
+2. Choose Take Photo.
+3. Grant camera permission if prompted.
+4. Capture and accept the photo.
+5. Return to the exact Add/Edit screen you started from, with the selected/captured photo still attached and ready to save.

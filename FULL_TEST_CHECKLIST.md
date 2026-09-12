@@ -112,3 +112,10 @@ Photo checks:
 - [ ] Add a Project cover photo and Project Item photo with both routes.
 - [ ] From a Photos & Documents section, confirm the photo button offers camera/library and the document button still opens Files.
 - [ ] Confirm camera permission is requested the first time Take Photo is used.
+
+## v0.38.1 Camera Regression Check
+- [ ] From a Room, tap Add Photo > Take Photo, capture a photo, and confirm you return to the same Room screen without it dismissing.
+- [ ] From an Add/Edit form (Fixture is a good test), tap Add Photo > Take Photo, capture a photo, and confirm the form remains open with the photo selected and Save still available.
+- [ ] Cancel the camera and confirm only the camera closes.
+- [ ] Deny camera permission (or test with permission disabled) and confirm the app stays open and shows a Camera Unavailable alert.
+- [ ] Choose Photo Library immediately after opening Add Photo and confirm the parent form remains open after selection.
