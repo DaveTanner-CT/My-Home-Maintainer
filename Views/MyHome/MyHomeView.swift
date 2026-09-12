@@ -1152,6 +1152,7 @@ struct VendorDetailView: View {
     @Query private var tasks: [MaintenanceTask]
     @Query private var history: [MaintenanceRecord]
     @State private var showLinkTask = false
+    @State private var showAddToContacts = false
 
     private var vendorSystems: [HomeSystem] { systems.filter { $0.vendor?.persistentModelID == vendor.persistentModelID } }
     private var vendorAppliances: [Appliance] { appliances.filter { $0.purchasedFrom.localizedCaseInsensitiveContains(vendor.businessName) } }
@@ -1208,8 +1209,15 @@ struct VendorDetailView: View {
             if !vendor.notes.isEmpty { Section("Notes") { Text(vendor.notes) } }
         }
         .navigationTitle(vendor.businessName)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { VendorFormView(existing: vendor) } } }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { showAddToContacts = true } label: { Image(systemName: "person.crop.circle.badge.plus") }
+                    .accessibilityLabel("Add Vendor to Contacts")
+                NavigationLink("Edit") { VendorFormView(existing: vendor) }
+            }
+        }
         .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .vendor(vendor)) } }
+        .sheet(isPresented: $showAddToContacts) { VendorContactEditor(vendor: vendor) }
     }
 }
 

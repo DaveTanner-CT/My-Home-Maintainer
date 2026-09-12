@@ -482,13 +482,16 @@ struct PaintFormView: View {
 struct VendorFormView: View {
     @Environment(\.dismiss) private var dismiss; @Environment(\.modelContext) private var modelContext
     let existing: Vendor?
-    @State private var businessName: String; @State private var contactName: String; @State private var category: String; @State private var phone: String; @State private var email: String; @State private var website: String; @State private var address: String; @State private var notes: String; @State private var favorite: Bool; @State private var pendingPhotoData: Data?; @State private var showDelete = false
+    @State private var businessName: String; @State private var contactName: String; @State private var category: String; @State private var phone: String; @State private var email: String; @State private var website: String; @State private var address: String; @State private var notes: String; @State private var favorite: Bool; @State private var pendingPhotoData: Data?; @State private var showDelete = false; @State private var showContactPicker = false
     init(existing: Vendor? = nil) {
         self.existing = existing; _businessName = State(initialValue: existing?.businessName ?? ""); _contactName = State(initialValue: existing?.contactName ?? ""); _category = State(initialValue: existing?.category ?? "")
         _phone = State(initialValue: existing?.phone ?? ""); _email = State(initialValue: existing?.email ?? ""); _website = State(initialValue: existing?.website ?? ""); _address = State(initialValue: existing?.address ?? ""); _notes = State(initialValue: existing?.notes ?? ""); _favorite = State(initialValue: existing?.isFavorite ?? false)
     }
     var body: some View {
         Form {
+            Section {
+                Button { showContactPicker = true } label: { Label("Import from Contacts", systemImage: "person.crop.circle.badge.plus") }
+            }
             Section("Vendor") { TextField("Business name", text: $businessName); TextField("Contact name", text: $contactName); TextField("Service category", text: $category); Toggle("Favorite", isOn: $favorite) }
             Section("Contact") { TextField("Phone", text: $phone).keyboardType(.phonePad); TextField("Email", text: $email).keyboardType(.emailAddress).textInputAutocapitalization(.never); TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never); TextField("Address", text: $address) }
             Section("Notes") { TextField("Notes", text: $notes, axis: .vertical) }
@@ -496,6 +499,18 @@ struct VendorFormView: View {
             if existing != nil { Section { Button("Delete Vendor", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Vendor" : "Edit Vendor")
+        .sheet(isPresented: $showContactPicker) {
+            ContactImportPicker { contact in
+                let imported = VendorContactMapper.importedValues(from: contact)
+                businessName = imported.businessName
+                contactName = imported.contactName
+                phone = imported.phone
+                email = imported.email
+                website = imported.website
+                address = imported.address
+                showContactPicker = false
+            }
+        }
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(businessName.isEmpty) } }
         .confirmationDialog("Delete this vendor?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Vendor", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } } message: { Text("Historical maintenance records retain vendor names already recorded.") }
     }

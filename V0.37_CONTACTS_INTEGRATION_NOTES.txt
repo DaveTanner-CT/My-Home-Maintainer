@@ -1,0 +1,9 @@
+HomeMaintainer v0.37 - Vendor Contacts Integration
+
+- Vendor Add/Edit forms now include Import from Contacts.
+- Native iOS contact picker can populate business/contact name, phone, email, website, and address.
+- Imported information remains editable before saving the Vendor record.
+- Vendor detail pages now include Add Vendor to Contacts.
+- Native iOS new-contact editor is prefilled from the Vendor record so the user can review/edit before saving to Contacts.
+- Added Contacts privacy usage text to project.yml and Info.plist.
+- No automatic background contact changes are made; both directions are user initiated.

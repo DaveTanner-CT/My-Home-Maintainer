@@ -4,6 +4,8 @@
 <dict>
     <key>CFBundleDisplayName</key>
     <string>HomeKeeper</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Home Maintainer lets you import vendor details from Contacts and add vendors to Contacts.</string>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 </dict>

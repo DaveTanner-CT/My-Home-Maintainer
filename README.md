@@ -274,3 +274,11 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Task deletion moved to a More menu so destructive actions do not compete with primary actions.
 - Dashboard/detail spacing tightened for faster scanning while preserving all workflows.
 - Build/export/transfer metadata updated to 0.36.
+
+## v0.37 — Vendor Contacts Integration
+
+- Vendor Add/Edit includes **Import from Contacts** using the native iOS contact picker.
+- Contact selection prefills business/contact name, phone, email, website, and address; users can edit before saving.
+- Vendor detail includes **Add Vendor to Contacts**, opening the native iOS new-contact editor prefilled from the Vendor record.
+- Contacts interactions are explicitly user initiated; Home Maintainer does not silently modify Contacts.
+- Contacts privacy usage text is included in the project configuration.
