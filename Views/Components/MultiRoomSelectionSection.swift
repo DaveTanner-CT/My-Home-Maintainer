@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Reusable room/area multi-selection used by records that can serve or belong to
-/// more than one room. The first selected room is retained as the record's primary
-/// room for backward compatibility; the full set is stored through additionalRooms.
+/// Compact multi-room selector used by records that can serve or belong to more
+/// than one room. It intentionally mirrors the single-room Picker presentation
+/// used elsewhere instead of rendering every room as a long inline list.
 struct MultiRoomSelectionSection: View {
     let rooms: [Room]
     @Binding var primaryRoom: Room?
@@ -16,26 +16,41 @@ struct MultiRoomSelectionSection: View {
                 Text("No rooms or areas have been added yet.")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(rooms) { room in
-                    Button {
-                        toggle(room)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
+                Menu {
+                    ForEach(rooms) { room in
+                        Button {
+                            toggle(room)
+                        } label: {
+                            if isSelected(room) {
+                                Label(room.name, systemImage: "checkmark")
+                            } else {
                                 Text(room.name)
-                                    .foregroundStyle(.primary)
-                                Text(room.areaType.rawValue)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
                             }
-                            Spacer()
-                            Image(systemName: isSelected(room) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(isSelected(room) ? Color.accentColor : Color.secondary)
                         }
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+
+                    if !selectedRooms.isEmpty {
+                        Divider()
+                        Button("Clear Selection") {
+                            selectedRooms.removeAll()
+                            primaryRoom = nil
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("Room / Area")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(selectionSummary)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
 
             Text(helpText)
@@ -43,6 +58,19 @@ struct MultiRoomSelectionSection: View {
                 .foregroundStyle(.secondary)
         }
         .onAppear { normalizeSelection() }
+    }
+
+    private var selectionSummary: String {
+        switch selectedRooms.count {
+        case 0:
+            return "Choose room / area"
+        case 1:
+            return selectedRooms[0].name
+        case 2:
+            return selectedRooms.map(\.name).joined(separator: ", ")
+        default:
+            return "\(selectedRooms.count) selected"
+        }
     }
 
     private func isSelected(_ room: Room) -> Bool {

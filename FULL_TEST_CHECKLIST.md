@@ -92,3 +92,12 @@ Photo checks:
 - [ ] Photos & Documents header icons add photos/documents on System, Device, Fixture, Furniture, Task, Project, and History detail pages.
 - [ ] Project Tasks/Measurements/History compact header actions still open the correct forms.
 - [ ] Task Delete is available from the ellipsis menu and still cancels pending task notifications.
+
+
+## v0.37.3 Contacts + Room Selector checks
+- [ ] Vendor > Add Vendor > Import from Contacts: tap a contact once; picker closes once and Vendor fields populate immediately.
+- [ ] After importing a contact, Save remains visible and saves the Vendor.
+- [ ] Paint Add/Edit uses a compact Room / Area selector rather than an inline room list.
+- [ ] Systems, Devices & Equipment, Fixtures, Furniture, Projects, and Tasks use the same compact room selector pattern.
+- [ ] Multi-room records can still select more than one room and existing selections are retained.
+- [ ] Detectors and Consumables continue to use the standard Room / Area Picker.

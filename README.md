@@ -284,7 +284,7 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Contacts privacy usage text is included in the project configuration.
 
 
-## v0.37.2 — Contacts Integration Fix
+## v0.37.3 — Contacts Integration Fix
 
 - Fixed Contacts → Vendor import handoff so selected contact values populate the Vendor form reliably.
 - Added a visible **Add to Contacts** action in each Vendor detail Contact section.

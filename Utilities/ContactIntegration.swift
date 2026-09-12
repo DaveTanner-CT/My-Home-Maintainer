@@ -44,6 +44,7 @@ struct ContactImportPresenter: UIViewControllerRepresentable {
     final class Coordinator: NSObject, CNContactPickerDelegate {
         var parent: ContactImportPresenter
         weak var presentedPicker: CNContactPickerViewController?
+        private var isCompletingSelection = false
 
         init(parent: ContactImportPresenter) {
             self.parent = parent
@@ -52,6 +53,7 @@ struct ContactImportPresenter: UIViewControllerRepresentable {
         func requestPresentation(from host: UIViewController) {
             guard parent.isPresented else { return }
             guard presentedPicker == nil else { return }
+            guard !isCompletingSelection else { return }
             guard host.viewIfLoaded?.window != nil else { return }
 
             let picker = CNContactPickerViewController()
@@ -71,24 +73,31 @@ struct ContactImportPresenter: UIViewControllerRepresentable {
         }
 
         func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            guard !isCompletingSelection else { return }
+            isCompletingSelection = true
             let imported = VendorContactMapper.importedValues(from: contact)
-            presentedPicker = nil
 
-            // CNContactPicker dismisses itself. We only update the existing Vendor form;
-            // no SwiftUI sheet is toggled here, so the Vendor form remains on screen.
+            // Flip the SwiftUI presentation flag before the picker begins dismissing.
+            // Previously presentedPicker was cleared first, leaving a short window where
+            // isPresented was still true and SwiftUI could immediately present a second picker.
+            parent.isPresented = false
+            parent.onSelect(imported)
+
+            // Keep the picker reference/finishing guard alive through the dismissal turn.
             DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.parent.onSelect(imported)
-                self.parent.isPresented = false
+                self?.presentedPicker = nil
+                self?.isCompletingSelection = false
             }
         }
 
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
-            presentedPicker = nil
+            guard !isCompletingSelection else { return }
+            isCompletingSelection = true
+            parent.isPresented = false
+            parent.onCancel()
             DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.parent.isPresented = false
-                self.parent.onCancel()
+                self?.presentedPicker = nil
+                self?.isCompletingSelection = false
             }
         }
     }

@@ -121,7 +121,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.37.2")
+                LabeledContent("Build", value: "0.37.3")
                 Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
