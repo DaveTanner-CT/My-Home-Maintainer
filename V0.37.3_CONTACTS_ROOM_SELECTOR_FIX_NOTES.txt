@@ -1,4 +1,4 @@
-HomeMaintainer v0.37.3 - Contacts + Room Selector Fix
+HomeMaintainer v0.37.4 - Contacts + Room Selector Fix
 
 - Fixed the Vendor Contacts importer so one contact selection returns directly to the Vendor form.
 - Prevented the native Contacts picker from being immediately presented a second time while the first picker is dismissing.

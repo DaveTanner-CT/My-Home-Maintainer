@@ -44,26 +44,17 @@ struct HomeSetupView: View {
     @Query private var records: [MaintenanceRecord]
     @State private var showAddHistory = false
 
-    private var profileComplete: Bool {
-        guard let home = homes.first else { return false }
-        return !home.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !home.address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     private var setupSteps: [SetupStep] {
         [
-            SetupStep(title: "Home profile", subtitle: "Name and address identify this home and make exports easier to recognize.", icon: "house", complete: profileComplete, destination: .profile),
-            SetupStep(title: "Rooms & areas", subtitle: "Create the places that projects, fixtures, equipment, paint, and tasks can connect to.", icon: "door.left.hand.open", complete: !rooms.isEmpty, destination: .rooms),
-            SetupStep(title: "Home systems", subtitle: "Record major built-in systems such as HVAC, water, electrical, plumbing, and generators.", icon: "wrench.and.screwdriver", complete: !systems.isEmpty, destination: .systems),
-            SetupStep(title: "Devices & equipment", subtitle: "Record appliances, electronics, tools, and outdoor equipment you want to maintain or track.", icon: "refrigerator", complete: !appliances.isEmpty, destination: .appliances),
-            SetupStep(title: "Fixtures", subtitle: "Record installed items such as faucets, lights, fans, and hardware when their details matter.", icon: "lightbulb", complete: !fixtures.isEmpty, destination: .fixtures),
-            SetupStep(title: "Furniture", subtitle: "Record furniture that belongs with the home, including rooms, photos, purchase details, and warranties.", icon: "sofa", complete: !furniture.isEmpty, destination: .furniture),
-            SetupStep(title: "Safety", subtitle: "Record smoke and CO detectors so replacement dates can be monitored.", icon: "sensor.tag.radiowaves.forward", complete: !detectors.isEmpty, destination: .detectors)
+            SetupStep(title: "Home profile", subtitle: "Name and address identify this home and make exports easier to recognize.", icon: "house", destination: .profile),
+            SetupStep(title: "Rooms & areas", subtitle: "Create the places that projects, fixtures, equipment, paint, and tasks can connect to.", icon: "door.left.hand.open", destination: .rooms),
+            SetupStep(title: "Home systems", subtitle: "Record major built-in systems such as HVAC, water, electrical, plumbing, and generators.", icon: "wrench.and.screwdriver", destination: .systems),
+            SetupStep(title: "Devices & equipment", subtitle: "Record appliances, electronics, tools, and outdoor equipment you want to maintain or track.", icon: "refrigerator", destination: .appliances),
+            SetupStep(title: "Fixtures", subtitle: "Record installed items such as faucets, lights, fans, and hardware when their details matter.", icon: "lightbulb", destination: .fixtures),
+            SetupStep(title: "Furniture", subtitle: "Record furniture that belongs with the home, including rooms, photos, purchase details, and warranties.", icon: "sofa", destination: .furniture),
+            SetupStep(title: "Safety", subtitle: "Record smoke and CO detectors so replacement dates can be monitored.", icon: "sensor.tag.radiowaves.forward", destination: .detectors)
         ]
     }
-
-    private var completedStepCount: Int { setupSteps.filter(\.complete).count }
-    private var progress: Double { setupSteps.isEmpty ? 0 : Double(completedStepCount) / Double(setupSteps.count) }
 
     private var unassignedSystems: Int {
         systems.filter { $0.room == nil && $0.location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
@@ -163,17 +154,10 @@ struct HomeSetupView: View {
     var body: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Home setup")
-                            .font(.title3.bold())
-                        Spacer()
-                        Text("\(completedStepCount) of \(setupSteps.count)")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    ProgressView(value: progress)
-                    Text(progress == 1 ? "The core home structure is in place. Use the checks below to tighten the quality of your records." : "These are foundation steps, not a requirement to catalog every object in your house. Add only the records that will actually help you maintain, plan, or document the home.")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Home setup")
+                        .font(.title3.bold())
+                    Text("Use the Foundation categories to organize the home. The Connections and Record Quality sections below flag specific records that still need attention.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -186,8 +170,8 @@ struct HomeSetupView: View {
                         destinationView(for: step.destination)
                     } label: {
                         HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: step.complete ? "checkmark.circle.fill" : step.icon)
-                                .foregroundStyle(step.complete ? Color.green : Color.accentColor)
+                            Image(systemName: step.icon)
+                                .foregroundStyle(Color.accentColor)
                                 .frame(width: 28)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(step.title).font(.headline)
@@ -375,7 +359,6 @@ private struct SetupStep: Identifiable {
     let title: String
     let subtitle: String
     let icon: String
-    let complete: Bool
     let destination: SetupDestination
 }
 
