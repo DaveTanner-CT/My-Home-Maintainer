@@ -1,0 +1,6 @@
+HomeMaintainer v0.37.2 - Contacts presentation fix
+
+- Replaced the nested SwiftUI sheet used for Contacts import with an imperative native Contacts presenter embedded in VendorFormView.
+- Selecting or cancelling a contact no longer changes the Vendor form presentation state.
+- Selected contact values are mapped to plain Swift strings and applied directly to the existing Vendor form.
+- Existing Add to Contacts action remains visible in Vendor detail Contact section.

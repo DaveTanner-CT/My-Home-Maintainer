@@ -120,7 +120,7 @@ struct HomeDashboardView: View {
                     )
                 }
 
-                Text("HomeMaintainer v0.37")
+                Text("HomeMaintainer v0.37.2")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)

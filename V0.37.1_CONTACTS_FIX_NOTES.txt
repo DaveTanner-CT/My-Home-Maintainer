@@ -1,4 +1,4 @@
-HomeMaintainer v0.37.1 - Contacts Integration Fix
+HomeMaintainer v0.37.2 - Contacts Integration Fix
 
 - Fixed Contacts -> Vendor import so selected contact values are converted to a plain Swift payload before the native picker dismisses, then applied to the Vendor form on the main thread.
 - Added an explicit Add to Contacts row inside every existing Vendor detail Contact section.

@@ -1183,6 +1183,9 @@ struct VendorDetailView: View {
                    let url = URL(string: "http://maps.apple.com/?q=\(encoded)") {
                     Button { openURL(url) } label: { Label(vendor.address, systemImage: "map") }
                 }
+                Button { showAddToContacts = true } label: {
+                    Label("Add to Contacts", systemImage: "person.crop.circle.badge.plus")
+                }
             }
             if !vendorSystems.isEmpty {
                 Section("Related Systems") {
@@ -1210,14 +1213,12 @@ struct VendorDetailView: View {
         }
         .navigationTitle(vendor.businessName)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button { showAddToContacts = true } label: { Image(systemName: "person.crop.circle.badge.plus") }
-                    .accessibilityLabel("Add Vendor to Contacts")
+            ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink("Edit") { VendorFormView(existing: vendor) }
             }
         }
         .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .vendor(vendor)) } }
-        .sheet(isPresented: $showAddToContacts) { VendorContactEditor(vendor: vendor) }
+        .sheet(isPresented: $showAddToContacts) { VendorContactEditor(vendor: vendor) { showAddToContacts = false } }
     }
 }
 

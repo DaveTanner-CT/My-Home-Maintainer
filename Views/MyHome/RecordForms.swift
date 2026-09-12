@@ -499,17 +499,16 @@ struct VendorFormView: View {
             if existing != nil { Section { Button("Delete Vendor", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Vendor" : "Edit Vendor")
-        .sheet(isPresented: $showContactPicker) {
-            ContactImportPicker { contact in
-                let imported = VendorContactMapper.importedValues(from: contact)
+        .background {
+            ContactImportPresenter(isPresented: $showContactPicker) { imported in
                 businessName = imported.businessName
                 contactName = imported.contactName
                 phone = imported.phone
                 email = imported.email
                 website = imported.website
                 address = imported.address
-                showContactPicker = false
-            }
+            } onCancel: { }
+            .frame(width: 0, height: 0)
         }
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(businessName.isEmpty) } }
         .confirmationDialog("Delete this vendor?", isPresented: $showDelete, titleVisibility: .visible) { Button("Delete Vendor", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }; Button("Cancel", role: .cancel) { } } message: { Text("Historical maintenance records retain vendor names already recorded.") }
