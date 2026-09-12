@@ -32,13 +32,22 @@ targets:
         TARGETED_DEVICE_FAMILY: '1'
         INFOPLIST_KEY_CFBundleDisplayName: "My Home Keeper"
         INFOPLIST_KEY_CFBundleName: "My Home Keeper"
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: My Home Keeper lets you attach photos to home records and project ideas.
-        INFOPLIST_KEY_NSCameraUsageDescription: My Home Keeper lets you photograph equipment labels, paint cans, receipts, and project ideas.
-        INFOPLIST_KEY_NSContactsUsageDescription: My Home Keeper lets you import vendor details from Contacts and add vendors to Contacts.
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "My Home Keeper lets you attach photos to home records and project ideas."
+        INFOPLIST_KEY_NSCameraUsageDescription: "My Home Keeper lets you photograph equipment labels, paint cans, receipts, and project ideas."
+        INFOPLIST_KEY_NSContactsUsageDescription: "My Home Keeper lets you import vendor details from Contacts and add vendors to Contacts."
 
     info:
       path: Info.plist
       properties:
+        CFBundleDisplayName: "My Home Keeper"
+        CFBundleName: "My Home Keeper"
+        CFBundleIconName: AppIcon
+
+        NSCameraUsageDescription: "My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects."
+        NSContactsUsageDescription: "My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts."
+        NSPhotoLibraryUsageDescription: "My Home Keeper lets you attach photos to home records and project ideas."
+
         UILaunchScreen: {}
+
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
