@@ -111,11 +111,14 @@ struct VendorContactEditor: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UINavigationController {
         let contact = VendorContactMapper.contact(from: vendor)
-        let controller = CNContactViewController(forNewContact: contact)
+        // Present as an unknown contact so iOS offers both familiar choices:
+        // Create New Contact and Add to Existing Contact.
+        let controller = CNContactViewController(forUnknownContact: contact)
         controller.contactStore = CNContactStore()
         controller.delegate = context.coordinator
+        controller.allowsActions = true
         controller.allowsEditing = true
-        controller.title = "Add to Contacts"
+        controller.title = "Add or Update Contact"
         return UINavigationController(rootViewController: controller)
     }
 

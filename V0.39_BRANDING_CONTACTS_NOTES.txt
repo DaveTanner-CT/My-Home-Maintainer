@@ -1,0 +1,8 @@
+My Home Keeper v0.39 - Branding + Native Contact Update Flow
+
+- Added the approved home/shield avatar as the actual iOS AppIcon asset set.
+- Visible app name is now My Home Keeper.
+- Existing bundle identifier is intentionally unchanged so upgrades preserve user data.
+- Vendor detail action is now Add / Update Contact.
+- Uses Apple's native unknown-contact card, which offers Create New Contact or Add to Existing Contact.
+- Existing Vendor import-from-Contacts workflow remains unchanged.

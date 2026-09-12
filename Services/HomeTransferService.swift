@@ -365,7 +365,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.38.1", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.39", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(
                 id: roomIDs[$0.persistentModelID]!,
                 name: $0.name,
@@ -402,7 +402,7 @@ enum TransferError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedVersion: return "This transfer package was created by an unsupported archive format."
-        case .storeNotEmpty: return "For safety, a home transfer can only be imported into a fresh Home Maintainer data store."
+        case .storeNotEmpty: return "For safety, a home transfer can only be imported into a fresh My Home Keeper data store."
         case .invalidArchive(let detail): return "This transfer package did not pass its integrity check. \(detail)"
         }
     }

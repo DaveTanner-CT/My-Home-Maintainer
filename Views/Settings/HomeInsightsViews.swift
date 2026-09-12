@@ -244,7 +244,7 @@ struct DataExportView: View {
             }
 
             Section("Choose where it goes") {
-                Text("Home Maintainer now opens the standard iPhone Share sheet first. From there you can choose Save to Files, Google Drive, Mail, AirDrop, Messages, or another compatible app.")
+                Text("My Home Keeper now opens the standard iPhone Share sheet first. From there you can choose Save to Files, Google Drive, Mail, AirDrop, Messages, or another compatible app.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Text("For Google Drive, the most reliable route is to choose the Google Drive app directly in the Share sheet. Choosing Save to Files → Google Drive uses Apple's Files provider; if Drive reports that folder contents are unavailable, use the Google Drive share option instead.")

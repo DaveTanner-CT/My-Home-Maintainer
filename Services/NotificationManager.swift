@@ -36,7 +36,7 @@ actor NotificationManager {
         }
 
         if overdueEnabled, let overdueDate = Calendar.current.date(byAdding: .day, value: 1, to: task.dueDate) {
-            await add(identifier: "\(base)-overdue", title: "Overdue: \(task.title)", body: "This maintenance task is overdue. Open Home Maintainer to review or complete it.", date: overdueDate, hour: hour)
+            await add(identifier: "\(base)-overdue", title: "Overdue: \(task.title)", body: "This maintenance task is overdue. Open My Home Keeper to review or complete it.", date: overdueDate, hour: hour)
         }
     }
 

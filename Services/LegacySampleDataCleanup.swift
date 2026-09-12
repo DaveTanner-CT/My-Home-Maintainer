@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Removes the demo records that shipped in early Home Maintainer builds.
+/// Removes the demo records that shipped in early My Home Keeper builds.
 ///
 /// This migration is deliberately conservative: it only deletes records that still
 /// match the original sample values. If a sample record has been edited, has a user

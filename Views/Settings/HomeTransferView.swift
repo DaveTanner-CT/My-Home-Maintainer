@@ -44,7 +44,7 @@ struct HomeTransferView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Move the home's digital record with the house", systemImage: "house.and.flag")
                         .font(.headline)
-                    Text("Create a Home Maintainer transfer package for a future owner. The package preserves stable links between rooms, projects, fixtures, furniture, devices/equipment, systems, tasks, warranties, history, vendors, and stored documents.")
+                    Text("Create a My Home Keeper transfer package for a future owner. The package preserves stable links between rooms, projects, fixtures, furniture, devices/equipment, systems, tasks, warranties, history, vendors, and stored documents.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -67,7 +67,7 @@ struct HomeTransferView: View {
                 Button { prepareTransferSelection() } label: {
                     Label("Choose Items & Create Owner Transfer", systemImage: "checklist")
                 }
-                Text("Home Maintainer opens the standard iPhone Share sheet so you can choose Google Drive, Save to Files, Mail, AirDrop, Messages, or another compatible app.")
+                Text("My Home Keeper opens the standard iPhone Share sheet so you can choose Google Drive, Save to Files, Mail, AirDrop, Messages, or another compatible app.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Text("For Google Drive, choose the Google Drive app directly in the Share sheet when possible. Save to Files → Google Drive relies on Apple's Files provider and may show a folder-contents error if that provider is unavailable or not responding.")
@@ -86,7 +86,7 @@ struct HomeTransferView: View {
                     Label("Import is locked because this app already contains home data.", systemImage: "lock.shield")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Text("This safeguard prevents two homes from being accidentally merged. A transfer is intended for a fresh installation of Home Maintainer.")
+                    Text("This safeguard prevents two homes from being accidentally merged. A transfer is intended for a fresh installation of My Home Keeper.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -117,7 +117,7 @@ struct HomeTransferView: View {
             }
 
             Section("How the handoff works") {
-                Text("1. The current owner creates a transfer package and shares the JSON file securely.\n2. The new owner installs Home Maintainer on their iPhone.\n3. On a fresh app, they open Settings → Home Transfer → Import Home Transfer.\n4. Home Maintainer previews the package before importing.\n5. The home's connected record becomes theirs to maintain going forward.")
+                Text("1. The current owner creates a transfer package and shares the JSON file securely.\n2. The new owner installs My Home Keeper on their iPhone.\n3. On a fresh app, they open Settings → Home Transfer → Import Home Transfer.\n4. My Home Keeper previews the package before importing.\n5. The home's connected record becomes theirs to maintain going forward.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

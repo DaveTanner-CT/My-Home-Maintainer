@@ -315,3 +315,8 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Taking or cancelling a photo no longer dismisses the Add/Edit screen underneath it.
 - Camera authorization is checked explicitly and denied/unavailable states show a user-facing alert.
 - A brief presentation handoff prevents the Add Photo action sheet and camera/photo-library picker from competing for presentation.
+
+## v0.39 — My Home Keeper Branding + Contact Update
+- Uses the approved home/shield avatar as the installed iOS app icon.
+- Visible app name changed to My Home Keeper while preserving the existing bundle identifier for upgrade continuity.
+- Vendor Contact action now uses Apple's native Add / Update flow with Create New Contact and Add to Existing Contact choices.

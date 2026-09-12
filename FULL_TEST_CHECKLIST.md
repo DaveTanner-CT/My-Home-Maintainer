@@ -119,3 +119,12 @@ Photo checks:
 - [ ] Cancel the camera and confirm only the camera closes.
 - [ ] Deny camera permission (or test with permission disabled) and confirm the app stays open and shows a Camera Unavailable alert.
 - [ ] Choose Photo Library immediately after opening Add Photo and confirm the parent form remains open after selection.
+
+## v0.39 Branding + Contacts
+- [ ] Installed app shows the new home/shield icon on the iPhone Home Screen.
+- [ ] App label reads My Home Keeper.
+- [ ] Existing app data remains present after installing over v0.38.1.
+- [ ] Vendor → Add / Update Contact opens the native contact card.
+- [ ] Create New Contact works.
+- [ ] Add to Existing Contact lets you choose an existing contact and review/save the merged details.
+- [ ] Import from Contacts still fills the Vendor form correctly.

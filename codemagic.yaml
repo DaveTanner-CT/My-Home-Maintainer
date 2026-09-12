@@ -1,6 +1,6 @@
 workflows:
   home-maintainer-adhoc:
-    name: Home Maintainer Ad Hoc iPhone Build
+    name: My Home Keeper Ad Hoc iPhone Build
     max_build_duration: 60
     instance_type: mac_mini_m2
 

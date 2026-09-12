@@ -312,7 +312,7 @@ struct HomeOutlookView: View {
                             LabeledContent("Items missing recorded cost", value: "\(missingCostCount)")
                         }
                     }
-                    Text("Tap any issue above to see the exact records that need attention. Recorded costs are shown only as a baseline; Home Maintainer does not inflate them into a future-price prediction.")
+                    Text("Tap any issue above to see the exact records that need attention. Recorded costs are shown only as a baseline; My Home Keeper does not inflate them into a future-price prediction.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -401,7 +401,7 @@ struct HomeOutlookView: View {
         let target = max(item.projectedDate, Calendar.current.date(byAdding: .day, value: 30, to: .now) ?? .now)
         let project = Project(
             title: "Replace \(item.name)",
-            projectDescription: "Plan replacement for \(item.name). Home Maintainer estimated this planning window from the recorded purchase/installation date and a \(item.serviceLifeYears)-year service-life assumption.",
+            projectDescription: "Plan replacement for \(item.name). My Home Keeper estimated this planning window from the recorded purchase/installation date and a \(item.serviceLifeYears)-year service-life assumption.",
             stage: .planning,
             targetDate: target,
             budget: item.baselineCost,

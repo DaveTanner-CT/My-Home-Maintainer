@@ -378,7 +378,7 @@ struct RecommendedMaintenanceView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Label("Why am I seeing these?", systemImage: "info.circle")
                             .font(.headline)
-                        Text("See what Home Maintainer found in your inventory and how each type of record affects these recommendations.")
+                        Text("See what My Home Keeper found in your inventory and how each type of record affects these recommendations.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

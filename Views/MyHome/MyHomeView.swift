@@ -1184,7 +1184,7 @@ struct VendorDetailView: View {
                     Button { openURL(url) } label: { Label(vendor.address, systemImage: "map") }
                 }
                 Button { showAddToContacts = true } label: {
-                    Label("Add to Contacts", systemImage: "person.crop.circle.badge.plus")
+                    Label("Add / Update Contact", systemImage: "person.crop.circle.badge.plus")
                 }
             }
             if !vendorSystems.isEmpty {
