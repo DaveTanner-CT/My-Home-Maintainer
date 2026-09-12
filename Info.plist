@@ -4,6 +4,8 @@
 <dict>
     <key>CFBundleDisplayName</key>
     <string>My Home Keeper</string>
+    <key>CFBundleName</key>
+    <string>My Home Keeper</string>
     <key>NSCameraUsageDescription</key>
     <string>My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects.</string>
     <key>NSContactsUsageDescription</key>

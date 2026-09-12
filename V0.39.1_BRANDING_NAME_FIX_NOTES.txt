@@ -1,0 +1,7 @@
+My Home Keeper v0.39.2 - Display Name Consistency
+
+- Sets PRODUCT_NAME to My Home Keeper.
+- Sets both CFBundleDisplayName and CFBundleName to My Home Keeper.
+- Keeps the existing bundle identifier org.scriptingforschools.HomeMaintainer so upgrades preserve existing app data.
+- Settings > About explicitly shows My Home Keeper.
+- Visible build/version metadata updated to 0.39.2.

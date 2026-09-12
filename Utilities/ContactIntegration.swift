@@ -119,7 +119,16 @@ struct VendorContactEditor: UIViewControllerRepresentable {
         controller.allowsActions = true
         controller.allowsEditing = true
         controller.title = "Add or Update Contact"
-        return UINavigationController(rootViewController: controller)
+        controller.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .cancel,
+            target: context.coordinator,
+            action: #selector(Coordinator.cancelTapped)
+        )
+
+        let navigationController = UINavigationController(rootViewController: controller)
+        navigationController.modalPresentationStyle = .pageSheet
+        navigationController.isModalInPresentation = false
+        return navigationController
     }
 
     func updateUIViewController(_ uiViewController: UINavigationController, context: Context) { }
@@ -129,6 +138,12 @@ struct VendorContactEditor: UIViewControllerRepresentable {
 
         init(parent: VendorContactEditor) {
             self.parent = parent
+        }
+
+        @objc func cancelTapped() {
+            DispatchQueue.main.async { [parent] in
+                parent.onComplete()
+            }
         }
 
         func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {

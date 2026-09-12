@@ -1,0 +1,10 @@
+My Home Keeper v0.39.2
+
+Fixes
+- Rebuilt AppIcon catalog with both legacy iPhone slots and modern universal iOS 1024x1024 entries.
+- Added explicit regular, dark, and tinted universal AppIcon assets.
+- Kept app icon images RGB with no alpha channel.
+- Added ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS to the generated Xcode project settings.
+- Added an explicit Cancel button to the Vendor Add / Update Contact screen.
+- Cancel dismisses only the contact workflow and returns to the Vendor detail page.
+- Contact screen remains swipe-dismissable when iOS permits it.
