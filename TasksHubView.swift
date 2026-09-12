@@ -85,8 +85,6 @@ struct TasksHubView: View {
 
             if section == .calendar {
                 calendarControls
-            } else {
-                listControls
             }
 
             switch section {
@@ -121,7 +119,34 @@ struct TasksHubView: View {
         .navigationTitle("Tasks")
         .searchable(text: $searchText, prompt: "Search tasks")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Category", selection: $categoryFilter) {
+                        Text("All Categories").tag("All")
+                        ForEach(TaskCategory.allCases) { category in
+                            Text(category.rawValue).tag(category.rawValue)
+                        }
+                    }
+                    if section == .all || section == .calendar {
+                        Picker("Status", selection: $statusFilter) {
+                            Text("All Statuses").tag("All")
+                            ForEach(TaskDisplayStatus.allCases, id: \.rawValue) { status in
+                                Text(status.rawValue).tag(status.rawValue)
+                            }
+                        }
+                    }
+                    if categoryFilter != "All" || statusFilter != "All" {
+                        Divider()
+                        Button("Clear Filters") {
+                            categoryFilter = "All"
+                            statusFilter = "All"
+                        }
+                    }
+                } label: {
+                    Image(systemName: categoryFilter == "All" && statusFilter == "All" ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                }
+                .accessibilityLabel("Filter Tasks")
+
                 Button { showAdd = true } label: {
                     Image(systemName: "plus")
                 }
@@ -141,53 +166,12 @@ struct TasksHubView: View {
         }
     }
 
-    private var listControls: some View {
-        Section("Filter") {
-            Picker("Category", selection: $categoryFilter) {
-                Text("All Categories").tag("All")
-                ForEach(TaskCategory.allCases) { category in
-                    Text(category.rawValue).tag(category.rawValue)
-                }
-            }
-
-            if section == .all {
-                Picker("Status", selection: $statusFilter) {
-                    Text("All Statuses").tag("All")
-                    ForEach(TaskDisplayStatus.allCases, id: \.rawValue) { status in
-                        Text(status.rawValue).tag(status.rawValue)
-                    }
-                }
-            }
-        }
-    }
-
     private var calendarControls: some View {
-        Group {
-            Section {
-                DatePicker("Maintenance calendar", selection: $selectedDate, displayedComponents: .date)
-                    .datePickerStyle(.graphical)
-                    .labelsHidden()
-            }
-
-            Section("Filter") {
-                Picker("Category", selection: $categoryFilter) {
-                    Text("All Categories").tag("All")
-                    ForEach(TaskCategory.allCases) { category in
-                        Text(category.rawValue).tag(category.rawValue)
-                    }
-                }
-
-                Picker("Status", selection: $statusFilter) {
-                    Text("All Statuses").tag("All")
-                    ForEach(TaskDisplayStatus.allCases, id: \.rawValue) { status in
-                        Text(status.rawValue).tag(status.rawValue)
-                    }
-                }
-
-                Button("Today") {
-                    selectedDate = Date()
-                }
-            }
+        Section {
+            DatePicker("Maintenance calendar", selection: $selectedDate, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+            Button("Jump to Today") { selectedDate = Date() }
         }
     }
 

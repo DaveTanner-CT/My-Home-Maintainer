@@ -23,6 +23,7 @@ final class HomeAttachment {
     var detector: Detector?
     var consumable: Consumable?
     var fixture: Fixture?
+    var furniture: Furniture?
 
     init(
         name: String,
@@ -60,6 +61,7 @@ enum AttachmentOwnerReference {
     case detector(Detector)
     case consumable(Consumable)
     case fixture(Fixture)
+    case furniture(Furniture)
 
     func matches(_ attachment: HomeAttachment) -> Bool {
         switch self {
@@ -87,6 +89,8 @@ enum AttachmentOwnerReference {
             return attachment.consumable?.persistentModelID == owner.persistentModelID
         case .fixture(let owner):
             return attachment.fixture?.persistentModelID == owner.persistentModelID
+        case .furniture(let owner):
+            return attachment.furniture?.persistentModelID == owner.persistentModelID
         }
     }
 
@@ -103,6 +107,7 @@ enum AttachmentOwnerReference {
         attachment.detector = nil
         attachment.consumable = nil
         attachment.fixture = nil
+        attachment.furniture = nil
 
         switch self {
         case .room(let owner): attachment.room = owner
@@ -117,6 +122,7 @@ enum AttachmentOwnerReference {
         case .detector(let owner): attachment.detector = owner
         case .consumable(let owner): attachment.consumable = owner
         case .fixture(let owner): attachment.fixture = owner
+        case .furniture(let owner): attachment.furniture = owner
         }
     }
 }

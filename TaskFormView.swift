@@ -29,10 +29,12 @@ struct TaskFormView: View {
     @State private var website: String
     @State private var selectedVendor: Vendor?
     @State private var selectedRoom: Room?
+    @State private var selectedRooms: [Room]
     @State private var selectedSystem: HomeSystem?
     @State private var selectedAppliance: Appliance?
     @State private var selectedFixture: Fixture?
     @State private var selectedProject: Project?
+    @State private var pendingPhotoData: Data?
 
     init(
         existingTask: MaintenanceTask? = nil,
@@ -42,18 +44,22 @@ struct TaskFormView: View {
         initialFixture: Fixture? = nil,
         initialProject: Project? = nil,
         initialTitle: String = "",
+        initialDescription: String = "",
+        initialCategory: TaskCategory = .general,
         initialDueDate: Date = .now,
-        initialLeadTimeDays: Int = 0
+        initialLeadTimeDays: Int = 0,
+        initialRecurrence: RecurrenceRule = .oneTime,
+        initialPriority: Int = 1
     ) {
         self.existingTask = existingTask
         _title = State(initialValue: existingTask?.title ?? initialTitle)
-        _description = State(initialValue: existingTask?.taskDescription ?? "")
-        _category = State(initialValue: existingTask?.category ?? .general)
+        _description = State(initialValue: existingTask?.taskDescription ?? initialDescription)
+        _category = State(initialValue: existingTask?.category ?? initialCategory)
         _dueDate = State(initialValue: existingTask?.dueDate ?? initialDueDate)
         _leadTimeDays = State(initialValue: existingTask?.leadTimeDays ?? initialLeadTimeDays)
-        _recurrence = State(initialValue: existingTask?.recurrence ?? .oneTime)
+        _recurrence = State(initialValue: existingTask?.recurrence ?? initialRecurrence)
         _recurrenceAnchor = State(initialValue: existingTask?.recurrenceAnchor ?? .scheduledDate)
-        _priority = State(initialValue: existingTask?.priority ?? 1)
+        _priority = State(initialValue: existingTask?.priority ?? initialPriority)
         _notes = State(initialValue: existingTask?.notes ?? "")
         _instructions = State(initialValue: existingTask?.instructions ?? "")
         _contactName = State(initialValue: existingTask?.contactName ?? "")
@@ -67,6 +73,8 @@ struct TaskFormView: View {
         _selectedProject = State(initialValue: existingTask?.project ?? initialProject)
         let inferredRoom = initialRoom ?? initialFixture?.room ?? initialAppliance?.room ?? initialSystem?.room ?? initialProject?.room
         _selectedRoom = State(initialValue: existingTask?.room ?? inferredRoom)
+        let inferredRooms = initialFixture?.linkedRooms ?? initialAppliance?.linkedRooms ?? initialSystem?.linkedRooms ?? initialProject?.linkedRooms ?? [inferredRoom].compactMap { $0 }
+        _selectedRooms = State(initialValue: existingTask?.linkedRooms ?? inferredRooms)
     }
 
     var body: some View {
@@ -83,8 +91,8 @@ struct TaskFormView: View {
                 Picker("Repeat", selection: $recurrence) { ForEach(RecurrenceRule.allCases) { Text($0.rawValue).tag($0) } }
                 if recurrence != .oneTime { Picker("Repeat from", selection: $recurrenceAnchor) { ForEach(RecurrenceAnchor.allCases) { Text($0.rawValue).tag($0) } } }
             }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas")
             Section("Related Home Records") {
-                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
                 Picker("Fixture", selection: $selectedFixture) { Text("None").tag(nil as Fixture?); ForEach(fixtures) { Text($0.name).tag(Optional($0)) } }
                 Picker("Device / Equipment", selection: $selectedAppliance) { Text("None").tag(nil as Appliance?); ForEach(appliances) { Text($0.name).tag(Optional($0)) } }
                 Picker("System", selection: $selectedSystem) { Text("None").tag(nil as HomeSystem?); ForEach(systems) { Text($0.name).tag(Optional($0)) } }
@@ -100,6 +108,7 @@ struct TaskFormView: View {
                 TextField("Website", text: $website).keyboardType(.URL).textInputAutocapitalization(.never)
             }
             Section("Instructions & Notes") { TextField("Instructions", text: $instructions, axis: .vertical); TextField("Notes", text: $notes, axis: .vertical) }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existingTask == nil ? "Add Photo" : "Add Another Photo")
         }
         .navigationTitle(existingTask == nil ? "New Task" : "Edit Task")
         .navigationBarTitleDisplayMode(.inline)
@@ -107,10 +116,10 @@ struct TaskFormView: View {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
         }
-        .onChange(of: selectedFixture) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
-        .onChange(of: selectedAppliance) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
-        .onChange(of: selectedSystem) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
-        .onChange(of: selectedProject) { _, value in if selectedRoom == nil { selectedRoom = value?.room } }
+        .onChange(of: selectedFixture) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
+        .onChange(of: selectedAppliance) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
+        .onChange(of: selectedSystem) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
+        .onChange(of: selectedProject) { _, value in if selectedRooms.isEmpty, let value { selectedRooms = value.linkedRooms; selectedRoom = value.room } }
     }
 
     private func save() {
@@ -120,7 +129,9 @@ struct TaskFormView: View {
         task.leadTimeDays = leadTimeDays; task.recurrence = recurrence; task.recurrenceAnchor = recurrenceAnchor; task.priority = priority; task.notes = notes; task.instructions = instructions
         task.contactName = contactName; task.phone = phone; task.email = email; task.website = website
         task.vendor = selectedVendor; task.system = selectedSystem; task.appliance = selectedAppliance; task.fixture = selectedFixture; task.project = selectedProject
-        task.room = selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room
+        task.setPrimaryRoom(selectedRoom ?? selectedFixture?.room ?? selectedAppliance?.room ?? selectedSystem?.room ?? selectedProject?.room)
+        task.additionalRooms = selectedRooms.filter { $0.persistentModelID != task.room?.persistentModelID }
+        savePendingRecordPhoto(pendingPhotoData, owner: .task(task), modelContext: modelContext)
         try? modelContext.save(); Task { await NotificationManager.shared.schedule(for: task) }; dismiss()
     }
 }

@@ -13,8 +13,9 @@ final class Detector {
     var isHardwired: Bool
     var replacementDate: Date?
     var notes: String
+    var room: Room?
 
-    init(location: String, type: String = "Combination", manufacturer: String = "", model: String = "", manufactureDate: Date? = nil, installationDate: Date? = nil, batteryType: String = "", isHardwired: Bool = false, replacementDate: Date? = nil, notes: String = "") {
+    init(location: String, type: String = "Combination", manufacturer: String = "", model: String = "", manufactureDate: Date? = nil, installationDate: Date? = nil, batteryType: String = "", isHardwired: Bool = false, replacementDate: Date? = nil, notes: String = "", room: Room? = nil) {
         self.location = location
         self.type = type
         self.manufacturer = manufacturer
@@ -25,6 +26,7 @@ final class Detector {
         self.isHardwired = isHardwired
         self.replacementDate = replacementDate ?? Self.calculateReplacementDate(manufactureDate: manufactureDate, installationDate: installationDate)
         self.notes = notes
+        self.room = room
     }
 
     static func calculateReplacementDate(manufactureDate: Date?, installationDate: Date?) -> Date? {
@@ -46,8 +48,9 @@ final class Consumable {
     var lastReplaced: Date?
     var nextReplacement: Date?
     var notes: String
+    var room: Room?
 
-    init(name: String, type: String = "", size: String = "", manufacturer: String = "", modelPartNumber: String = "", purchaseLink: String = "", replacementIntervalMonths: Int? = nil, lastReplaced: Date? = nil, nextReplacement: Date? = nil, notes: String = "") {
+    init(name: String, type: String = "", size: String = "", manufacturer: String = "", modelPartNumber: String = "", purchaseLink: String = "", replacementIntervalMonths: Int? = nil, lastReplaced: Date? = nil, nextReplacement: Date? = nil, notes: String = "", room: Room? = nil) {
         self.name = name
         self.type = type
         self.size = size
@@ -64,5 +67,6 @@ final class Consumable {
             self.nextReplacement = nil
         }
         self.notes = notes
+        self.room = room
     }
 }

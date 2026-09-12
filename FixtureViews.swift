@@ -33,6 +33,8 @@ struct FixtureDetailView: View {
     @Query private var tasks: [MaintenanceTask]
     @Query private var history: [MaintenanceRecord]
     @State private var showAddTask = false
+    @State private var showLinkTask = false
+    @State private var showAddHistory = false
 
     private var linkedTasks: [MaintenanceTask] {
         tasks.filter { $0.fixture?.persistentModelID == fixture.persistentModelID }
@@ -48,7 +50,9 @@ struct FixtureDetailView: View {
         List {
             Section("Fixture") {
                 if !fixture.category.isEmpty { LabeledContent("Category", value: fixture.category) }
-                if let room = fixture.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+                ForEach(fixture.linkedRooms) { linkedRoom in
+                    NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                }
                 if let project = fixture.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
                 if !fixture.manufacturer.isEmpty { LabeledContent("Manufacturer", value: fixture.manufacturer) }
                 if !fixture.model.isEmpty { LabeledContent("Model", value: fixture.model) }
@@ -70,21 +74,41 @@ struct FixtureDetailView: View {
                 if let vendor = fixture.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !fixture.productLink.isEmpty, let url = fixtureNormalizedURL(fixture.productLink) { Link("Product / Replacement Link", destination: url) }
             }
-            Section("Connected Tasks") {
-                if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No linked tasks") }
                 ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
-                Button { showAddTask = true } label: { Label("Add Task for This Fixture", systemImage: "plus") }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
             }
-            Section("Home History") {
-                if linkedHistory.isEmpty { Text("No maintenance or installation history yet").foregroundStyle(.secondary) }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No maintenance or installation history yet", icon: "clock") }
                 ForEach(linkedHistory.prefix(6)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
             AttachmentSection(owner: .fixture(fixture))
             if !fixture.notes.isEmpty { Section("Notes") { Text(fixture.notes) } }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(fixture.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { FixtureFormView(existing: fixture) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .fixture(fixture)) } }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: fixture.room, initialFixture: fixture, initialProject: fixture.sourceProject, initialVendor: fixture.vendor, initialTitle: "Maintenance: \(fixture.name)") } }
     }
 }
 
@@ -103,6 +127,7 @@ struct FixtureFormView: View {
     @State private var partNumber: String
     @State private var finishColor: String
     @State private var selectedRoom: Room?
+    @State private var selectedRooms: [Room]
     @State private var selectedVendor: Vendor?
     @State private var selectedProject: Project?
     @State private var hasInstallDate: Bool
@@ -115,6 +140,7 @@ struct FixtureFormView: View {
     @State private var warrantyDate: Date
     @State private var productLink: String
     @State private var notes: String
+    @State private var pendingPhotoData: Data?
     @State private var showDelete = false
 
     init(existing: Fixture? = nil, initialRoom: Room? = nil) {
@@ -126,6 +152,7 @@ struct FixtureFormView: View {
         _partNumber = State(initialValue: existing?.partNumber ?? "")
         _finishColor = State(initialValue: existing?.finishColor ?? "")
         _selectedRoom = State(initialValue: existing?.room ?? initialRoom)
+        _selectedRooms = State(initialValue: existing?.linkedRooms ?? [initialRoom].compactMap { $0 })
         _selectedVendor = State(initialValue: existing?.vendor)
         _selectedProject = State(initialValue: existing?.sourceProject)
         _hasInstallDate = State(initialValue: existing?.installationDate != nil)
@@ -145,12 +172,12 @@ struct FixtureFormView: View {
             Section("Fixture") {
                 TextField("Name", text: $name)
                 TextField("Category", text: $category)
-                Picker("Room / Area", selection: $selectedRoom) { Text("None").tag(nil as Room?); ForEach(rooms) { Text($0.name).tag(Optional($0)) } }
                 TextField("Manufacturer", text: $manufacturer)
                 TextField("Model", text: $model)
                 TextField("Part / replacement number", text: $partNumber)
                 TextField("Finish / color", text: $finishColor)
             }
+            MultiRoomSelectionSection(rooms: rooms, primaryRoom: $selectedRoom, selectedRooms: $selectedRooms, title: "Rooms / Areas")
             Section("Purchase & Installation") {
                 Toggle("Installation date", isOn: $hasInstallDate)
                 if hasInstallDate { DatePicker("Installed", selection: $installDate, displayedComponents: .date) }
@@ -167,6 +194,7 @@ struct FixtureFormView: View {
                 TextField("Product / replacement link", text: $productLink).keyboardType(.URL).textInputAutocapitalization(.never)
                 TextField("Notes", text: $notes, axis: .vertical)
             }
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
             if existing != nil { Section { Button("Delete Fixture", role: .destructive) { showDelete = true } } }
         }
         .navigationTitle(existing == nil ? "Add Fixture" : "Edit Fixture")
@@ -189,7 +217,8 @@ struct FixtureFormView: View {
         record.model = model
         record.partNumber = partNumber
         record.finishColor = finishColor
-        record.room = selectedRoom
+        record.setPrimaryRoom(selectedRoom)
+        record.additionalRooms = selectedRooms.filter { $0.persistentModelID != selectedRoom?.persistentModelID }
         record.vendor = selectedVendor
         record.sourceProject = selectedProject
         record.installationDate = hasInstallDate ? installDate : nil
@@ -199,6 +228,7 @@ struct FixtureFormView: View {
         record.warrantyExpiration = hasWarrantyDate ? warrantyDate : nil
         record.productLink = productLink
         record.notes = notes
+        savePendingRecordPhoto(pendingPhotoData, owner: .fixture(record), modelContext: modelContext)
         try? modelContext.save()
         dismiss()
     }

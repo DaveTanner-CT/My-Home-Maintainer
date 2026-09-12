@@ -10,8 +10,13 @@ struct ProjectDetailView: View {
     @Query private var fixtures: [Fixture]
     @Query private var systems: [HomeSystem]
     @Query private var paints: [PaintFinish]
+    @Query private var tasks: [MaintenanceTask]
+    @Query private var history: [MaintenanceRecord]
     @State private var showAddItem = false
     @State private var showAddMeasurement = false
+    @State private var showAddTask = false
+    @State private var showLinkTask = false
+    @State private var showAddHistory = false
 
     private var items: [ProjectItem] {
         allItems.filter { $0.project?.persistentModelID == project.persistentModelID }
@@ -36,6 +41,13 @@ struct ProjectDetailView: View {
     private var linkedSystems: [HomeSystem] { systems.filter { $0.sourceProject?.persistentModelID == project.persistentModelID } }
     private var linkedPaints: [PaintFinish] { paints.filter { $0.sourceProject?.persistentModelID == project.persistentModelID } }
     private var hasPermanentRecords: Bool { !linkedAppliances.isEmpty || !linkedFixtures.isEmpty || !linkedSystems.isEmpty || !linkedPaints.isEmpty }
+    private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.project?.persistentModelID == project.persistentModelID } }
+    private var linkedHistory: [MaintenanceRecord] {
+        history.filter {
+            $0.project?.persistentModelID == project.persistentModelID ||
+            ($0.project == nil && $0.relatedItemName.localizedCaseInsensitiveContains(project.title))
+        }.sorted { $0.date > $1.date }
+    }
 
     var body: some View {
         List {
@@ -49,11 +61,13 @@ struct ProjectDetailView: View {
 
             Section("Project") {
                 LabeledContent("Stage", value: project.stageRaw)
-                if let room = project.room {
-                    NavigationLink {
-                        RoomDetailView(room: room)
-                    } label: {
-                        LabeledContent("Room / Area", value: room.name)
+                if !project.linkedRooms.isEmpty {
+                    ForEach(project.linkedRooms) { linkedRoom in
+                        NavigationLink {
+                            RoomDetailView(room: linkedRoom)
+                        } label: {
+                            LabeledContent("Room / Area", value: linkedRoom.name)
+                        }
                     }
                 } else if !project.roomName.isEmpty {
                     LabeledContent("Room / Area", value: project.roomName)
@@ -82,14 +96,31 @@ struct ProjectDetailView: View {
             }
 
             if hasPermanentRecords {
-                Section("Permanent Home Records") {
+                Section("Installed in My Home") {
                     ForEach(linkedFixtures) { item in NavigationLink { FixtureDetailView(fixture: item) } label: { Label(item.name, systemImage: "lightbulb") } }
                     ForEach(linkedAppliances) { item in NavigationLink { ApplianceDetailView(appliance: item) } label: { Label(item.name, systemImage: "refrigerator") } }
                     ForEach(linkedSystems) { item in NavigationLink { SystemDetailView(system: item) } label: { Label(item.name, systemImage: "wrench.and.screwdriver") } }
                     ForEach(linkedPaints) { item in NavigationLink { PaintDetailView(paint: item) } label: { Label("\(item.surface): \(item.colorName)", systemImage: "paintbrush") } }
-                    Text("These records were installed from this project and now carry their own room, warranty, task, document, and maintenance connections.")
+                    Text("These items now live in the permanent home record. Open one to manage its room, warranty, tasks, documents, and history.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+            }
+
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No tasks linked to this project") }
+                ForEach(linkedTasks) { task in
+                    NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
+                }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
             }
 
             Section("Budget") {
@@ -122,8 +153,8 @@ struct ProjectDetailView: View {
                 }
             }
 
-            Section("Measurements") {
-                if measurements.isEmpty { Text("No measurements yet").foregroundStyle(.secondary) }
+            Section {
+                if measurements.isEmpty { CompactEmptyStateRow("No measurements yet", icon: "ruler") }
                 ForEach(measurements) { measurement in
                     NavigationLink {
                         ProjectMeasurementDetailView(project: project, measurement: measurement)
@@ -131,9 +162,29 @@ struct ProjectDetailView: View {
                         LabeledContent(measurement.name, value: "\(measurement.value.formatted()) \(measurement.unit)")
                     }
                 }
-                Button { showAddMeasurement = true } label: {
-                    Label("Add Measurement", systemImage: "ruler")
+            } header: {
+                CompactSectionHeader(
+                    title: "Measurements",
+                    count: measurements.count,
+                    primarySystemImage: "plus.circle.fill",
+                    primaryAccessibilityLabel: "Add Measurement",
+                    primaryAction: { showAddMeasurement = true }
+                )
+            }
+
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No history recorded for this project yet", icon: "clock") }
+                ForEach(linkedHistory.prefix(8)) { record in
+                    NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) }
                 }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
             }
 
             AttachmentSection(owner: .project(project))
@@ -142,12 +193,13 @@ struct ProjectDetailView: View {
                 Section("Notes") { Text(project.notes) }
             }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(project.title)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink("Edit") { ProjectFormView(existing: project) }
                 Menu {
-                    Button { showAddItem = true } label: { Label("Idea / Product", systemImage: "lightbulb") }
+                    Button { showAddItem = true } label: { Label("Idea / Shopping Option", systemImage: "lightbulb") }
                     Button { showAddMeasurement = true } label: { Label("Measurement", systemImage: "ruler") }
                 } label: {
                     Image(systemName: "plus")
@@ -159,6 +211,15 @@ struct ProjectDetailView: View {
         }
         .sheet(isPresented: $showAddMeasurement) {
             NavigationStack { ProjectMeasurementFormView(project: project) }
+        }
+        .sheet(isPresented: $showAddTask) {
+            NavigationStack { TaskFormView(initialRoom: project.room, initialProject: project) }
+        }
+        .sheet(isPresented: $showLinkTask) {
+            NavigationStack { ExistingTaskLinkView(target: .project(project)) }
+        }
+        .sheet(isPresented: $showAddHistory) {
+            NavigationStack { MaintenanceRecordFormView(initialRoom: project.room, initialProject: project, initialTitle: "Project update: \(project.title)", initialEventType: .project) }
         }
     }
 

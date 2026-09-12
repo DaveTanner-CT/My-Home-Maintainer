@@ -282,3 +282,10 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Vendor detail includes **Add Vendor to Contacts**, opening the native iOS new-contact editor prefilled from the Vendor record.
 - Contacts interactions are explicitly user initiated; Home Maintainer does not silently modify Contacts.
 - Contacts privacy usage text is included in the project configuration.
+
+
+## v0.37.1 — Contacts Integration Fix
+
+- Fixed Contacts → Vendor import handoff so selected contact values populate the Vendor form reliably.
+- Added a visible **Add to Contacts** action in each Vendor detail Contact section.
+- Kept the native iOS contact editor for reviewing/saving exported vendor contacts.

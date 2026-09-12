@@ -14,6 +14,7 @@ struct CompleteTaskView: View {
     @State private var costText = ""
     @State private var notes = ""
     @State private var eventType: HomeEventType = .maintenance
+    @State private var saveError: String?
 
     var body: some View {
         Form {
@@ -47,8 +48,18 @@ struct CompleteTaskView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { complete() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { complete() }.disabled(!costIsValid) }
         }
+        .alert("Could Not Complete Task", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: { Text(saveError ?? "The task could not be saved.") }
+    }
+
+    private var costIsValid: Bool {
+        let trimmed = costText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return true }
+        guard let value = Double(trimmed) else { return false }
+        return value >= 0
     }
 
     private var resolvedRoom: Room? { task.room ?? task.fixture?.room ?? task.appliance?.room ?? task.system?.room ?? task.project?.room }
@@ -83,8 +94,12 @@ struct CompleteTaskView: View {
             task.completedDate = completionDate
         }
 
-        try? modelContext.save()
-        Task { await NotificationManager.shared.schedule(for: task) }
-        dismiss()
+        do {
+            try modelContext.save()
+            Task { await NotificationManager.shared.schedule(for: task) }
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 }

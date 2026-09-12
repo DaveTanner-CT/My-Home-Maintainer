@@ -7,10 +7,12 @@ struct ProjectCompletionView: View {
     @Query private var allItems: [ProjectItem]
     @Query private var appliances: [Appliance]
     @Query private var fixtures: [Fixture]
+    @Query private var furniture: [Furniture]
     @Query private var systems: [HomeSystem]
     @Query private var paints: [PaintFinish]
     @Query private var history: [MaintenanceRecord]
     @State private var completedMessage = false
+    @State private var showCloseConfirmation = false
 
     private var projectItems: [ProjectItem] {
         allItems.filter { $0.project?.persistentModelID == project.persistentModelID && !$0.isIdeaOnly }
@@ -40,8 +42,9 @@ struct ProjectCompletionView: View {
                             if let date = item.purchaseDate { Text(date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary) }
                         }
                         Menu {
-                            Button { addAppliance(item) } label: { Label("Appliance / Electronics / Equipment", systemImage: "refrigerator") }
+                            Button { addAppliance(item) } label: { Label("Device / Equipment", systemImage: "refrigerator") }
                             Button { addFixture(item) } label: { Label("Fixture", systemImage: "lightbulb") }
+                            Button { addFurniture(item) } label: { Label("Furniture", systemImage: "sofa") }
                             Button { addSystem(item) } label: { Label("Home System", systemImage: "wrench.and.screwdriver") }
                             Button { addPaint(item) } label: { Label("Paint / Finish", systemImage: "paintbrush") }
                             Button { addHistoryOnly(item) } label: { Label("History Only", systemImage: "clock.arrow.circlepath") }
@@ -63,7 +66,7 @@ struct ProjectCompletionView: View {
                 if project.stage == .completed {
                     Label("Project completed and preserved in Home History", systemImage: "checkmark.seal.fill").foregroundStyle(.green)
                 } else {
-                    Button { closeProject() } label: { Label("Mark Project Completed", systemImage: "checkmark.seal") }
+                    Button { showCloseConfirmation = true } label: { Label("Mark Project Completed", systemImage: "checkmark.seal") }
                         .disabled(!canCloseProject)
                     if !canCloseProject {
                         Text("Install or save the \(purchased.count) purchased item\(purchased.count == 1 ? "" : "s") above before closing the project. This prevents researched purchases from becoming disconnected from the permanent home record.")
@@ -73,6 +76,12 @@ struct ProjectCompletionView: View {
             }
         }
         .navigationTitle("Install & Finish")
+        .confirmationDialog("Complete this project?", isPresented: $showCloseConfirmation, titleVisibility: .visible) {
+            Button("Mark Completed") { closeProject() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("The project will be preserved in Home History. You can still open and edit the project later.")
+        }
         .alert("Project Completed", isPresented: $completedMessage) { Button("OK", role: .cancel) {} } message: { Text("The project is now part of Home History, and installed items remain linked back to this project.") }
     }
 
@@ -80,6 +89,8 @@ struct ProjectCompletionView: View {
     private func installedItemLink(_ item: ProjectItem) -> some View {
         if let fixture = fixtures.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
             NavigationLink { FixtureDetailView(fixture: fixture) } label: { installedRow(item) }
+        } else if let furnitureItem = furniture.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
+            NavigationLink { FurnitureDetailView(furniture: furnitureItem) } label: { installedRow(item) }
         } else if let appliance = appliances.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
             NavigationLink { ApplianceDetailView(appliance: appliance) } label: { installedRow(item) }
         } else if let system = systems.first(where: { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }) {
@@ -107,6 +118,7 @@ struct ProjectCompletionView: View {
     private func alreadySaved(_ item: ProjectItem) -> Bool {
         appliances.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
             || fixtures.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
+            || furniture.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
             || systems.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.name.caseInsensitiveCompare(item.title) == .orderedSame }
             || paints.contains { $0.sourceProject?.persistentModelID == project.persistentModelID && $0.colorName.caseInsensitiveCompare(item.title) == .orderedSame }
     }
@@ -126,6 +138,15 @@ struct ProjectCompletionView: View {
         modelContext.insert(record)
         copyPhoto(item, to: .fixture(record))
         addInstallHistory(item, fixture: record)
+        markInstalled(item)
+    }
+
+    private func addFurniture(_ item: ProjectItem) {
+        guard !alreadySaved(item) else { markInstalled(item); return }
+        let record = Furniture(name: item.title, category: item.category, brand: item.manufacturer, model: item.model, materialFinish: item.finishColor, dimensions: item.dimensions, purchaseDate: item.purchaseDate, purchasePrice: item.actualPurchaseCost ?? item.unitCost, purchasedFrom: item.store, productLink: item.website, notes: item.notes, room: project.room, sourceProject: project)
+        modelContext.insert(record)
+        copyPhoto(item, to: .furniture(record))
+        addInstallHistory(item)
         markInstalled(item)
     }
 

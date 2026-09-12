@@ -25,18 +25,34 @@ struct HomeInsightsView: View {
     var body: some View {
         List {
             Section("Home Health") {
-                insightRow("Warranties expiring in 90 days", count: expiringSystems.count + expiringAppliances.count + expiringFixtures.count, icon: "shield.lefthalf.filled")
-                insightRow("Detector replacements due soon", count: replacementDetectors.count, icon: "sensor.tag.radiowaves.forward")
-                insightRow("Consumables due soon", count: replacementConsumables.count, icon: "arrow.triangle.2.circlepath")
-                insightRow("Active projects", count: activeProjects.count, icon: "hammer")
-                insightRow("Stored photos & documents", count: attachments.count, icon: "paperclip")
+                NavigationLink { WarrantyCenterView() } label: {
+                    insightRow("Warranties expiring in 90 days", count: expiringSystems.count + expiringAppliances.count + expiringFixtures.count, icon: "shield.lefthalf.filled")
+                }
+                NavigationLink { DetectorsListView() } label: {
+                    insightRow("Detector replacements due soon", count: replacementDetectors.count, icon: "sensor.tag.radiowaves.forward")
+                }
+                NavigationLink { ConsumablesListView() } label: {
+                    insightRow("Consumables due soon", count: replacementConsumables.count, icon: "arrow.triangle.2.circlepath")
+                }
+                NavigationLink { ProjectsView() } label: {
+                    insightRow("Active projects", count: activeProjects.count, icon: "hammer")
+                }
+                NavigationLink { StoredAttachmentLibraryView(attachments: attachments) } label: {
+                    insightRow("Stored photos & documents", count: attachments.count, icon: "paperclip")
+                }
             }
 
             Section("Maintenance This Year") {
-                LabeledContent("Completed records", value: thisYearRecords.count.formatted())
-                LabeledContent("Recorded spending", value: thisYearSpend.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                NavigationLink { HomeHistoryView() } label: {
+                    LabeledContent("Completed records", value: thisYearRecords.count.formatted())
+                }
+                NavigationLink { HomeHistoryView() } label: {
+                    LabeledContent("Recorded spending", value: thisYearSpend.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                }
                 if let latest = records.first {
-                    LabeledContent("Most recent", value: latest.date.formatted(date: .abbreviated, time: .omitted))
+                    NavigationLink { MaintenanceRecordDetailView(record: latest) } label: {
+                        LabeledContent("Most recent", value: latest.date.formatted(date: .abbreviated, time: .omitted))
+                    }
                 }
             }
 
@@ -117,6 +133,26 @@ struct HomeInsightsView: View {
     }
 }
 
+
+private struct StoredAttachmentLibraryView: View {
+    let attachments: [HomeAttachment]
+
+    var body: some View {
+        List {
+            if attachments.isEmpty {
+                ContentUnavailableView("No stored files", systemImage: "paperclip")
+            } else {
+                ForEach(attachments.sorted { $0.createdAt > $1.createdAt }) { attachment in
+                    NavigationLink { AttachmentDetailView(attachment: attachment) } label: {
+                        AttachmentRow(attachment: attachment)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Photos & Documents")
+    }
+}
+
 struct WarrantyCenterView: View {
     @Query private var systems: [HomeSystem]
     @Query private var appliances: [Appliance]
@@ -191,43 +227,58 @@ private struct WarrantyEntry: Identifiable {
 
 struct DataExportView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var exportDocument: HomeArchiveDocument?
-    @State private var showExporter = false
+    @State private var shareItem: ExportShareItem?
     @State private var exportError: String?
 
     var body: some View {
         List {
             Section("Home Archive") {
-                Text("Export a structured JSON archive of your home records, projects, maintenance history, and stored attachments. Attachment file data is included in the archive.")
+                Text("Create a structured JSON backup of your home records, projects, Home History, and stored attachments. Attachment file data is included in the archive.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Button {
                     createExport()
                 } label: {
-                    Label("Export Home Archive", systemImage: "square.and.arrow.up")
+                    Label("Share / Save Home Backup", systemImage: "square.and.arrow.up")
                 }
             }
+
+            Section("Choose where it goes") {
+                Text("Home Maintainer now opens the standard iPhone Share sheet first. From there you can choose Save to Files, Google Drive, Mail, AirDrop, Messages, or another compatible app.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text("For Google Drive, the most reliable route is to choose the Google Drive app directly in the Share sheet. Choosing Save to Files → Google Drive uses Apple's Files provider; if Drive reports that folder contents are unavailable, use the Google Drive share option instead.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("About this export") {
-                Text("This release creates an archive you can save outside the app. Automatic restore/import is not enabled yet; that will be added after the archive format has been tested on real data.")
+                Text("This JSON backup is a readable safety/export copy. The supported restore/import path is Home Transfer, which preserves relationships with stable transfer IDs and validates the package before importing it into a fresh app.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
-        .navigationTitle("Export Data")
-        .fileExporter(isPresented: $showExporter, document: exportDocument, contentType: .json, defaultFilename: "HomeMaintainer-Archive-\(Date.now.formatted(.iso8601.year().month().day()))") { result in
-            if case .failure(let error) = result { exportError = error.localizedDescription }
+        .navigationTitle("Backup / Export")
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(items: [item.url]) {
+                ExportShareFile.remove(item.url)
+                shareItem = nil
+            }
         }
         .alert("Export Error", isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })) {
             Button("OK", role: .cancel) { exportError = nil }
-        } message: { Text(exportError ?? "Unable to export the archive.") }
+        } message: { Text(exportError ?? "Unable to create the archive.") }
     }
 
     private func createExport() {
         do {
-            exportDocument = HomeArchiveDocument(data: try HomeExportService.encodedArchive(context: modelContext))
-            showExporter = true
+            let data = try HomeExportService.encodedArchive(context: modelContext)
+            let stamp = Date.now.formatted(.iso8601.year().month().day())
+            let url = try ExportShareFile.write(data: data, filename: "HomeMaintainer-Backup-\(stamp).json")
+            shareItem = ExportShareItem(url: url)
         } catch {
             exportError = error.localizedDescription
         }
     }
 }
+

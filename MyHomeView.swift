@@ -4,34 +4,93 @@ import SwiftData
 struct MyHomeView: View {
     @Query private var records: [MaintenanceRecord]
     @Query private var homes: [Home]
-    @State private var showAddMaintenance = false
+    @State private var showAddHistory = false
 
     var body: some View {
         List {
-            Section("Home") {
-                NavigationLink { HomeProfileView() } label: {
-                    Label(homes.first?.name ?? "Home Profile", systemImage: "house")
+            Section("Set Up & Review") {
+                NavigationLink { HomeSetupView() } label: {
+                    hubRow(
+                        title: "Home Setup",
+                        subtitle: "See what is connected, what may be missing, and the most useful next records to add.",
+                        icon: "checklist.checked"
+                    )
                 }
-                NavigationLink { RecommendedMaintenanceView() } label: { Label("Recommended Maintenance", systemImage: "checklist.checked") }
             }
-            Section("Home Records") {
-                NavigationLink { RoomsListView() } label: { Label("Rooms & Areas", systemImage: "door.left.hand.open") }
-                NavigationLink { SystemsListView() } label: { Label("Home Systems", systemImage: "wrench.and.screwdriver") }
-                NavigationLink { AppliancesListView() } label: { Label("Appliances, Electronics & Equipment", systemImage: "refrigerator") }
-                NavigationLink { FixturesListView() } label: { Label("Fixtures", systemImage: "lightbulb") }
-                NavigationLink { PaintListView() } label: { Label("Paint & Finishes", systemImage: "paintbrush") }
-                NavigationLink { DetectorsListView() } label: { Label("Smoke & CO Detectors", systemImage: "sensor.tag.radiowaves.forward") }
-                NavigationLink { ConsumablesListView() } label: { Label("Filters & Consumables", systemImage: "shippingbox") }
-                NavigationLink { VendorsListView() } label: { Label("Vendors", systemImage: "person.2") }
+
+            Section("Start with a Place") {
+                NavigationLink { RoomsListView() } label: {
+                    hubRow(
+                        title: "Rooms & Areas",
+                        subtitle: "See everything connected to a room, exterior area, or part of the property.",
+                        icon: "door.left.hand.open"
+                    )
+                }
             }
-            Section("History") {
-                NavigationLink { HomeHistoryView() } label: { Label("Home History", systemImage: "clock.arrow.circlepath") }
-                LabeledContent("Recorded events", value: "\(records.count)")
-                Button { showAddMaintenance = true } label: { Label("Add Home History Event", systemImage: "plus.circle") }
+
+            Section("Equipment & Finishes") {
+                NavigationLink { SystemsListView() } label: {
+                    hubRow(title: "Home Systems", subtitle: "HVAC, plumbing, water, generators, and other built-in systems.", icon: "wrench.and.screwdriver")
+                }
+                NavigationLink { AppliancesListView() } label: {
+                    hubRow(title: "Devices & Equipment", subtitle: "Appliances, electronics, home technology, tools, and outdoor equipment.", icon: "refrigerator")
+                }
+                NavigationLink { FixturesListView() } label: {
+                    hubRow(title: "Fixtures", subtitle: "Faucets, lighting, fans, hardware, and installed components.", icon: "lightbulb")
+                }
+                NavigationLink { FurnitureListView() } label: {
+                    hubRow(title: "Furniture", subtitle: "Furniture that belongs with the home, with rooms, photos, purchase details, and warranties.", icon: "sofa")
+                }
+                NavigationLink { PaintListView() } label: {
+                    hubRow(title: "Paint & Finishes", subtitle: "Colors, surfaces, finishes, purchase details, and product references.", icon: "paintbrush")
+                }
+            }
+
+            Section("Care & Planning") {
+                NavigationLink { HomeCareView() } label: {
+                    hubRow(title: "Home Care", subtitle: "Maintenance recommendations, seasonal work, warranties, safety, and replacement planning.", icon: "heart.text.clipboard")
+                }
+            }
+
+            Section("Records & People") {
+                NavigationLink { HomeHistoryView() } label: {
+                    hubRow(title: "Home History", subtitle: "Repairs, purchases, installations, replacements, inspections, and completed projects.", icon: "clock.arrow.circlepath")
+                }
+                NavigationLink { VendorsListView() } label: {
+                    hubRow(title: "Vendors", subtitle: "Keep the people and companies who have worked on your home connected to the record.", icon: "person.2")
+                }
             }
         }
         .navigationTitle("My Home")
-        .sheet(isPresented: $showAddMaintenance) { NavigationStack { MaintenanceRecordFormView() } }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if homes.first != nil {
+                    NavigationLink { HomeProfileView() } label: { Image(systemName: "house") }
+                        .accessibilityLabel("Home Profile")
+                }
+                Menu {
+                    Button { showAddHistory = true } label: { Label("Home History Event", systemImage: "clock.badge.plus") }
+                    NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView() } }
+    }
+
+    @ViewBuilder
+    private func hubRow(title: String, subtitle: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .frame(width: 28)
+                .foregroundStyle(Color.accentColor)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 3)
     }
 }
 
@@ -145,6 +204,144 @@ struct RoomsListView: View {
     }
 }
 
+struct FeetInchesDimensionRow: View {
+    let label: String
+    @Binding var value: Double?
+
+    private enum Field: Hashable {
+        case feet
+        case inches
+    }
+
+    @State private var feetText = ""
+    @State private var inchesText = ""
+    @FocusState private var focusedField: Field?
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+
+            TextField("0", text: $feetText)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 54)
+                .focused($focusedField, equals: .feet)
+                .onChange(of: feetText) { _, _ in
+                    saveRawEntry()
+                }
+
+            Text("ft")
+                .foregroundStyle(.secondary)
+
+            TextField("0", text: $inchesText)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 54)
+                .focused($focusedField, equals: .inches)
+                .onChange(of: inchesText) { _, _ in
+                    saveRawEntry()
+                }
+
+            Text("in")
+                .foregroundStyle(.secondary)
+        }
+        .onAppear {
+            syncFromStoredValue()
+        }
+        .onChange(of: focusedField) { oldField, newField in
+            // Keep whatever the user types visible while editing. When they leave
+            // the inches field, normalize total inches into feet + remainder.
+            // Example: 38 inches -> 3 ft 2 in.
+            if oldField == .inches && newField != .inches {
+                syncFromStoredValue()
+            } else if oldField != nil && newField == nil {
+                syncFromStoredValue()
+            }
+        }
+    }
+
+    private func saveRawEntry() {
+        let cleanedFeet = feetText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedInches = inchesText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleanedFeet.isEmpty && cleanedInches.isEmpty {
+            value = nil
+            return
+        }
+
+        let enteredFeet = max(0, Int(cleanedFeet) ?? 0)
+        let enteredInches = max(0, Int(cleanedInches) ?? 0)
+        let totalInches = enteredFeet * 12 + enteredInches
+        value = Double(totalInches) / 12.0
+    }
+
+    private func syncFromStoredValue() {
+        guard let number = value else {
+            feetText = ""
+            inchesText = ""
+            return
+        }
+
+        let totalInches = max(0, Int((number * 12).rounded()))
+        feetText = String(totalInches / 12)
+        inchesText = String(totalInches % 12)
+    }
+}
+
+
+struct RoomSectionHeader: View {
+    let title: String
+    var count: Int? = nil
+    let addAccessibilityLabel: String
+    let linkAccessibilityLabel: String?
+    let addAction: () -> Void
+    let linkAction: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(title)
+            if let count, count > 0 {
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(.quaternary, in: Capsule())
+            }
+            Spacer()
+            Button(action: addAction) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(addAccessibilityLabel)
+
+            if let linkAction, let linkAccessibilityLabel {
+                Button(action: linkAction) {
+                    Image(systemName: "link")
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(linkAccessibilityLabel)
+            }
+        }
+    }
+}
+
+private struct CompactEmptyRow: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Label(text, systemImage: "minus")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+}
+
 struct RoomDetailView: View {
     @Environment(\.modelContext) private var modelContext
     let room: Room
@@ -154,35 +351,52 @@ struct RoomDetailView: View {
     @Query private var projects: [Project]
     @Query private var systems: [HomeSystem]
     @Query private var fixtures: [Fixture]
+    @Query private var furniture: [Furniture]
+    @Query private var detectors: [Detector]
+    @Query private var consumables: [Consumable]
     @Query private var history: [MaintenanceRecord]
     @State private var showAddProject = false
     @State private var showAddPaint = false
     @State private var showAddAppliance = false
     @State private var showAddFixture = false
+    @State private var showAddFurniture = false
     @State private var showAddSystem = false
     @State private var showAddTask = false
+    @State private var showAddDetector = false
+    @State private var showAddConsumable = false
+    @State private var showLinkProject = false
+    @State private var showLinkPaint = false
+    @State private var showLinkAppliance = false
+    @State private var showLinkFixture = false
+    @State private var showLinkFurniture = false
+    @State private var showLinkSystem = false
+    @State private var showLinkTask = false
+    @State private var showAddHistory = false
 
-    private var roomAppliances: [Appliance] { appliances.filter { $0.room?.persistentModelID == room.persistentModelID } }
-    private var roomTasks: [MaintenanceTask] { tasks.filter { $0.room?.persistentModelID == room.persistentModelID } }
+    private var roomAppliances: [Appliance] { appliances.filter { $0.isLinked(to: room) } }
+    private var roomTasks: [MaintenanceTask] { tasks.filter { $0.isRelevant(to: room) } }
     private var roomPaints: [PaintFinish] {
         paints.filter {
-            $0.room?.persistentModelID == room.persistentModelID ||
-            ($0.room == nil && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
+            $0.isLinked(to: room) ||
+            ($0.room == nil && $0.additionalRooms.isEmpty && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
         }
     }
     private var roomProjects: [Project] {
         projects.filter {
-            $0.room?.persistentModelID == room.persistentModelID ||
-            ($0.room == nil && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
+            $0.isLinked(to: room) ||
+            ($0.room == nil && $0.additionalRooms.isEmpty && $0.roomName.caseInsensitiveCompare(room.name) == .orderedSame)
         }
     }
     private var roomSystems: [HomeSystem] {
         systems.filter {
-            $0.room?.persistentModelID == room.persistentModelID ||
-            ($0.room == nil && $0.location.caseInsensitiveCompare(room.name) == .orderedSame)
+            $0.isLinked(to: room) ||
+            ($0.room == nil && $0.additionalRooms.isEmpty && $0.location.caseInsensitiveCompare(room.name) == .orderedSame)
         }
     }
-    private var roomFixtures: [Fixture] { fixtures.filter { $0.room?.persistentModelID == room.persistentModelID } }
+    private var roomFixtures: [Fixture] { fixtures.filter { $0.isLinked(to: room) } }
+    private var roomFurniture: [Furniture] { furniture.filter { $0.isLinked(to: room) } }
+    private var roomDetectors: [Detector] { detectors.filter { $0.room?.persistentModelID == room.persistentModelID } }
+    private var roomConsumables: [Consumable] { consumables.filter { $0.room?.persistentModelID == room.persistentModelID } }
     private var openRoomTasks: [MaintenanceTask] { roomTasks.filter { !$0.isCompleted }.sorted { $0.dueDate < $1.dueDate } }
     private var roomHistory: [MaintenanceRecord] {
         history.filter { record in
@@ -190,6 +404,7 @@ struct RoomDetailView: View {
             (record.room == nil && (
                 record.relatedItemName.caseInsensitiveCompare(room.name) == .orderedSame ||
                 roomFixtures.contains(where: { $0.name.caseInsensitiveCompare(record.relatedItemName) == .orderedSame }) ||
+                roomFurniture.contains(where: { $0.name.caseInsensitiveCompare(record.relatedItemName) == .orderedSame }) ||
                 roomAppliances.contains(where: { $0.name.caseInsensitiveCompare(record.relatedItemName) == .orderedSame }) ||
                 roomSystems.contains(where: { $0.name.caseInsensitiveCompare(record.relatedItemName) == .orderedSame })
             ))
@@ -199,6 +414,7 @@ struct RoomDetailView: View {
         let cutoff = Calendar.current.date(byAdding: .day, value: 90, to: .now) ?? .now
         return roomFixtures.compactMap(\.warrantyExpiration).filter { $0 <= cutoff }.count +
             roomAppliances.compactMap(\.warrantyExpiration).filter { $0 <= cutoff }.count +
+            roomFurniture.compactMap(\.warrantyExpiration).filter { $0 <= cutoff }.count +
             roomSystems.compactMap(\.warrantyExpiration).filter { $0 <= cutoff }.count
     }
 
@@ -207,19 +423,59 @@ struct RoomDetailView: View {
             Section("Area") {
                 LabeledContent("Type", value: room.areaType.rawValue)
                 if room.isFavorite { Label("Favorite", systemImage: "star.fill").foregroundStyle(.yellow) }
+
+                if room.dimensionLength != nil || room.dimensionWidth != nil || room.ceilingHeight != nil {
+                    if let dimensions = formattedFloorDimensions {
+                        LabeledContent("Dimensions", value: dimensions)
+                    }
+                    if let height = formattedDimension(room.ceilingHeight) {
+                        LabeledContent("Ceiling height", value: height)
+                    }
+                    if let area = room.calculatedArea {
+                        LabeledContent("Area", value: "\(area.formatted(.number.precision(.fractionLength(0...2)))) \(room.dimensionUnit.areaAbbreviation)")
+                    }
+                } else {
+                    Text("No dimensions recorded")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
                 if !room.notes.isEmpty { Text(room.notes) }
             }
 
+            RoomPhotoGridSection(room: room)
+
             Section("At a Glance") {
-                LabeledContent("Active projects", value: "\(roomProjects.filter { $0.stage != .completed }.count)")
-                LabeledContent("Open tasks", value: "\(openRoomTasks.count)")
-                LabeledContent("Systems / devices / fixtures", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count)")
-                if warrantyAlerts > 0 { Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark").foregroundStyle(.orange) }
+                NavigationLink { RoomProjectsSummaryView(room: room, projects: roomProjects) } label: {
+                    LabeledContent("Active projects", value: "\(roomProjects.filter { $0.stage != .completed }.count)")
+                }
+                NavigationLink { RoomTasksSummaryView(room: room, tasks: roomTasks) } label: {
+                    LabeledContent("Open tasks", value: "\(openRoomTasks.count)")
+                }
+                NavigationLink { RoomAssetsSummaryView(room: room, systems: roomSystems, appliances: roomAppliances, fixtures: roomFixtures, furniture: roomFurniture) } label: {
+                    LabeledContent("Systems / devices / fixtures / furniture", value: "\(roomSystems.count + roomAppliances.count + roomFixtures.count + roomFurniture.count)")
+                }
+                if !roomDetectors.isEmpty {
+                    NavigationLink { RoomDetectorsSummaryView(room: room, detectors: roomDetectors) } label: {
+                        LabeledContent("Smoke / CO detectors", value: "\(roomDetectors.count)")
+                    }
+                }
+                if !roomConsumables.isEmpty {
+                    NavigationLink { RoomConsumablesSummaryView(room: room, consumables: roomConsumables) } label: {
+                        LabeledContent("Filters / consumables", value: "\(roomConsumables.count)")
+                    }
+                }
+                if warrantyAlerts > 0 {
+                    NavigationLink { RoomWarrantySummaryView(room: room, systems: roomSystems, appliances: roomAppliances, fixtures: roomFixtures, furniture: roomFurniture) } label: {
+                        Label("\(warrantyAlerts) warranty item\(warrantyAlerts == 1 ? "" : "s") need attention", systemImage: "shield.lefthalf.filled.badge.checkmark")
+                            .foregroundStyle(.orange)
+                    }
+                }
                 if let next = openRoomTasks.first { NavigationLink { TaskDetailView(task: next) } label: { LabeledContent("Next task", value: next.title) } }
             }
 
-            Section("Projects") {
-                if roomProjects.isEmpty { Text("No linked projects").foregroundStyle(.secondary) }
+            Section {
+                if roomProjects.isEmpty { CompactEmptyRow("No linked projects") }
                 ForEach(roomProjects) { project in
                     NavigationLink { ProjectDetailView(project: project) } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -233,13 +489,19 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddProject = true } label: {
-                    Label("Add Project for This Area", systemImage: "plus")
-                }
+            } header: {
+                RoomSectionHeader(
+                    title: "Projects",
+                    count: roomProjects.count,
+                    addAccessibilityLabel: "Create New Project",
+                    linkAccessibilityLabel: "Link Existing Project",
+                    addAction: { showAddProject = true },
+                    linkAction: { showLinkProject = true }
+                )
             }
 
-            Section("Paint & Finishes") {
-                if roomPaints.isEmpty { Text("No paint records").foregroundStyle(.secondary) }
+            Section {
+                if roomPaints.isEmpty { CompactEmptyRow("No paint records") }
                 ForEach(roomPaints) { paint in
                     NavigationLink { PaintDetailView(paint: paint) } label: {
                         VStack(alignment: .leading) {
@@ -248,62 +510,215 @@ struct RoomDetailView: View {
                         }
                     }
                 }
-                Button { showAddPaint = true } label: {
-                    Label("Add Paint / Finish", systemImage: "plus")
-                }
+            } header: {
+                RoomSectionHeader(
+                    title: "Paint & Finishes",
+                    count: roomPaints.count,
+                    addAccessibilityLabel: "Create New Paint or Finish",
+                    linkAccessibilityLabel: "Link Existing Paint or Finish",
+                    addAction: { showAddPaint = true },
+                    linkAction: { showLinkPaint = true }
+                )
             }
 
-            Section("Home Systems") {
-                if roomSystems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
+            Section {
+                if roomSystems.isEmpty { CompactEmptyRow("No linked home systems") }
                 ForEach(roomSystems) { system in NavigationLink(system.name) { SystemDetailView(system: system) } }
-                Button { showAddSystem = true } label: { Label("Add Home System", systemImage: "plus") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Home Systems",
+                    count: roomSystems.count,
+                    addAccessibilityLabel: "Create New Home System",
+                    linkAccessibilityLabel: "Link Existing Home System",
+                    addAction: { showAddSystem = true },
+                    linkAction: { showLinkSystem = true }
+                )
             }
 
-            Section("Appliances, Electronics & Equipment") {
-                if roomAppliances.isEmpty { Text("No appliances, electronics, or equipment").foregroundStyle(.secondary) }
+            Section {
+                if roomAppliances.isEmpty { CompactEmptyRow("No devices or equipment") }
                 ForEach(roomAppliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
-                Button { showAddAppliance = true } label: {
-                    Label("Add Device / Equipment", systemImage: "plus")
-                }
+            } header: {
+                RoomSectionHeader(
+                    title: "Devices & Equipment",
+                    count: roomAppliances.count,
+                    addAccessibilityLabel: "Create New Device or Equipment",
+                    linkAccessibilityLabel: "Link Existing Device or Equipment",
+                    addAction: { showAddAppliance = true },
+                    linkAction: { showLinkAppliance = true }
+                )
             }
 
-            Section("Fixtures") {
-                if roomFixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
+            Section {
+                if roomFixtures.isEmpty { CompactEmptyRow("No linked fixtures") }
                 ForEach(roomFixtures) { fixture in NavigationLink(fixture.name) { FixtureDetailView(fixture: fixture) } }
-                Button { showAddFixture = true } label: { Label("Add Fixture", systemImage: "plus") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Fixtures",
+                    count: roomFixtures.count,
+                    addAccessibilityLabel: "Create New Fixture",
+                    linkAccessibilityLabel: "Link Existing Fixture",
+                    addAction: { showAddFixture = true },
+                    linkAction: { showLinkFixture = true }
+                )
             }
 
-            Section("Tasks") {
-                if roomTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+            Section {
+                if roomFurniture.isEmpty { CompactEmptyRow("No linked furniture") }
+                ForEach(roomFurniture) { item in NavigationLink(item.name) { FurnitureDetailView(furniture: item) } }
+            } header: {
+                RoomSectionHeader(
+                    title: "Furniture",
+                    count: roomFurniture.count,
+                    addAccessibilityLabel: "Create New Furniture",
+                    linkAccessibilityLabel: "Link Existing Furniture",
+                    addAction: { showAddFurniture = true },
+                    linkAction: { showLinkFurniture = true }
+                )
+            }
+
+            Section {
+                if roomDetectors.isEmpty { CompactEmptyRow("No detectors assigned") }
+                ForEach(roomDetectors) { detector in
+                    NavigationLink { DetectorDetailView(detector: detector) } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(detector.type).font(.headline)
+                            Text([detector.manufacturer, detector.model].filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                RoomSectionHeader(
+                    title: "Smoke & CO Detectors",
+                    count: roomDetectors.count,
+                    addAccessibilityLabel: "Add Detector to This Room",
+                    linkAccessibilityLabel: nil,
+                    addAction: { showAddDetector = true },
+                    linkAction: nil
+                )
+            }
+
+            Section {
+                if roomConsumables.isEmpty { CompactEmptyRow("No filters or consumables assigned") }
+                ForEach(roomConsumables) { item in
+                    NavigationLink { ConsumableDetailView(item: item) } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.name).font(.headline)
+                            Text([item.type, item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                RoomSectionHeader(
+                    title: "Filters & Consumables",
+                    count: roomConsumables.count,
+                    addAccessibilityLabel: "Add Filter or Consumable to This Room",
+                    linkAccessibilityLabel: nil,
+                    addAction: { showAddConsumable = true },
+                    linkAction: nil
+                )
+            }
+
+            Section {
+                if roomTasks.isEmpty { CompactEmptyRow("No linked tasks") }
                 ForEach(roomTasks) { task in
                     NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) }
                 }
-                Button { showAddTask = true } label: {
-                    Label("Add Task for This Area", systemImage: "plus")
-                }
+            } header: {
+                RoomSectionHeader(
+                    title: "Tasks",
+                    count: roomTasks.count,
+                    addAccessibilityLabel: "Create New Task",
+                    linkAccessibilityLabel: "Link Existing Task",
+                    addAction: { showAddTask = true },
+                    linkAction: { showLinkTask = true }
+                )
             }
 
-            Section("Recent Home History") {
-                if roomHistory.isEmpty { Text("No history recorded for this area yet").foregroundStyle(.secondary) }
+            Section {
+                if roomHistory.isEmpty { CompactEmptyRow("No history recorded yet") }
                 ForEach(roomHistory.prefix(5)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
                 NavigationLink { HomeHistoryView() } label: { Label("View Full Home History", systemImage: "clock.arrow.circlepath") }
+            } header: {
+                RoomSectionHeader(
+                    title: "Recent Home History",
+                    count: roomHistory.count,
+                    addAccessibilityLabel: "Add History Event for This Room",
+                    linkAccessibilityLabel: nil,
+                    addAction: { showAddHistory = true },
+                    linkAction: nil
+                )
             }
 
-            AttachmentSection(owner: .room(room))
+            AttachmentSection(owner: .room(room), showsPhotos: false)
         }
+        .listSectionSpacing(.compact)
         .navigationTitle(room.name)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink("Edit") { RoomFormView(existing: room) }
+                Menu {
+                    Button { showAddProject = true } label: { Label("Project", systemImage: "hammer") }
+                    Button { showAddTask = true } label: { Label("Task", systemImage: "checkmark.circle") }
+                    Divider()
+                    Button { showAddSystem = true } label: { Label("Home System", systemImage: "wrench.and.screwdriver") }
+                    Button { showAddAppliance = true } label: { Label("Device / Equipment", systemImage: "refrigerator") }
+                    Button { showAddFixture = true } label: { Label("Fixture", systemImage: "lightbulb") }
+                    Button { showAddFurniture = true } label: { Label("Furniture", systemImage: "sofa") }
+                    Button { showAddPaint = true } label: { Label("Paint / Finish", systemImage: "paintbrush") }
+                    Button { showAddDetector = true } label: { Label("Smoke / CO Detector", systemImage: "sensor.tag.radiowaves.forward") }
+                    Button { showAddConsumable = true } label: { Label("Filter / Consumable", systemImage: "shippingbox") }
+                    Divider()
+                    Menu("Link Existing") {
+                        Button("Project") { showLinkProject = true }
+                        Button("Task") { showLinkTask = true }
+                        Button("Home System") { showLinkSystem = true }
+                        Button("Device / Equipment") { showLinkAppliance = true }
+                        Button("Fixture") { showLinkFixture = true }
+                        Button("Furniture") { showLinkFurniture = true }
+                        Button("Paint / Finish") { showLinkPaint = true }
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add to This Area")
             }
         }
         .sheet(isPresented: $showAddProject) { NavigationStack { ProjectFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddPaint) { NavigationStack { PaintFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddAppliance) { NavigationStack { ApplianceFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddFixture) { NavigationStack { FixtureFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddFurniture) { NavigationStack { FurnitureFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddSystem) { NavigationStack { SystemFormView(initialRoom: room) } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddDetector) { NavigationStack { DetectorFormView(initialRoom: room) } }
+        .sheet(isPresented: $showAddConsumable) { NavigationStack { ConsumableFormView(initialRoom: room) } }
+        .sheet(isPresented: $showLinkProject) { NavigationStack { RoomLinkExistingView(room: room, category: .projects) } }
+        .sheet(isPresented: $showLinkPaint) { NavigationStack { RoomLinkExistingView(room: room, category: .paints) } }
+        .sheet(isPresented: $showLinkAppliance) { NavigationStack { RoomLinkExistingView(room: room, category: .appliances) } }
+        .sheet(isPresented: $showLinkFixture) { NavigationStack { RoomLinkExistingView(room: room, category: .fixtures) } }
+        .sheet(isPresented: $showLinkFurniture) { NavigationStack { RoomLinkExistingView(room: room, category: .furniture) } }
+        .sheet(isPresented: $showLinkSystem) { NavigationStack { RoomLinkExistingView(room: room, category: .systems) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { RoomLinkExistingView(room: room, category: .tasks) } }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: room, initialTitle: "Work in \(room.name)") } }
         .onAppear { connectLegacyRecords() }
+    }
+
+    private var formattedFloorDimensions: String? {
+        guard let length = formattedDimension(room.dimensionLength),
+              let width = formattedDimension(room.dimensionWidth) else { return nil }
+        return "\(length) × \(width)"
+    }
+
+    private func formattedDimension(_ value: Double?) -> String? {
+        guard let value else { return nil }
+        if room.dimensionUnit == .meters {
+            return "\(value.formatted(.number.precision(.fractionLength(0...2)))) m"
+        }
+        let totalInches = max(0, Int((value * 12).rounded()))
+        return "\(totalInches / 12) ft \(totalInches % 12) in"
     }
 
     private func connectLegacyRecords() {
@@ -319,6 +734,137 @@ struct RoomDetailView: View {
             changed = true
         }
         if changed { try? modelContext.save() }
+    }
+}
+
+
+
+enum RoomLinkCategory: String, Identifiable {
+    case projects = "Projects"
+    case paints = "Paint & Finishes"
+    case systems = "Home Systems"
+    case appliances = "Devices & Equipment"
+    case fixtures = "Fixtures"
+    case furniture = "Furniture"
+    case tasks = "Tasks"
+    var id: String { rawValue }
+}
+
+struct RoomLinkExistingView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    let room: Room
+    let category: RoomLinkCategory
+
+    @Query(sort: \Project.title) private var projects: [Project]
+    @Query(sort: \PaintFinish.colorName) private var paints: [PaintFinish]
+    @Query(sort: \HomeSystem.name) private var systems: [HomeSystem]
+    @Query(sort: \Appliance.name) private var appliances: [Appliance]
+    @Query(sort: \Fixture.name) private var fixtures: [Fixture]
+    @Query(sort: \Furniture.name) private var furniture: [Furniture]
+    @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
+
+    var body: some View {
+        List {
+            Section {
+                Text("Select existing records that belong in \(room.name). Linking a record here does not remove it from another room or area.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            content
+        }
+        .navigationTitle("Link Existing \(category.rawValue)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch category {
+        case .projects:
+            if projects.isEmpty { empty("No projects are available to link.") }
+            ForEach(projects) { item in linkRow(title: item.title, subtitle: item.stage.rawValue, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .paints:
+            if paints.isEmpty { empty("No paint or finish records are available to link.") }
+            ForEach(paints) { item in
+                let title = [item.colorName, item.surface].filter { !$0.isEmpty }.joined(separator: " · ")
+                linkRow(title: title.isEmpty ? "Paint / Finish" : title, subtitle: [item.brand, item.colorCode].filter { !$0.isEmpty }.joined(separator: " · "), linked: item.isLinked(to: room)) { toggle(item) }
+            }
+        case .systems:
+            if systems.isEmpty { empty("No home systems are available to link.") }
+            ForEach(systems) { item in linkRow(title: item.name, subtitle: item.type, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .appliances:
+            if appliances.isEmpty { empty("No devices or equipment are available to link.") }
+            ForEach(appliances) { item in linkRow(title: item.name, subtitle: [item.manufacturer, item.model].filter { !$0.isEmpty }.joined(separator: " · "), linked: item.isLinked(to: room)) { toggle(item) } }
+        case .fixtures:
+            if fixtures.isEmpty { empty("No fixtures are available to link.") }
+            ForEach(fixtures) { item in linkRow(title: item.name, subtitle: item.category, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .furniture:
+            if furniture.isEmpty { empty("No furniture is available to link.") }
+            ForEach(furniture) { item in linkRow(title: item.name, subtitle: item.category, linked: item.isLinked(to: room)) { toggle(item) } }
+        case .tasks:
+            if tasks.isEmpty { empty("No tasks are available to link.") }
+            ForEach(tasks) { item in
+                let inherited = item.isRelevant(to: room) && !item.isDirectlyLinked(to: room)
+                linkRow(title: item.title, subtitle: inherited ? "Already appears here through a linked record" : item.dueDate.formatted(date: .abbreviated, time: .omitted), linked: item.isDirectlyLinked(to: room)) { toggle(item) }
+            }
+        }
+    }
+
+    private func empty(_ text: String) -> some View { Text(text).foregroundStyle(.secondary) }
+
+    private func linkRow(title: String, subtitle: String, linked: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).foregroundStyle(.primary)
+                    if !subtitle.isEmpty { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+                }
+                Spacer()
+                Image(systemName: linked ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(linked ? Color.blue : Color.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggle(_ item: Project) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: PaintFinish) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: HomeSystem) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: Appliance) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: Fixture) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: Furniture) { item.isLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func toggle(_ item: MaintenanceTask) { item.isDirectlyLinked(to: room) ? item.unlink(from: room) : item.link(to: room); save() }
+    private func save() { try? modelContext.save() }
+}
+
+struct RoomAssetsSummaryView: View {
+    let room: Room
+    let systems: [HomeSystem]
+    let appliances: [Appliance]
+    let fixtures: [Fixture]
+    let furniture: [Furniture]
+
+    var body: some View {
+        List {
+            Section("Home Systems") {
+                if systems.isEmpty { Text("No linked home systems").foregroundStyle(.secondary) }
+                ForEach(systems) { item in NavigationLink(item.name) { SystemDetailView(system: item) } }
+            }
+            Section("Devices & Equipment") {
+                if appliances.isEmpty { Text("No linked devices or equipment").foregroundStyle(.secondary) }
+                ForEach(appliances) { item in NavigationLink(item.name) { ApplianceDetailView(appliance: item) } }
+            }
+            Section("Fixtures") {
+                if fixtures.isEmpty { Text("No linked fixtures").foregroundStyle(.secondary) }
+                ForEach(fixtures) { item in NavigationLink(item.name) { FixtureDetailView(fixture: item) } }
+            }
+            Section("Furniture") {
+                if furniture.isEmpty { Text("No linked furniture").foregroundStyle(.secondary) }
+                ForEach(furniture) { item in NavigationLink(item.name) { FurnitureDetailView(furniture: item) } }
+            }
+        }
+        .navigationTitle("\(room.name) Assets")
     }
 }
 
@@ -341,8 +887,15 @@ struct SystemDetailView: View {
     @Query private var history: [MaintenanceRecord]
     @State private var showEdit = false
     @State private var showAddTask = false
+    @State private var showLinkTask = false
+    @State private var showAddHistory = false
     private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.system?.persistentModelID == system.persistentModelID } }
-    private var linkedHistory: [MaintenanceRecord] { history.filter { $0.relatedItemName.localizedCaseInsensitiveContains(system.name) } }
+    private var linkedHistory: [MaintenanceRecord] {
+        history.filter {
+            $0.system?.persistentModelID == system.persistentModelID ||
+            ($0.system == nil && $0.relatedItemName.localizedCaseInsensitiveContains(system.name))
+        }.sorted { $0.date > $1.date }
+    }
     var body: some View {
         List {
             Section("Equipment") {
@@ -350,7 +903,11 @@ struct SystemDetailView: View {
                 if !system.manufacturer.isEmpty { LabeledContent("Manufacturer", value: system.manufacturer) }
                 if !system.model.isEmpty { LabeledContent("Model", value: system.model) }
                 if !system.serialNumber.isEmpty { LabeledContent("Serial", value: system.serialNumber) }
-                if let room = system.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } } else if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
+                if !system.linkedRooms.isEmpty {
+                    ForEach(system.linkedRooms) { linkedRoom in
+                        NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                    }
+                } else if !system.location.isEmpty { LabeledContent("Location", value: system.location) }
                 if let project = system.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
             }
             if system.warrantyExpiration != nil || (system.installationDate != nil && system.expectedServiceLifeYears != nil) {
@@ -370,13 +927,41 @@ struct SystemDetailView: View {
                 if let vendor = system.vendor { NavigationLink { VendorDetailView(vendor: vendor) } label: { LabeledContent("Vendor", value: vendor.businessName) } }
                 if !system.website.isEmpty, let url = normalizedURL(system.website) { Link(destination: url) { Label("Open Website", systemImage: "safari") } }
             }
-            Section("Tasks") { if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }; ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }; Button { showAddTask = true } label: { Label("Add Task for This System", systemImage: "plus") } }
-            Section("Maintenance History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No linked tasks") }
+                ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
+            }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No recorded maintenance", icon: "clock") }
+                ForEach(linkedHistory.prefix(8)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
+            }
             AttachmentSection(owner: .system(system))
             if !system.notes.isEmpty { Section("Notes") { Text(system.notes) } }
-        }.navigationTitle(system.name)
+        }
+        .listSectionSpacing(.compact)
+        .navigationTitle(system.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { SystemFormView(existing: system) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: system.room, initialSystem: system, initialProject: system.sourceProject) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .system(system)) } }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: system.room, initialSystem: system, initialProject: system.sourceProject, initialVendor: system.vendor, initialTitle: "Maintenance: \(system.name)") } }
     }
 }
 
@@ -399,16 +984,25 @@ struct ApplianceDetailView: View {
     @Query private var history: [MaintenanceRecord]
     @State private var showEdit = false
     @State private var showAddTask = false
+    @State private var showLinkTask = false
+    @State private var showAddHistory = false
     private var linkedTasks: [MaintenanceTask] { tasks.filter { $0.appliance?.persistentModelID == appliance.persistentModelID } }
-    private var linkedHistory: [MaintenanceRecord] { history.filter { $0.relatedItemName.localizedCaseInsensitiveContains(appliance.name) } }
+    private var linkedHistory: [MaintenanceRecord] {
+        history.filter {
+            $0.appliance?.persistentModelID == appliance.persistentModelID ||
+            ($0.appliance == nil && $0.relatedItemName.localizedCaseInsensitiveContains(appliance.name))
+        }.sorted { $0.date > $1.date }
+    }
     var body: some View {
         List {
-            Section("Appliance / Electronics / Equipment") {
+            Section("Device / Equipment") {
                 if !appliance.category.isEmpty { LabeledContent("Category", value: appliance.category) }
                 if !appliance.manufacturer.isEmpty { LabeledContent("Manufacturer", value: appliance.manufacturer) }
                 if !appliance.model.isEmpty { LabeledContent("Model", value: appliance.model) }
                 if !appliance.serialNumber.isEmpty { LabeledContent("Serial", value: appliance.serialNumber) }
-                if let room = appliance.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+                ForEach(appliance.linkedRooms) { linkedRoom in
+                    NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                }
                 if let project = appliance.sourceProject { NavigationLink { ProjectDetailView(project: project) } label: { LabeledContent("Added from project", value: project.title) } }
             }
             Section("Purchase & Warranty") {
@@ -423,13 +1017,41 @@ struct ApplianceDetailView: View {
                 if !appliance.manufacturerWebsite.isEmpty, let url = normalizedURL(appliance.manufacturerWebsite) { Link("Manufacturer Website", destination: url) }
                 if !appliance.productRegistrationLink.isEmpty, let url = normalizedURL(appliance.productRegistrationLink) { Link("Product Registration", destination: url) }
             }
-            Section("Tasks") { if linkedTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }; ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }; Button { showAddTask = true } label: { Label("Add Task for This Device", systemImage: "plus") } }
-            Section("Maintenance History") { if linkedHistory.isEmpty { Text("No recorded maintenance").foregroundStyle(.secondary) }; ForEach(linkedHistory) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }
+            Section {
+                if linkedTasks.isEmpty { CompactEmptyStateRow("No linked tasks") }
+                ForEach(linkedTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+            } header: {
+                CompactSectionHeader(
+                    title: "Tasks",
+                    count: linkedTasks.count,
+                    primaryAccessibilityLabel: "Create New Task",
+                    primaryAction: { showAddTask = true },
+                    secondarySystemImage: "link",
+                    secondaryAccessibilityLabel: "Link Existing Task",
+                    secondaryAction: { showLinkTask = true }
+                )
+            }
+            Section {
+                if linkedHistory.isEmpty { CompactEmptyStateRow("No recorded maintenance", icon: "clock") }
+                ForEach(linkedHistory.prefix(8)) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } }
+            } header: {
+                CompactSectionHeader(
+                    title: "Home History",
+                    count: linkedHistory.count,
+                    primarySystemImage: "clock.badge.plus",
+                    primaryAccessibilityLabel: "Add History Event",
+                    primaryAction: { showAddHistory = true }
+                )
+            }
             AttachmentSection(owner: .appliance(appliance))
             if !appliance.notes.isEmpty { Section("Notes") { Text(appliance.notes) } }
-        }.navigationTitle(appliance.name)
+        }
+        .listSectionSpacing(.compact)
+        .navigationTitle(appliance.name)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ApplianceFormView(existing: appliance) } } }
         .sheet(isPresented: $showAddTask) { NavigationStack { TaskFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject) } }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .appliance(appliance)) } }
+        .sheet(isPresented: $showAddHistory) { NavigationStack { MaintenanceRecordFormView(initialRoom: appliance.room, initialAppliance: appliance, initialProject: appliance.sourceProject, initialTitle: "Maintenance: \(appliance.name)") } }
     }
 }
 
@@ -453,8 +1075,10 @@ struct PaintDetailView: View {
     var body: some View {
         List {
             Section("Location") {
-                if let room = paint.room {
-                    NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) }
+                if !paint.linkedRooms.isEmpty {
+                    ForEach(paint.linkedRooms) { linkedRoom in
+                        NavigationLink { RoomDetailView(room: linkedRoom) } label: { LabeledContent("Room / Area", value: linkedRoom.name) }
+                    }
                 } else {
                     LabeledContent("Room / Area", value: paint.roomName)
                 }
@@ -523,10 +1147,16 @@ struct VendorDetailView: View {
     let vendor: Vendor
     @Environment(\.openURL) private var openURL
     @Query private var systems: [HomeSystem]
+    @Query private var appliances: [Appliance]
+    @Query private var fixtures: [Fixture]
     @Query private var tasks: [MaintenanceTask]
     @Query private var history: [MaintenanceRecord]
+    @State private var showLinkTask = false
+    @State private var showAddToContacts = false
 
     private var vendorSystems: [HomeSystem] { systems.filter { $0.vendor?.persistentModelID == vendor.persistentModelID } }
+    private var vendorAppliances: [Appliance] { appliances.filter { $0.purchasedFrom.localizedCaseInsensitiveContains(vendor.businessName) } }
+    private var vendorFixtures: [Fixture] { fixtures.filter { $0.vendor?.persistentModelID == vendor.persistentModelID || $0.purchasedFrom.localizedCaseInsensitiveContains(vendor.businessName) } }
     private var vendorTasks: [MaintenanceTask] { tasks.filter { $0.vendor?.persistentModelID == vendor.persistentModelID } }
     private var vendorHistory: [MaintenanceRecord] { history.filter { $0.vendorName.localizedCaseInsensitiveContains(vendor.businessName) } }
     private var totalSpending: Double { vendorHistory.compactMap(\.cost).reduce(0,+) }
@@ -553,16 +1183,25 @@ struct VendorDetailView: View {
                    let url = URL(string: "http://maps.apple.com/?q=\(encoded)") {
                     Button { openURL(url) } label: { Label(vendor.address, systemImage: "map") }
                 }
+                Button { showAddToContacts = true } label: {
+                    Label("Add to Contacts", systemImage: "person.crop.circle.badge.plus")
+                }
             }
             if !vendorSystems.isEmpty {
                 Section("Related Systems") {
                     ForEach(vendorSystems) { item in NavigationLink(item.name) { SystemDetailView(system: item) } }
                 }
             }
-            if !vendorTasks.isEmpty {
-                Section("Tasks") {
-                    ForEach(vendorTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+            if !vendorAppliances.isEmpty || !vendorFixtures.isEmpty {
+                Section("Related Equipment & Fixtures") {
+                    ForEach(vendorAppliances) { item in NavigationLink { ApplianceDetailView(appliance: item) } label: { Label(item.name, systemImage: "refrigerator") } }
+                    ForEach(vendorFixtures) { item in NavigationLink { FixtureDetailView(fixture: item) } label: { Label(item.name, systemImage: "lightbulb") } }
                 }
+            }
+            Section("Tasks") {
+                if vendorTasks.isEmpty { Text("No linked tasks").foregroundStyle(.secondary) }
+                ForEach(vendorTasks) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+                Button { showLinkTask = true } label: { Label("Link Existing Task", systemImage: "link") }
             }
             Section("Work History") {
                 if vendorHistory.isEmpty { Text("No recorded work").foregroundStyle(.secondary) }
@@ -573,7 +1212,13 @@ struct VendorDetailView: View {
             if !vendor.notes.isEmpty { Section("Notes") { Text(vendor.notes) } }
         }
         .navigationTitle(vendor.businessName)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { VendorFormView(existing: vendor) } } }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink("Edit") { VendorFormView(existing: vendor) }
+            }
+        }
+        .sheet(isPresented: $showLinkTask) { NavigationStack { ExistingTaskLinkView(target: .vendor(vendor)) } }
+        .sheet(isPresented: $showAddToContacts) { VendorContactEditor(vendor: vendor) { showAddToContacts = false } }
     }
 }
 
@@ -582,7 +1227,7 @@ struct VendorRow: View { let vendor: Vendor; var body: some View { VStack(alignm
 struct MaintenanceHistoryView: View {
     @Query(sort: \MaintenanceRecord.date, order: .reverse) private var records: [MaintenanceRecord]
     @State private var showAdd = false
-    var body: some View { List { if records.isEmpty { ContentUnavailableView("No maintenance history", systemImage: "clock.arrow.circlepath", description: Text("Completed tasks and manually entered work will appear here.")) }; ForEach(records) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }.navigationTitle("Maintenance History").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { MaintenanceRecordFormView() } } }
+    var body: some View { List { if records.isEmpty { ContentUnavailableView("No home history", systemImage: "clock.arrow.circlepath", description: Text("Completed tasks and manually entered work will appear here.")) }; ForEach(records) { record in NavigationLink { MaintenanceRecordDetailView(record: record) } label: { MaintenanceRecordRow(record: record) } } }.navigationTitle("Home History").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { MaintenanceRecordFormView() } } }
 }
 
 struct MaintenanceRecordRow: View { let record: MaintenanceRecord; var body: some View { VStack(alignment: .leading, spacing: 4) { Text(record.title).font(.headline); Text(record.date.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary); if !record.vendorName.isEmpty { Text(record.vendorName).font(.subheadline) }; if let cost = record.cost { Text(cost.formatted(AppFormatting.currency)).font(.subheadline.weight(.semibold)) } }.padding(.vertical, 2) } }
@@ -617,16 +1262,288 @@ struct MaintenanceRecordDetailView: View {
 
 struct DetectorsListView: View {
     @Query(sort: \Detector.location) private var detectors: [Detector]; @State private var showAdd = false
-    var body: some View { List { if detectors.isEmpty { ContentUnavailableView("No detectors yet", systemImage: "sensor.tag.radiowaves.forward", description: Text("Track detector locations, batteries, and ten-year replacement dates.")) }; ForEach(detectors) { detector in NavigationLink { DetectorDetailView(detector: detector) } label: { VStack(alignment: .leading, spacing: 4) { Text(detector.location).font(.headline); Text([detector.type, detector.manufacturer, detector.model].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary); if let date = detector.replacementDate { Text("Replace by \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption) } } } } }.navigationTitle("Smoke & CO Detectors").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { DetectorFormView() } } }
+    var body: some View { List { if detectors.isEmpty { ContentUnavailableView("No detectors yet", systemImage: "sensor.tag.radiowaves.forward", description: Text("Track detector locations, batteries, and ten-year replacement dates.")) }; ForEach(detectors) { detector in NavigationLink { DetectorDetailView(detector: detector) } label: { VStack(alignment: .leading, spacing: 4) { Text(detector.room?.name ?? detector.location).font(.headline); Text([detector.type, detector.manufacturer, detector.model].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary); if let date = detector.replacementDate { Text("Replace by \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption) } } } } }.navigationTitle("Smoke & CO Detectors").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { DetectorFormView() } } }
 }
 
-struct DetectorDetailView: View { let detector: Detector; var body: some View { List { Section("Detector") { LabeledContent("Type", value: detector.type); if !detector.manufacturer.isEmpty { LabeledContent("Manufacturer", value: detector.manufacturer) }; if !detector.model.isEmpty { LabeledContent("Model", value: detector.model) }; LabeledContent("Hardwired", value: detector.isHardwired ? "Yes" : "No"); if !detector.batteryType.isEmpty { LabeledContent("Battery", value: detector.batteryType) } }; Section("Dates") { if let d = detector.manufactureDate { LabeledContent("Manufactured", value: d.formatted(date: .abbreviated, time: .omitted)) }; if let d = detector.installationDate { LabeledContent("Installed", value: d.formatted(date: .abbreviated, time: .omitted)) }; if let d = detector.replacementDate { LabeledContent("Replace by", value: d.formatted(date: .long, time: .omitted)) } }; AttachmentSection(owner: .detector(detector)); if !detector.notes.isEmpty { Section("Notes") { Text(detector.notes) } } }.navigationTitle(detector.location).toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { DetectorFormView(existing: detector) } } } } }
+struct DetectorDetailView: View {
+    let detector: Detector
+    @State private var showHistory = false
+
+    private var replacementTaskDate: Date { detector.replacementDate ?? Calendar.current.date(byAdding: .month, value: 1, to: .now) ?? .now }
+
+    var body: some View {
+        List {
+            Section("Location") {
+                if let room = detector.room { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+                else if !detector.location.isEmpty { LabeledContent("Location", value: detector.location) }
+            }
+            Section("Detector") {
+                LabeledContent("Type", value: detector.type)
+                if !detector.manufacturer.isEmpty { LabeledContent("Manufacturer", value: detector.manufacturer) }
+                if !detector.model.isEmpty { LabeledContent("Model", value: detector.model) }
+                LabeledContent("Hardwired", value: detector.isHardwired ? "Yes" : "No")
+                if !detector.batteryType.isEmpty { LabeledContent("Battery", value: detector.batteryType) }
+            }
+            Section("Dates") {
+                if let d = detector.manufactureDate { LabeledContent("Manufactured", value: d.formatted(date: .abbreviated, time: .omitted)) }
+                if let d = detector.installationDate { LabeledContent("Installed", value: d.formatted(date: .abbreviated, time: .omitted)) }
+                if let d = detector.replacementDate { LabeledContent("Replace by", value: d.formatted(date: .long, time: .omitted)) }
+            }
+            Section("Actions") {
+                Button { showHistory = true } label: { Label("Add History Event", systemImage: "clock.arrow.circlepath") }
+                NavigationLink {
+                    TaskFormView(
+                        initialRoom: detector.room,
+                        initialTitle: "Replace \(detector.type) detector",
+                        initialDescription: "Replace detector in \(detector.room?.name ?? detector.location).",
+                        initialCategory: .safety,
+                        initialDueDate: replacementTaskDate,
+                        initialLeadTimeDays: 30,
+                        initialRecurrence: .oneTime,
+                        initialPriority: 2
+                    )
+                } label: { Label("Add Replacement Reminder", systemImage: "calendar.badge.plus") }
+            }
+            AttachmentSection(owner: .detector(detector))
+            if !detector.notes.isEmpty { Section("Notes") { Text(detector.notes) } }
+        }
+        .navigationTitle(detector.room?.name ?? detector.location)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { DetectorFormView(existing: detector) } } }
+        .sheet(isPresented: $showHistory) {
+            NavigationStack {
+                MaintenanceRecordFormView(
+                    initialRoom: detector.room,
+                    initialTitle: "Detector service — \(detector.type)",
+                    initialRelatedItemName: "\(detector.type) detector — \(detector.room?.name ?? detector.location)",
+                    initialEventType: .maintenance
+                )
+            }
+        }
+    }
+}
 
 struct ConsumablesListView: View {
     @Query(sort: \Consumable.name) private var consumables: [Consumable]; @State private var showAdd = false
-    var body: some View { List { if consumables.isEmpty { ContentUnavailableView("No consumables yet", systemImage: "shippingbox", description: Text("Add filters, batteries, humidifier pads, and other replacement supplies.")) }; ForEach(consumables) { item in NavigationLink { ConsumableDetailView(item: item) } label: { VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.headline); Text([item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary); if let date = item.nextReplacement { Text("Next replacement \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption) } } } } }.navigationTitle("Consumables").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { ConsumableFormView() } } }
+    var body: some View { List { if consumables.isEmpty { ContentUnavailableView("No consumables yet", systemImage: "shippingbox", description: Text("Add filters, batteries, humidifier pads, and other replacement supplies.")) }; ForEach(consumables) { item in NavigationLink { ConsumableDetailView(item: item) } label: { VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.headline); Text([item.room?.name ?? "", item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary); if let date = item.nextReplacement { Text("Next replacement \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption) } } } } }.navigationTitle("Consumables").toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }.sheet(isPresented: $showAdd) { NavigationStack { ConsumableFormView() } } }
 }
 
-struct ConsumableDetailView: View { let item: Consumable; @State private var showEdit = false; var body: some View { List { Section("Item") { if !item.type.isEmpty { LabeledContent("Type", value: item.type) }; if !item.size.isEmpty { LabeledContent("Size", value: item.size) }; if !item.manufacturer.isEmpty { LabeledContent("Manufacturer", value: item.manufacturer) }; if !item.modelPartNumber.isEmpty { LabeledContent("Part number", value: item.modelPartNumber) }; if !item.purchaseLink.isEmpty, let url = normalizedURL(item.purchaseLink) { Link("Purchase Link", destination: url) } }; Section("Replacement") { if let months = item.replacementIntervalMonths { LabeledContent("Interval", value: "Every \(months) months") }; if let date = item.lastReplaced { LabeledContent("Last replaced", value: date.formatted(date: .abbreviated, time: .omitted)) }; if let date = item.nextReplacement { LabeledContent("Next replacement", value: date.formatted(date: .long, time: .omitted)) } }; AttachmentSection(owner: .consumable(item)); if !item.notes.isEmpty { Section("Notes") { Text(item.notes) } } }.navigationTitle(item.name).toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ConsumableFormView(existing: item) } } } } }
+struct ConsumableDetailView: View {
+    let item: Consumable
+    @Environment(\.modelContext) private var modelContext
+    @State private var showReplaceConfirm = false
+    @State private var showHistory = false
+    @State private var replaceError: String?
+
+    var body: some View {
+        List {
+            if let room = item.room {
+                Section("Location") { NavigationLink { RoomDetailView(room: room) } label: { LabeledContent("Room / Area", value: room.name) } }
+            }
+            Section("Item") {
+                if !item.type.isEmpty { LabeledContent("Type", value: item.type) }
+                if !item.size.isEmpty { LabeledContent("Size", value: item.size) }
+                if !item.manufacturer.isEmpty { LabeledContent("Manufacturer", value: item.manufacturer) }
+                if !item.modelPartNumber.isEmpty { LabeledContent("Part number", value: item.modelPartNumber) }
+                if !item.purchaseLink.isEmpty, let url = normalizedURL(item.purchaseLink) { Link("Purchase Link", destination: url) }
+            }
+            Section("Replacement") {
+                if let months = item.replacementIntervalMonths { LabeledContent("Interval", value: "Every \(months) months") }
+                if let date = item.lastReplaced { LabeledContent("Last replaced", value: date.formatted(date: .abbreviated, time: .omitted)) }
+                if let date = item.nextReplacement { LabeledContent("Next replacement", value: date.formatted(date: .long, time: .omitted)) }
+                Button { showReplaceConfirm = true } label: { Label("Mark Replaced Today", systemImage: "checkmark.circle") }
+                if let next = item.nextReplacement {
+                    NavigationLink {
+                        TaskFormView(
+                            initialRoom: item.room,
+                            initialTitle: "Replace \(item.name)",
+                            initialDescription: [item.type, item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "),
+                            initialCategory: .general,
+                            initialDueDate: next,
+                            initialLeadTimeDays: 7,
+                            initialRecurrence: .oneTime,
+                            initialPriority: 1
+                        )
+                    } label: { Label("Add Replacement Reminder", systemImage: "calendar.badge.plus") }
+                }
+                Button { showHistory = true } label: { Label("Add History Event", systemImage: "clock.arrow.circlepath") }
+            }
+            AttachmentSection(owner: .consumable(item))
+            if !item.notes.isEmpty { Section("Notes") { Text(item.notes) } }
+        }
+        .navigationTitle(item.name)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink("Edit") { ConsumableFormView(existing: item) } } }
+        .confirmationDialog("Mark \(item.name) as replaced today?", isPresented: $showReplaceConfirm, titleVisibility: .visible) {
+            Button("Mark Replaced") { markReplacedToday() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This updates the last replacement date and calculates the next replacement from the saved interval.")
+        }
+        .sheet(isPresented: $showHistory) {
+            NavigationStack {
+                MaintenanceRecordFormView(
+                    initialRoom: item.room,
+                    initialTitle: "Replaced \(item.name)",
+                    initialRelatedItemName: item.name,
+                    initialEventType: .maintenance
+                )
+            }
+        }
+        .alert("Could Not Record Replacement", isPresented: Binding(get: { replaceError != nil }, set: { if !$0 { replaceError = nil } })) {
+            Button("OK", role: .cancel) { replaceError = nil }
+        } message: { Text(replaceError ?? "The replacement could not be saved.") }
+    }
+
+    private func markReplacedToday() {
+        let today = Date()
+        item.lastReplaced = today
+        if let months = item.replacementIntervalMonths {
+            item.nextReplacement = Calendar.current.date(byAdding: .month, value: months, to: today)
+        } else {
+            item.nextReplacement = nil
+        }
+        let history = MaintenanceRecord(
+            date: today,
+            title: "Replaced \(item.name)",
+            notes: [item.type, item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "),
+            relatedItemName: item.name,
+            eventType: .maintenance,
+            room: item.room
+        )
+        modelContext.insert(history)
+        do {
+            try modelContext.save()
+        } catch {
+            replaceError = error.localizedDescription
+        }
+    }
+}
 
 private func normalizedURL(_ value: String) -> URL? { if let url = URL(string: value), url.scheme != nil { return url }; return URL(string: "https://\(value)") }
+
+
+private struct RoomDetectorsSummaryView: View {
+    let room: Room
+    let detectors: [Detector]
+
+    var body: some View {
+        List {
+            ForEach(detectors) { detector in
+                NavigationLink { DetectorDetailView(detector: detector) } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(detector.type).font(.headline)
+                        Text([detector.manufacturer, detector.model].filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationTitle("\(room.name) Detectors")
+    }
+}
+
+private struct RoomConsumablesSummaryView: View {
+    let room: Room
+    let consumables: [Consumable]
+
+    var body: some View {
+        List {
+            ForEach(consumables) { item in
+                NavigationLink { ConsumableDetailView(item: item) } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(item.name).font(.headline)
+                        Text([item.type, item.size, item.modelPartNumber].filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationTitle("\(room.name) Supplies")
+    }
+}
+
+private struct RoomWarrantySummaryView: View {
+    let room: Room
+    let systems: [HomeSystem]
+    let appliances: [Appliance]
+    let fixtures: [Fixture]
+    let furniture: [Furniture]
+
+    private var cutoff: Date { Calendar.current.date(byAdding: .day, value: 90, to: .now) ?? .now }
+
+    var body: some View {
+        List {
+            let matchingSystems = systems.filter { ($0.warrantyExpiration ?? .distantFuture) <= cutoff }
+            let matchingAppliances = appliances.filter { ($0.warrantyExpiration ?? .distantFuture) <= cutoff }
+            let matchingFixtures = fixtures.filter { ($0.warrantyExpiration ?? .distantFuture) <= cutoff }
+            let matchingFurniture = furniture.filter { ($0.warrantyExpiration ?? .distantFuture) <= cutoff }
+
+            if !matchingSystems.isEmpty {
+                Section("Home Systems") {
+                    ForEach(matchingSystems) { item in
+                        NavigationLink { SystemDetailView(system: item) } label: { warrantyRow(item.name, item.warrantyExpiration) }
+                    }
+                }
+            }
+            if !matchingAppliances.isEmpty {
+                Section("Devices & Equipment") {
+                    ForEach(matchingAppliances) { item in
+                        NavigationLink { ApplianceDetailView(appliance: item) } label: { warrantyRow(item.name, item.warrantyExpiration) }
+                    }
+                }
+            }
+            if !matchingFixtures.isEmpty {
+                Section("Fixtures") {
+                    ForEach(matchingFixtures) { item in
+                        NavigationLink { FixtureDetailView(fixture: item) } label: { warrantyRow(item.name, item.warrantyExpiration) }
+                    }
+                }
+            }
+            if !matchingFurniture.isEmpty {
+                Section("Furniture") {
+                    ForEach(matchingFurniture) { item in
+                        NavigationLink { FurnitureDetailView(furniture: item) } label: { warrantyRow(item.name, item.warrantyExpiration) }
+                    }
+                }
+            }
+        }
+        .navigationTitle("\(room.name) Warranties")
+    }
+
+    @ViewBuilder
+    private func warrantyRow(_ name: String, _ date: Date?) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(name).font(.headline)
+            if let date { Text(date < .now ? "Expired \(date.formatted(date: .abbreviated, time: .omitted))" : "Expires \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(date < .now ? .red : .orange) }
+        }
+    }
+}
+
+private struct RoomProjectsSummaryView: View {
+    let room: Room
+    let projects: [Project]
+    var body: some View {
+        List {
+            if projects.isEmpty { ContentUnavailableView("No projects", systemImage: "hammer") }
+            ForEach(projects) { project in
+                NavigationLink { ProjectDetailView(project: project) } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(project.title).font(.headline)
+                        Text(project.stage.rawValue).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }.navigationTitle("\(room.name) Projects")
+    }
+}
+
+private struct RoomTasksSummaryView: View {
+    let room: Room
+    let tasks: [MaintenanceTask]
+    var body: some View {
+        List {
+            let open = tasks.filter { !$0.isCompleted }.sorted { $0.dueDate < $1.dueDate }
+            if open.isEmpty { ContentUnavailableView("No open tasks", systemImage: "checkmark.circle") }
+            ForEach(open) { task in NavigationLink { TaskDetailView(task: task) } label: { TaskRowView(task: task) } }
+        }.navigationTitle("\(room.name) Tasks")
+    }
+}

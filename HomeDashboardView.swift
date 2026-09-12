@@ -16,7 +16,7 @@ struct HomeDashboardView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(homes.first?.name ?? "My Home")
                         .font(.largeTitle.bold())
@@ -40,9 +40,18 @@ struct HomeDashboardView: View {
                 .buttonStyle(.plain)
 
                 HStack(spacing: 10) {
-                    SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
-                    SummaryCard(title: "Current", count: current.count, tint: .orange)
-                    SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
+                    NavigationLink { DashboardTaskListView(title: "Overdue Tasks", tasks: overdue) } label: {
+                        SummaryCard(title: "Overdue", count: overdue.count, tint: .red)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink { DashboardTaskListView(title: "Current Tasks", tasks: current) } label: {
+                        SummaryCard(title: "Current", count: current.count, tint: .orange)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink { DashboardTaskListView(title: "Upcoming Tasks", tasks: upcoming) } label: {
+                        SummaryCard(title: "Upcoming", count: upcoming.count, tint: .blue)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 sectionTitle("Needs Attention")
@@ -89,19 +98,34 @@ struct HomeDashboardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
 
-                sectionTitle("Quick Access")
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    QuickLink(title: "Home Systems", icon: "wrench.and.screwdriver", destination: AnyView(SystemsListView()))
-                    QuickLink(title: "Rooms", icon: "door.left.hand.open", destination: AnyView(RoomsListView()))
-                    QuickLink(title: "Devices & Equipment", icon: "refrigerator", destination: AnyView(AppliancesListView()))
-                    QuickLink(title: "Paint & Finishes", icon: "paintbrush", destination: AnyView(PaintListView()))
-                    QuickLink(title: "Projects", icon: "hammer", destination: AnyView(ProjectsView()))
-                    QuickLink(title: "Vendors", icon: "person.crop.circle.badge.checkmark", destination: AnyView(VendorsListView()))
-                    QuickLink(title: "Home Insights", icon: "chart.bar.xaxis", destination: AnyView(HomeInsightsView()))
-                    QuickLink(title: "Warranty Center", icon: "shield", destination: AnyView(WarrantyCenterView()))
-                    QuickLink(title: "Seasonal Planning", icon: "calendar.badge.clock", destination: AnyView(SeasonalMaintenanceView()))
-                    QuickLink(title: "Replacement Forecast", icon: "chart.line.uptrend.xyaxis", destination: AnyView(ReplacementForecastView()))
+                sectionTitle("Shortcuts")
+                VStack(spacing: 10) {
+                    DashboardShortcut(
+                        title: "Rooms & Areas",
+                        subtitle: "Start with a place in your home.",
+                        icon: "door.left.hand.open",
+                        destination: AnyView(RoomsListView())
+                    )
+                    DashboardShortcut(
+                        title: "Home Care",
+                        subtitle: "Maintenance, warranties, safety, and planning.",
+                        icon: "heart.text.clipboard",
+                        destination: AnyView(HomeCareView())
+                    )
+                    DashboardShortcut(
+                        title: "Home History",
+                        subtitle: "See repairs, installs, purchases, and projects over time.",
+                        icon: "clock.arrow.circlepath",
+                        destination: AnyView(HomeHistoryView())
+                    )
                 }
+
+                Text("HomeMaintainer v0.37.1")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
             }
             .padding()
         }
@@ -144,14 +168,15 @@ private struct SummaryCard: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(10)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
-private struct QuickLink: View {
+private struct DashboardShortcut: View {
     let title: String
+    let subtitle: String
     let icon: String
     let destination: AnyView
 
@@ -159,15 +184,24 @@ private struct QuickLink: View {
         NavigationLink {
             destination
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .frame(width: 28)
+                    .frame(width: 30)
                     .font(.title3)
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .padding(14)
+            .padding(12)
             .background(.background)
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
@@ -190,5 +224,26 @@ struct EmptyCard: View {
         .padding(24)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+
+private struct DashboardTaskListView: View {
+    let title: String
+    let tasks: [MaintenanceTask]
+
+    var body: some View {
+        List {
+            if tasks.isEmpty {
+                ContentUnavailableView("No tasks", systemImage: "checkmark.circle")
+            } else {
+                ForEach(tasks.sorted { $0.dueDate < $1.dueDate }) { task in
+                    NavigationLink { TaskDetailView(task: task) } label: {
+                        TaskRowView(task: task)
+                    }
+                }
+            }
+        }
+        .navigationTitle(title)
     }
 }
