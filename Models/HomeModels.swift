@@ -133,7 +133,10 @@ final class HomeSystem {
         self.sourceProject = sourceProject
     }
 
-    var locationName: String { room?.name ?? location }
+    var locationName: String {
+        let roomNames = linkedRooms.map(\.name)
+        return roomNames.isEmpty ? location : roomNames.joined(separator: ", ")
+    }
 }
 
 @Model

@@ -70,7 +70,7 @@ enum HomeExportService {
 
         return HomeArchive(
             exportedAt: .now,
-            appVersion: "0.37.4",
+            appVersion: "0.37.5",
             homes: homes.map { .init(name: $0.name, address: $0.address, notes: $0.notes, yearBuilt: $0.yearBuilt, squareFeet: $0.squareFeet, purchaseDate: $0.purchaseDate) },
             rooms: rooms.map { .init(
                 name: $0.name,
@@ -110,6 +110,7 @@ enum HomeExportService {
     }
 
     private static func ownerDescription(for attachment: HomeAttachment) -> (type: String, name: String) {
+        if let value = attachment.home { return ("Home Profile", value.name) }
         if let value = attachment.room { return ("Room / Area", value.name) }
         if let value = attachment.task { return ("Task", value.title) }
         if let value = attachment.vendor { return ("Vendor", value.businessName) }

@@ -11,6 +11,7 @@ final class HomeAttachment {
     var createdAt: Date
     var fileData: Data
 
+    var home: Home?
     var room: Room?
     var task: MaintenanceTask?
     var vendor: Vendor?
@@ -49,6 +50,7 @@ final class HomeAttachment {
 }
 
 enum AttachmentOwnerReference {
+    case home(Home)
     case room(Room)
     case task(MaintenanceTask)
     case vendor(Vendor)
@@ -65,6 +67,8 @@ enum AttachmentOwnerReference {
 
     func matches(_ attachment: HomeAttachment) -> Bool {
         switch self {
+        case .home(let owner):
+            return attachment.home?.persistentModelID == owner.persistentModelID
         case .room(let owner):
             return attachment.room?.persistentModelID == owner.persistentModelID
         case .task(let owner):
@@ -95,6 +99,7 @@ enum AttachmentOwnerReference {
     }
 
     func assign(to attachment: HomeAttachment) {
+        attachment.home = nil
         attachment.room = nil
         attachment.task = nil
         attachment.vendor = nil
@@ -110,6 +115,7 @@ enum AttachmentOwnerReference {
         attachment.furniture = nil
 
         switch self {
+        case .home(let owner): attachment.home = owner
         case .room(let owner): attachment.room = owner
         case .task(let owner): attachment.task = owner
         case .vendor(let owner): attachment.vendor = owner

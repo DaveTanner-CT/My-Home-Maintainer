@@ -874,7 +874,7 @@ struct SystemsListView: View {
     var body: some View {
         List {
             if systems.isEmpty { ContentUnavailableView("No systems yet", systemImage: "wrench.and.screwdriver", description: Text("Add HVAC, water heaters, plumbing, generators, and other home systems.")) }
-            ForEach(systems) { system in NavigationLink { SystemDetailView(system: system) } label: { VStack(alignment: .leading, spacing: 3) { Text(system.name).font(.headline); Text([system.type, system.location].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()) } }
+            ForEach(systems) { system in NavigationLink { SystemDetailView(system: system) } label: { VStack(alignment: .leading, spacing: 3) { Text(system.name).font(.headline); Text([system.type, system.locationName].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()) } }
         }.navigationTitle("Home Systems")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } } }
         .sheet(isPresented: $showAdd) { NavigationStack { SystemFormView() } }

@@ -294,3 +294,9 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Removed the misleading setup completion count and progress bar.
 - Foundation categories are now navigation only; adding one record no longer visually marks a category as complete.
 - Connections and Record Quality remain the actionable indicators of missing or incomplete information.
+
+
+## v0.37.5 — Home Profile Photos + Multi-Room System Summaries
+- Added photo/document attachments to Home Profile.
+- Home Systems now show all linked rooms/areas in summary views.
+- Home Profile attachments are included in transfer/export.

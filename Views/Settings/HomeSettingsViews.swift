@@ -14,6 +14,7 @@ struct HomeProfileView: View {
                     if let date = home.purchaseDate { LabeledContent("Purchased", value: date.formatted(date: .abbreviated, time: .omitted)) }
                     if let squareFeet = home.squareFeet { LabeledContent("Square feet", value: squareFeet.formatted()) }
                 }
+                AttachmentSection(owner: .home(home))
                 if !home.notes.isEmpty { Section("Notes") { Text(home.notes) } }
             }
             .navigationTitle("Home Profile")
@@ -121,7 +122,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "Home Maintainer")
-                LabeledContent("Build", value: "0.37.4")
+                LabeledContent("Build", value: "0.37.5")
                 Text("Home Maintainer keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

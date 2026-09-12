@@ -208,8 +208,11 @@ enum HomeTransferService {
         var consumables: [String: Consumable] = [:]
         var projectItems: [String: ProjectItem] = [:]
 
+        var importedHome: Home?
         if let h = archive.home {
-            context.insert(Home(name: h.name, address: h.address, yearBuilt: h.yearBuilt, purchaseDate: h.purchaseDate, squareFeet: h.squareFeet, notes: h.notes))
+            let home = Home(name: h.name, address: h.address, yearBuilt: h.yearBuilt, purchaseDate: h.purchaseDate, squareFeet: h.squareFeet, notes: h.notes)
+            context.insert(home)
+            importedHome = home
         }
         for r in archive.rooms {
             let item = Room(
@@ -286,6 +289,7 @@ enum HomeTransferService {
         for a in archive.attachments {
             let item = HomeAttachment(name: a.name, caption: a.caption, category: a.category, fileName: a.fileName, typeIdentifier: a.typeIdentifier, createdAt: a.createdAt, fileData: a.fileData)
             switch a.ownerType {
+            case "home": item.home = importedHome
             case "room": item.room = a.ownerID.flatMap { rooms[$0] }
             case "vendor": item.vendor = a.ownerID.flatMap { vendors[$0] }
             case "system": item.system = a.ownerID.flatMap { systems[$0] }
@@ -343,7 +347,8 @@ enum HomeTransferService {
         }
         let attachmentDTOs = transferAttachments.map { a -> TransferAttachment in
             var type = "", owner: String?
-            if let v = a.room { type = "room"; owner = rid(v, roomIDs) }
+            if a.home != nil { type = "home"; owner = h?.id }
+            else if let v = a.room { type = "room"; owner = rid(v, roomIDs) }
             else if let v = a.vendor { type = "vendor"; owner = rid(v, vendorIDs) }
             else if let v = a.system { type = "system"; owner = rid(v, systemIDs) }
             else if let v = a.appliance { type = "appliance"; owner = rid(v, applianceIDs) }
@@ -360,7 +365,7 @@ enum HomeTransferService {
         }
 
         return HomeTransferArchive(
-            formatVersion: 1, appVersion: "0.37.4", packageType: packageType, exportedAt: .now, home: h,
+            formatVersion: 1, appVersion: "0.37.5", packageType: packageType, exportedAt: .now, home: h,
             rooms: rooms.map { .init(
                 id: roomIDs[$0.persistentModelID]!,
                 name: $0.name,
