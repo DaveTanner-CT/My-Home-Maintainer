@@ -1,0 +1,16 @@
+My Home Keeper v0.41
+Account Foundation
+
+- Adds Sign in with Apple to Settings > Account.
+- Persists the Apple user identifier securely in the iOS Keychain.
+- Stores the name/email Apple shares on first authorization for future sessions.
+- Checks Apple credential state on app launch and when Account opens.
+- Adds local sign out without touching existing home data.
+- Keeps all current home records local; no cloud migration occurs in v0.41.
+- Adds the Sign in with Apple entitlement plumbing for the iOS target.
+- Preserves universal iPhone/iPad targeting, orientation metadata, AppIcon configuration, and TestFlight version metadata.
+- Version: 0.41, build 410.
+
+Apple Developer setup required before distribution signing:
+1. Enable Sign in with Apple on the App ID org.scriptingforschools.HomeMaintainer.
+2. Regenerate/download the App Store provisioning profile in Codemagic after enabling the capability.

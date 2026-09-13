@@ -142,3 +142,15 @@ Photo checks:
 - [ ] Sheets used to add/edit records remain appropriately sized and dismiss correctly on iPad.
 - [ ] Camera, Photos, Contacts, notifications, export, and transfer flows still work after enabling iPad support.
 - [ ] Confirm app icon and My Home Keeper branding appear correctly on both iPhone and iPad.
+
+## v0.41 Account Foundation Checks
+
+- [ ] Settings shows Account section with Not Signed In before authentication.
+- [ ] Account screen shows Sign in with Apple button.
+- [ ] Sign in with Apple completes successfully on a physical device.
+- [ ] Name/email are shown when Apple provides them.
+- [ ] Leaving and reopening the app preserves signed-in account identity.
+- [ ] Relaunch checks Apple credential state without erasing local home data.
+- [ ] Sign Out returns the Account screen to signed-out state.
+- [ ] Signing in/out does not alter Rooms, Systems, Tasks, Projects, Attachments, or Home History.
+- [ ] Existing iPhone and iPad layouts continue to render correctly.

@@ -3,6 +3,7 @@ import SwiftData
 
 @main
 struct HomeKeeperApp: App {
+    @StateObject private var accountSession = AccountSessionStore()
     private var modelContainer: ModelContainer = {
         let schema = Schema([
             Home.self,
@@ -35,7 +36,10 @@ struct HomeKeeperApp: App {
     var body: some Scene {
         WindowGroup {
             RootTabView()
+                .environmentObject(accountSession)
                 .task {
+                    accountSession.refreshCredentialState()
+
                     await NotificationManager.shared.requestAuthorization()
                 }
         }

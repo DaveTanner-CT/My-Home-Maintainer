@@ -84,6 +84,7 @@ struct HomeProfileFormView: View {
 
 struct AppSettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var accountSession: AccountSessionStore
     @Query private var tasks: [MaintenanceTask]
     @AppStorage("notificationLeadEnabled") private var leadEnabled = true
     @AppStorage("notificationDueEnabled") private var dueEnabled = true
@@ -93,6 +94,22 @@ struct AppSettingsView: View {
 
     var body: some View {
         List {
+            Section("Account") {
+                NavigationLink {
+                    AccountView()
+                } label: {
+                    HStack {
+                        Label("My Home Keeper Account", systemImage: "person.crop.circle")
+                        Spacer()
+                        Text(accountSession.isSignedIn ? "Connected" : "Not Signed In")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text("Sign in with Apple is the foundation for upcoming family household sharing and cloud synchronization.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             Section("Home Setup") {
                 NavigationLink { HomeSetupView() } label: { Label("Home Setup", systemImage: "checklist.checked") }
                 NavigationLink { HomeProfileView() } label: { Label("Home Profile", systemImage: "house") }
@@ -122,7 +139,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "My Home Keeper")
-                LabeledContent("Build", value: "0.40.1")
+                LabeledContent("Build", value: "0.41")
                 Text("My Home Keeper keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
