@@ -1,0 +1,11 @@
+My Home Keeper v0.42 — Household Foundation
+
+- Adds local Household, HouseholdMember, and HouseholdInvitation SwiftData models.
+- A signed-in user can adopt the existing local Home into a Household without moving or duplicating existing records.
+- The adopting user becomes the Household Owner.
+- Adds Owner / Editor / Viewer role groundwork.
+- Owners can prepare family invitation records with role and invitation code.
+- Adds Household screens to Settings and Account.
+- Existing home data remains local and unchanged in v0.42.
+- Cross-device synchronization and real invitation acceptance are intentionally deferred to v0.43 cloud sync.
+- Version: 0.42, build 420.

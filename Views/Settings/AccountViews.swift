@@ -1,8 +1,10 @@
 import AuthenticationServices
+import SwiftData
 import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject private var accountSession: AccountSessionStore
+    @Query private var households: [Household]
 
     var body: some View {
         List {
@@ -13,11 +15,28 @@ struct AccountView: View {
             }
 
             Section("Household Sharing") {
-                Label("Shared households are the next step", systemImage: "person.2.badge.gearshape")
-                    .font(.subheadline.weight(.semibold))
-                Text("This version establishes your account identity. Your existing home records remain stored locally on this device until household and cloud synchronization are added in the next phases.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                NavigationLink {
+                    HouseholdSetupView()
+                } label: {
+                    HStack {
+                        Label("Household", systemImage: "person.2")
+                        Spacer()
+                        Text(households.first?.name ?? "Set Up")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                if let household = households.first {
+                    Text("This device is prepared for household sharing with \(household.members.count) member\(household.members.count == 1 ? "" : "s"). Cross-device cloud synchronization arrives in v0.43.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Create a household around the home already on this device. Your existing records will not be moved, duplicated, or erased.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Privacy") {

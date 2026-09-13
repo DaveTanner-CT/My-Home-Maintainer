@@ -154,3 +154,16 @@ Photo checks:
 - [ ] Sign Out returns the Account screen to signed-out state.
 - [ ] Signing in/out does not alter Rooms, Systems, Tasks, Projects, Attachments, or Home History.
 - [ ] Existing iPhone and iPad layouts continue to render correctly.
+
+
+## v0.42 Household Foundation Checks
+
+- Sign in with Apple and confirm Settings shows the connected account.
+- Open Settings > Household Sharing.
+- On the iPhone that contains the primary home data, create a household from the existing home.
+- Confirm the existing Home name is retained and no rooms, systems, tasks, vendors, photos, projects, or history are removed.
+- Confirm the signed-in user appears as Owner.
+- Prepare an Editor invitation and a Viewer invitation; confirm both appear under Prepared Invitations.
+- Rename the household and confirm the new name persists after relaunch.
+- Confirm the household screen clearly states that cross-device synchronization is not active until v0.43.
+- On a second device, do not recreate the primary home data; wait for v0.43 cloud synchronization.

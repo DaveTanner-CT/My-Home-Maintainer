@@ -86,6 +86,7 @@ struct AppSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var accountSession: AccountSessionStore
     @Query private var tasks: [MaintenanceTask]
+    @Query private var households: [Household]
     @AppStorage("notificationLeadEnabled") private var leadEnabled = true
     @AppStorage("notificationDueEnabled") private var dueEnabled = true
     @AppStorage("notificationOverdueEnabled") private var overdueEnabled = true
@@ -94,7 +95,7 @@ struct AppSettingsView: View {
 
     var body: some View {
         List {
-            Section("Account") {
+            Section("Account & Household") {
                 NavigationLink {
                     AccountView()
                 } label: {
@@ -106,7 +107,21 @@ struct AppSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                Text("Sign in with Apple is the foundation for upcoming family household sharing and cloud synchronization.")
+
+                NavigationLink {
+                    HouseholdSetupView()
+                } label: {
+                    HStack {
+                        Label("Household Sharing", systemImage: "person.2")
+                        Spacer()
+                        Text(households.first?.name ?? "Set Up")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Text("Create a household around your existing home and prepare family roles before cloud synchronization is enabled in the next phase.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -139,7 +154,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "My Home Keeper")
-                LabeledContent("Build", value: "0.41")
+                LabeledContent("Build", value: "0.42")
                 Text("My Home Keeper keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
