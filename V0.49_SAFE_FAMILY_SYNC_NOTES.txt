@@ -1,0 +1,12 @@
+My Home Keeper v0.49 - Safe Family Sync
+
+- Automatically checks private and shared CloudKit status when the iCloud Sync screen opens.
+- Adds pull-to-refresh and a Refresh Cloud Status action.
+- Tracks the most recent cloud version applied on each device.
+- Highlights when a newer private or family-shared cloud copy is available.
+- Keeps whole-home replacement explicitly confirmed; no silent overwrite of local edits.
+- Clarifies owner vs shared-member upload actions.
+- Retires the one-time CloudKit schema bootstrap workflow from normal Codemagic choices now that sharing schema is deployed.
+
+Version: 0.49
+Build: 490
