@@ -45,6 +45,17 @@ targets:
         NSContactsUsageDescription: "My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts."
         NSPhotoLibraryUsageDescription: "My Home Keeper lets you attach photos to home records and project ideas."
 
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
         UILaunchScreen: {}
 
         UIApplicationSceneManifest:
