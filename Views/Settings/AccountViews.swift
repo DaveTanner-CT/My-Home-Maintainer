@@ -29,7 +29,7 @@ struct AccountView: View {
                 }
 
                 if let household = households.first {
-                    Text("This device is prepared for household sharing with \(household.members.count) member\(household.members.count == 1 ? "" : "s"). Cloud synchronization is available from Settings → Cloud Sync once Supabase is configured.")
+                    Text("This device is prepared for household sharing with \(household.members.count) member\(household.members.count == 1 ? "" : "s"). Private iCloud synchronization is available from Settings → iCloud Sync.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -40,7 +40,7 @@ struct AccountView: View {
             }
 
             Section("Privacy") {
-                Text("My Home Keeper stores your Apple account identifier securely in the device Keychain. Apple only supplies your name and email the first time you authorize the app, so My Home Keeper keeps the values you choose to share for future sessions.")
+                Text("My Home Keeper stores your Sign in with Apple identifier securely in the device Keychain. Home cloud data is stored separately in your private iCloud CloudKit database. The developer does not receive that private household database through the app backend.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -108,7 +108,7 @@ struct AccountView: View {
                 Label("Sign in to prepare for family sharing", systemImage: "person.crop.circle.badge.checkmark")
                     .font(.headline)
 
-                Text("Sign in with Apple creates a stable account identity for My Home Keeper. Your current home data stays local until you explicitly upload it from Cloud Sync. Signing in alone never replaces or erases home records.")
+                Text("Sign in with Apple creates a stable account identity for My Home Keeper. Your current home data will stay on this device for now; signing in will not replace or erase it.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 

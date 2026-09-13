@@ -26,8 +26,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.scriptingforschools.HomeMaintainer
         PRODUCT_NAME: "My Home Keeper"
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '0.45'
-        CURRENT_PROJECT_VERSION: '450'
+        MARKETING_VERSION: '0.46'
+        CURRENT_PROJECT_VERSION: '460'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         TARGETED_DEVICE_FAMILY: '1,2'
@@ -37,6 +37,11 @@ targets:
       properties:
         com.apple.developer.applesignin:
           - Default
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.org.scriptingforschools.HomeMaintainer
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.ubiquity-kvstore-identifier: "$(TeamIdentifierPrefix)org.scriptingforschools.HomeMaintainer"
 
     info:
       path: Info.plist
@@ -50,8 +55,6 @@ targets:
         NSCameraUsageDescription: "My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects."
         NSContactsUsageDescription: "My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts."
         NSPhotoLibraryUsageDescription: "My Home Keeper lets you attach photos to home records and project ideas."
-        SupabaseProjectURL: "https://euhnbmtmcaclibomychc.supabase.co"
-        SupabasePublishableKey: "sb_publishable_7e_hy5Qsovmn-qjX5HbOCw_N2QEbnoP"
 
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

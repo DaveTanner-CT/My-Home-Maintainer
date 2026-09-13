@@ -122,18 +122,12 @@ struct AppSettingsView: View {
                 }
 
                 NavigationLink {
-                    CloudSyncView()
+                    CloudKitSyncView()
                 } label: {
-                    HStack {
-                        Label("Cloud Sync", systemImage: "icloud")
-                        Spacer()
-                        Text(accountSession.cloudStatusText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Label("iCloud Sync", systemImage: "icloud")
                 }
 
-                Text("Use Household Sharing to define who belongs to the home, then Cloud Sync to move the household between your signed-in devices.")
+                Text("My Home Keeper now stores cloud household backups in the user’s private iCloud database. Family sharing will use Apple CloudKit sharing rather than a developer-owned backend.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -166,7 +160,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "My Home Keeper")
-                LabeledContent("Version", value: appVersionDisplay)
+                LabeledContent("Version", value: "0.46 (Build 460)")
                 Text("My Home Keeper keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -174,11 +168,5 @@ struct AppSettingsView: View {
         }
         .navigationTitle("Settings")
         .alert("Notifications Updated", isPresented: $didReschedule) { Button("OK", role: .cancel) {} } message: { Text("Pending task reminders were refreshed using your current settings.") }
-    }
-
-    private var appVersionDisplay: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
-        return "\(version) (Build \(build))"
     }
 }

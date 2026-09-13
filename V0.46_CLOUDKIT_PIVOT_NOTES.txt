@@ -1,0 +1,23 @@
+My Home Keeper v0.46 - CloudKit Foundation
+
+This release pivots cloud storage away from Supabase and into Apple CloudKit.
+
+Key changes:
+- Adds iCloud/CloudKit entitlements.
+- Stores household backup data in the signed-in user's private CloudKit database.
+- Uses a custom private record zone named MyHomeKeeperHousehold.
+- Uploads the complete Home Transfer archive as a CKAsset, including photos/documents already represented in the transfer archive.
+- Supports checking for the latest private iCloud household backup.
+- Supports importing to an empty device or explicitly replacing local data from iCloud.
+- Keeps SwiftData as the local/offline store.
+- Keeps Sign in with Apple for the app account/profile layer, but CloudKit storage itself relies on the device's iCloud account.
+- Supabase is no longer required by this source tree.
+
+Next phase (v0.47): CKShare-based family sharing so another person can join with their own Apple ID and access the owner's shared CloudKit zone.
+
+Apple Developer setup required before Codemagic can sign the build:
+1. Enable iCloud for App ID org.scriptingforschools.HomeMaintainer.
+2. Enable CloudKit.
+3. Create/assign container iCloud.org.scriptingforschools.HomeMaintainer.
+4. Regenerate the App Store provisioning profile after enabling the capability.
+5. Fetch the updated profile in Codemagic.
