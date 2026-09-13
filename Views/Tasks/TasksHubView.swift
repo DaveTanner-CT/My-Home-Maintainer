@@ -116,6 +116,7 @@ struct TasksHubView: View {
                 calendarSection
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Tasks")
         .searchable(text: $searchText, prompt: "Search tasks")
         .toolbar {

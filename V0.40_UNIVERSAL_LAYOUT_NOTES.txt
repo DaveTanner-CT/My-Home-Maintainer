@@ -1,0 +1,11 @@
+My Home Keeper v0.40
+
+Universal layout / preflight update:
+- Enabled native iPhone + iPad targeting.
+- Added adaptive layout helpers based on available width, not device model names.
+- Home dashboard shortcuts now use an adaptive grid on wider displays.
+- Projects use a multi-column card layout at regular width and retain the compact list on iPhone.
+- Rooms, Tasks, and My Home use iPad-friendly native list styling.
+- Preserved the TestFlight/AppIcon source configuration established during preflight.
+
+Next architecture phase: My Home Keeper accounts + Household memberships + cloud sync, while retaining SwiftData for local/offline use.

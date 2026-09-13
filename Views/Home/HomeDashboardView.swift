@@ -99,7 +99,7 @@ struct HomeDashboardView: View {
                 .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
 
                 sectionTitle("Shortcuts")
-                VStack(spacing: 10) {
+                LazyVGrid(columns: AdaptiveLayout.cardColumns(minimum: 285, spacing: 10), spacing: 10) {
                     DashboardShortcut(
                         title: "Rooms & Areas",
                         subtitle: "Start with a place in your home.",
@@ -120,7 +120,7 @@ struct HomeDashboardView: View {
                     )
                 }
 
-                Text("My Home Keeper v0.39.2")
+                Text("My Home Keeper v0.40")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -128,6 +128,7 @@ struct HomeDashboardView: View {
                     .padding(.bottom, 4)
             }
             .padding()
+            .adaptivePageWidth()
         }
         .background(Color(.systemGroupedBackground))
         .toolbar {

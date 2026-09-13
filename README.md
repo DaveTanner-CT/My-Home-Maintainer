@@ -320,3 +320,14 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Uses the approved home/shield avatar as the installed iOS app icon.
 - Visible app name changed to My Home Keeper while preserving the existing bundle identifier for upgrade continuity.
 - Vendor Contact action now uses Apple's native Add / Update flow with Create New Contact and Add to Existing Contact choices.
+
+
+## v0.40 — Universal iPhone + iPad layout
+
+- My Home Keeper now targets both iPhone and iPad (`TARGETED_DEVICE_FAMILY: 1,2`).
+- High-traffic screens use width-adaptive SwiftUI layouts rather than device-name checks, so they also adapt to future wider/foldable displays and multitasking window sizes.
+- Home dashboard shortcuts flow into multiple columns when space allows.
+- Projects use a card grid on regular-width displays and retain the compact list on iPhone.
+- Rooms, Tasks, and Home Setup use native inset grouped presentation on larger displays.
+- The known-good AppIcon/XcodeGen configuration used for TestFlight is preserved.
+- This release intentionally does not introduce cloud-account migration yet; account/household sync is the next architecture phase.

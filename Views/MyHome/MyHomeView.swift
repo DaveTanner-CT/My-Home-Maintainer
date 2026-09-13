@@ -135,6 +135,7 @@ struct RoomsListView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Rooms & Areas")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

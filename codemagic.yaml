@@ -1,6 +1,6 @@
 workflows:
   home-maintainer-adhoc:
-    name: My Home Keeper Ad Hoc iPhone Build
+    name: My Home Keeper Ad Hoc iPhone + iPad Build
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -48,7 +48,6 @@ workflows:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
 
-
   my-home-keeper-home-manager-testflight:
     name: My-Home-Keeper-Home-Manager TestFlight Build
     max_build_duration: 60
@@ -86,92 +85,21 @@ workflows:
       - name: Verify App Store icon source configuration
         script: |
           cd "$CM_BUILD_DIR"
-
-          echo "===== PROJECT.YML LOCATION ====="
-          pwd
-          ls -la project.yml
-
-          echo "===== ICON SETTINGS IN PROJECT.YML ====="
-          grep -n "ASSETCATALOG_COMPILER_APPICON_NAME" project.yml || true
-          grep -n "CFBundleIconName" project.yml || true
-
-          echo "===== GENERATED INFO.PLIST ====="
-          plutil -p Info.plist || true
-
-          echo "===== CFBUNDLEICONNAME IN GENERATED INFO.PLIST ====="
-          /usr/libexec/PlistBuddy \
-            -c "Print :CFBundleIconName" \
-            Info.plist || true
-
-          echo "===== APPICON CONTENTS ====="
-          cat Resources/Assets.xcassets/AppIcon.appiconset/Contents.json
-
-          echo "===== ICON FILES ====="
-          ls -lh Resources/Assets.xcassets/AppIcon.appiconset/
-
-          echo "===== REQUIRED 120x120 ICON ====="
-          sips \
-            -g pixelWidth \
-            -g pixelHeight \
-            Resources/Assets.xcassets/AppIcon.appiconset/icon-60x60@2x.png
+          grep -q "ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon" project.yml
+          grep -q "CFBundleIconName: AppIcon" project.yml
+          test -f Resources/Assets.xcassets/AppIcon.appiconset/icon-60x60@2x.png
 
       - name: Set up code signing
         script: |
           cd "$CM_BUILD_DIR"
           xcode-project use-profiles --project "$XCODE_PROJECT"
 
-      - name: Build signed IPA and verify icon
+      - name: Build signed IPA
         script: |
           cd "$CM_BUILD_DIR"
-
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
-
-          echo "===== FIND IPA ====="
-          IPA_PATH=$(find build -name "*.ipa" | head -1)
-          echo "IPA: $IPA_PATH"
-
-          if [ -z "$IPA_PATH" ]; then
-            echo "ERROR: No IPA found."
-            exit 1
-          fi
-
-          rm -rf /tmp/mhk_ipa
-          mkdir -p /tmp/mhk_ipa
-          unzip -q "$IPA_PATH" -d /tmp/mhk_ipa
-
-          APP_PATH=$(find /tmp/mhk_ipa/Payload -maxdepth 1 -name "*.app" | head -1)
-
-          echo "===== APP PATH ====="
-          echo "$APP_PATH"
-
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No .app bundle found inside IPA."
-            exit 1
-          fi
-
-          echo "===== FINAL BUILT INFO.PLIST ====="
-          plutil -p "$APP_PATH/Info.plist"
-
-          echo "===== CFBUNDLEICONNAME ====="
-          /usr/libexec/PlistBuddy \
-            -c "Print :CFBundleIconName" \
-            "$APP_PATH/Info.plist" || true
-
-          echo "===== CFBUNDLEICONS ====="
-          /usr/libexec/PlistBuddy \
-            -c "Print :CFBundleIcons" \
-            "$APP_PATH/Info.plist" || true
-
-          echo "===== COMPILED ICON ASSETS ====="
-          find "$APP_PATH" -maxdepth 2 \
-            \( \
-              -name "Assets.car" \
-              -o -name "*60x60*" \
-              -o -name "*AppIcon*" \
-            \) \
-            -print
 
     artifacts:
       - build/**/*.ipa

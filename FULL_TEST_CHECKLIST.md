@@ -128,3 +128,17 @@ Photo checks:
 - [ ] Create New Contact works.
 - [ ] Add to Existing Contact lets you choose an existing contact and review/save the merged details.
 - [ ] Import from Contacts still fills the Vendor form correctly.
+
+
+## v0.40 Universal Layout Checks
+
+- [ ] Install through TestFlight on an iPhone and an iPad.
+- [ ] On iPad, confirm My Home Keeper fills the app window as a native iPad app rather than iPhone compatibility mode.
+- [ ] Rotate iPad between portrait and landscape; navigation and forms remain usable.
+- [ ] Resize the app in iPad multitasking / Stage Manager if available; content reflows without clipping.
+- [ ] Home dashboard shortcuts become multi-column when enough width is available and collapse cleanly when narrow.
+- [ ] Projects display as a card grid at regular width and as the original list at compact width.
+- [ ] Rooms, Tasks, and Home Setup remain readable and tappable on both compact and regular widths.
+- [ ] Sheets used to add/edit records remain appropriately sized and dismiss correctly on iPad.
+- [ ] Camera, Photos, Contacts, notifications, export, and transfer flows still work after enabling iPad support.
+- [ ] Confirm app icon and My Home Keeper branding appear correctly on both iPhone and iPad.
