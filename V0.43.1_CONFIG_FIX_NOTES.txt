@@ -1,0 +1,5 @@
+My Home Keeper v0.43.1 (build 432)
+
+Fixes cloud configuration detection by bundling the Supabase Project URL and publishable key directly in SupabaseConfiguration.swift, while still allowing Info.plist values to override them. This avoids relying on XcodeGen custom Info.plist key generation at runtime.
+
+No home data migration or deletion is performed by this update.
