@@ -121,7 +121,19 @@ struct AppSettingsView: View {
                     }
                 }
 
-                Text("Create a household around your existing home and prepare family roles before cloud synchronization is enabled in the next phase.")
+                NavigationLink {
+                    CloudSyncView()
+                } label: {
+                    HStack {
+                        Label("Cloud Sync", systemImage: "icloud")
+                        Spacer()
+                        Text(accountSession.cloudStatusText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Text("Use Household Sharing to define who belongs to the home, then Cloud Sync to move the household between your signed-in devices.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -154,7 +166,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "My Home Keeper")
-                LabeledContent("Build", value: "0.42")
+                LabeledContent("Build", value: "0.43")
                 Text("My Home Keeper keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

@@ -331,3 +331,24 @@ Room detail sections now include visible inline Add controls for Projects, Paint
 - Rooms, Tasks, and Home Setup use native inset grouped presentation on larger displays.
 - The known-good AppIcon/XcodeGen configuration used for TestFlight is preserved.
 - This release intentionally does not introduce cloud-account migration yet; account/household sync is the next architecture phase.
+
+## v0.41 — Account Foundation
+
+My Home Keeper now includes an account foundation built around Sign in with Apple. Account identity is persisted securely in the iOS Keychain, credential state is checked with Apple, and Settings includes an Account screen with sign-in/sign-out state. Existing home data remains local in v0.41; household membership and Supabase-backed shared synchronization are planned for the next phases.
+
+Before building v0.41 for TestFlight, enable the **Sign in with Apple** capability for App ID `org.scriptingforschools.HomeMaintainer` in the Apple Developer portal, then regenerate/fetch the App Store provisioning profile in Codemagic so it contains that entitlement.
+
+
+## v0.42 — Household Foundation
+
+My Home Keeper can now wrap the existing local home in a Household owned by the signed-in Apple account. Household membership uses Owner, Editor, and Viewer roles, and owners can prepare invitation records for family members. Existing rooms, systems, tasks, vendors, history, photos, and other records remain untouched on the source device; v0.43 will connect this household structure to the cloud and synchronize it across devices.
+
+
+## v0.43 — Same-Account Cloud Sync
+- Adds a Supabase-backed cloud session to the existing native Sign in with Apple flow.
+- Uploads the current household/home as a structured cloud snapshot.
+- Lets another empty device signed into the same Apple account discover and download that household.
+- Provides an explicit replace-from-cloud action for subsequent manual refreshes; local unsynced changes must be uploaded first.
+- Keeps SwiftData as the offline/local store.
+- Photos and documents remain local in v0.43 and are intentionally excluded from the cloud snapshot.
+- Requires the Supabase project URL/publishable key plus the schema in `SUPABASE_SETUP.sql`.

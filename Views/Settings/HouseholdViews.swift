@@ -62,7 +62,7 @@ struct HouseholdSetupView: View {
                 Label("Use your existing home as the household home", systemImage: "house.and.flag")
                     .font(.headline)
 
-                Text("Your current rooms, systems, tasks, vendors, photos, and history stay exactly where they are. This step only creates a household record around the home already on this device so it can be synchronized later.")
+                Text("Your current rooms, systems, tasks, vendors, photos, and history stay exactly where they are. This step creates the household record around the home already on this device; use Settings → Cloud Sync when you are ready to upload it.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -86,14 +86,14 @@ struct HouseholdSetupView: View {
                 }
             }
 
-            Section("What Happens Next") {
-                Label("v0.42", systemImage: "person.2")
-                Text("Creates household ownership, member roles, and invitation records locally.")
+            Section("Sharing Progress") {
+                Label("Household foundation", systemImage: "person.2")
+                Text("Owner, Editor, Viewer, and prepared invitation records remain available locally.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
-                Label("v0.43", systemImage: "icloud.and.arrow.up")
-                Text("Adds the cloud synchronization layer so this household and its home data appear on your other devices and for invited family members.")
+                Label("Same-account cloud sync", systemImage: "icloud.and.arrow.up")
+                Text("v0.43 can upload this home and download it on another device signed into the same Apple account once Supabase is configured.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -156,7 +156,7 @@ struct HouseholdDetailView: View {
                     LabeledContent("Home", value: home.name)
                 }
                 LabeledContent("Created", value: household.createdAt.formatted(date: .abbreviated, time: .omitted))
-                LabeledContent("Cloud Sync", value: household.syncReady ? "Connected" : "Coming in v0.43")
+                LabeledContent("Cloud Sync", value: household.syncReady ? "Uploaded" : "Not Uploaded")
 
                 if household.adoptedExistingHome {
                     Label("Existing home adopted safely", systemImage: "checkmark.circle.fill")
@@ -219,7 +219,7 @@ struct HouseholdDetailView: View {
 
             Section("Sharing Status") {
                 Label("Household structure is ready", systemImage: "checkmark.circle")
-                Text("Invitations are being recorded now so roles and membership are ready for the cloud layer. They do not yet deliver shared home data to another device. v0.43 will activate cross-device synchronization and invitation acceptance.")
+                Text("Household data can now be uploaded and downloaded between devices signed into the same Apple account from Settings → Cloud Sync. Family invitation acceptance remains staged for the next sharing phase.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -288,7 +288,7 @@ struct HouseholdInvitationFormView: View {
                 }
 
                 Section {
-                    Text("This version prepares the invitation and role locally. v0.43 will connect these invitations to the cloud and make them usable from another device.")
+                    Text("This version keeps invitation roles prepared locally. Same-account device sync is active in v0.43; accepting invitations from a different family member account is the next sharing phase.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

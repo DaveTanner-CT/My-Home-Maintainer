@@ -1,0 +1,29 @@
+My Home Keeper v0.43 — Same-Account Cloud Sync
+
+What this release adds
+- Supabase-backed authentication session layered onto native Sign in with Apple.
+- Manual upload of the current Household/Home snapshot from the populated device.
+- Discovery and download of that snapshot on another device signed into the same Apple account.
+- SwiftData remains the local/offline store.
+- Existing local data is never silently overwritten.
+- Initial cloud download is allowed only when the receiving device's home-data store is empty.
+- Photos/documents are intentionally excluded from v0.43 cloud snapshots; shared binary storage is the next phase.
+
+Required setup before cloud sync can connect
+1. Create a Supabase project.
+2. Enable Apple under Authentication -> Providers and configure the native iOS App ID/bundle ID:
+   org.scriptingforschools.HomeMaintainer
+3. Run SUPABASE_SETUP.sql in the Supabase SQL Editor.
+4. In project.yml, replace:
+   YOUR_SUPABASE_PROJECT_URL
+   YOUR_SUPABASE_PUBLISHABLE_KEY
+   with the project's URL and publishable key.
+5. Build/upload the app.
+6. On each device, sign out and sign back in with Apple once so My Home Keeper can establish the Supabase session.
+
+Recommended first migration
+- iPhone with existing data: create/confirm Household -> Settings -> Cloud Sync -> Upload This Home to Cloud.
+- iPad: make sure it has no independently entered home data -> sign in with the same Apple account -> Cloud Sync -> Check for My Cloud Household -> Download to This Empty Device.
+
+Version: 0.43
+Build: 430

@@ -167,3 +167,16 @@ Photo checks:
 - Rename the household and confirm the new name persists after relaunch.
 - Confirm the household screen clearly states that cross-device synchronization is not active until v0.43.
 - On a second device, do not recreate the primary home data; wait for v0.43 cloud synchronization.
+
+
+## v0.43 Same-Account Cloud Sync Checks
+- [ ] Build shows version 0.43 / build 430.
+- [ ] Without Supabase values configured, Settings → Cloud Sync shows Setup Required without crashing.
+- [ ] After Supabase configuration, sign out/in with Apple establishes Cloud Session = Connected.
+- [ ] Populated iPhone household uploads successfully.
+- [ ] iPad signed into the same Apple account can Check for My Cloud Household.
+- [ ] Empty iPad can download the cloud household and see rooms/systems/devices/fixtures/furniture/paint/projects/tasks/vendors/detectors/consumables/history.
+- [ ] Photos/documents are not expected to cross devices in v0.43.
+- [ ] Download to an already populated home-data store is blocked.
+- [ ] Replace Local Home from Cloud requires destructive confirmation and restores the latest uploaded structured data.
+- [ ] Sign out clears the Supabase session as well as the local Apple-account session.

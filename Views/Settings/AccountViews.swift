@@ -29,7 +29,7 @@ struct AccountView: View {
                 }
 
                 if let household = households.first {
-                    Text("This device is prepared for household sharing with \(household.members.count) member\(household.members.count == 1 ? "" : "s"). Cross-device cloud synchronization arrives in v0.43.")
+                    Text("This device is prepared for household sharing with \(household.members.count) member\(household.members.count == 1 ? "" : "s"). Cloud synchronization is available from Settings → Cloud Sync once Supabase is configured.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -108,7 +108,7 @@ struct AccountView: View {
                 Label("Sign in to prepare for family sharing", systemImage: "person.crop.circle.badge.checkmark")
                     .font(.headline)
 
-                Text("Sign in with Apple creates a stable account identity for My Home Keeper. Your current home data will stay on this device for now; signing in will not replace or erase it.")
+                Text("Sign in with Apple creates a stable account identity for My Home Keeper. Your current home data stays local until you explicitly upload it from Cloud Sync. Signing in alone never replaces or erases home records.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
