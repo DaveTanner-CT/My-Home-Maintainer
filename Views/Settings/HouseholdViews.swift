@@ -1,3 +1,4 @@
+import CloudKit
 import SwiftData
 import SwiftUI
 
@@ -144,9 +145,11 @@ struct HouseholdDetailView: View {
     @EnvironmentObject private var accountSession: AccountSessionStore
     let household: Household
 
-    @State private var showInvite = false
     @State private var showRename = false
     @State private var renamedHousehold = ""
+    @State private var isPreparingShare = false
+    @State private var cloudShare: CKShare?
+    @State private var sharingError: String?
 
     var body: some View {
         List {
@@ -155,21 +158,35 @@ struct HouseholdDetailView: View {
                 if let home = household.home {
                     LabeledContent("Home", value: home.name)
                 }
-                LabeledContent("Created", value: household.createdAt.formatted(date: .abbreviated, time: .omitted))
-                LabeledContent("iCloud Backup", value: household.syncReady ? "Uploaded" : "Not uploaded yet")
+                LabeledContent(
+                    "Created",
+                    value: household.createdAt.formatted(date: .abbreviated, time: .omitted)
+                )
+                LabeledContent(
+                    "iCloud Backup",
+                    value: household.syncReady ? "Uploaded" : "Not uploaded yet"
+                )
 
                 if household.adoptedExistingHome {
-                    Label("Existing home adopted safely", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                    Label(
+                        "Existing home adopted safely",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .foregroundStyle(.green)
                 }
             }
 
             Section("Members") {
                 ForEach(household.members.sorted { $0.joinedAt < $1.joinedAt }) { member in
                     HStack(spacing: 12) {
-                        Image(systemName: member.role == .owner ? "crown.fill" : "person.crop.circle")
-                            .foregroundStyle(member.role == .owner ? .orange : .secondary)
-                            .frame(width: 24)
+                        Image(
+                            systemName: member.role == .owner
+                                ? "crown.fill"
+                                : "person.crop.circle"
+                        )
+                        .foregroundStyle(member.role == .owner ? .orange : .secondary)
+                        .frame(width: 24)
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(member.displayName)
                             if !member.email.isEmpty {
@@ -178,7 +195,9 @@ struct HouseholdDetailView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
+
                         Spacer()
+
                         Text(member.role.rawValue)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
@@ -186,42 +205,55 @@ struct HouseholdDetailView: View {
                 }
 
                 Button {
-                    showInvite = true
+                    prepareCloudShare()
                 } label: {
-                    Label("Prepare Family Invitation", systemImage: "person.badge.plus")
-                }
-                .disabled(!currentUserCanManage)
-            }
-
-            if !household.invitations.isEmpty {
-                Section("Prepared Invitations") {
-                    ForEach(household.invitations.sorted { $0.createdAt > $1.createdAt }) { invitation in
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack {
-                                Text(invitation.email)
-                                Spacer()
-                                Text(invitation.role.rawValue)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            HStack {
-                                Text("Code \(invitation.invitationCode)")
-                                    .font(.caption.monospaced())
-                                Spacer()
-                                Text(invitation.status.rawValue)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                    if isPreparingShare {
+                        HStack {
+                            ProgressView()
+                            Text("Preparing Sharing…")
                         }
+                    } else {
+                        Label(
+                            "Share Household",
+                            systemImage: "person.badge.plus"
+                        )
                     }
                 }
+                .disabled(
+                    !currentUserCanManage ||
+                    isPreparingShare ||
+                    !household.syncReady
+                )
             }
 
-            Section("Sharing Status") {
-                Label("Household structure is ready", systemImage: "checkmark.circle")
-                Text("This release moves cloud storage to the household owner’s private iCloud database. Prepared invitation codes are no longer the long-term sharing mechanism. v0.47 will use Apple CloudKit sharing so family members can accept a native invitation with their own Apple IDs.")
+            Section("Family Sharing") {
+                if household.syncReady {
+                    Label(
+                        "Household is ready to share",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .foregroundStyle(.green)
+
+                    Text(
+                        "Share this household with another Apple user. "
+                        + "They will receive a native CloudKit invitation and "
+                        + "can access the shared home using their own Apple ID."
+                    )
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                } else {
+                    Label(
+                        "Upload to iCloud first",
+                        systemImage: "icloud.and.arrow.up"
+                    )
+
+                    Text(
+                        "Before inviting a family member, upload this household "
+                        + "from Settings → iCloud Sync."
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                }
             }
         }
         .toolbar {
@@ -232,107 +264,99 @@ struct HouseholdDetailView: View {
                             renamedHousehold = household.name
                             showRename = true
                         }
-                        Button("Prepare Invitation") { showInvite = true }
+
+                        Button("Share Household") {
+                            prepareCloudShare()
+                        }
+                        .disabled(!household.syncReady || isPreparingShare)
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
             }
         }
-        .sheet(isPresented: $showInvite) {
-            HouseholdInvitationFormView(household: household)
+        .sheet(
+            isPresented: Binding(
+                get: { cloudShare != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        cloudShare = nil
+                    }
+                }
+            )
+        ) {
+            if let cloudShare {
+                CloudSharingView(
+                    share: cloudShare,
+                    container: CloudKitSyncService.cloudContainer
+                )
+            }
         }
         .alert("Rename Household", isPresented: $showRename) {
             TextField("Household name", text: $renamedHousehold)
             Button("Cancel", role: .cancel) {}
             Button("Save") {
-                let trimmed = renamedHousehold.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmed = renamedHousehold.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
                 if !trimmed.isEmpty {
                     household.name = trimmed
                     try? modelContext.save()
                 }
             }
         }
+        .alert(
+            "Family Sharing",
+            isPresented: Binding(
+                get: { sharingError != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        sharingError = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                sharingError = nil
+            }
+        } message: {
+            Text(sharingError ?? "")
+        }
+    }
+
+    private func prepareCloudShare() {
+        guard household.syncReady else {
+            sharingError =
+                "Upload this household to iCloud before preparing a family share."
+            return
+        }
+
+        isPreparingShare = true
+
+        Task {
+            do {
+                let share = try await CloudKitSyncService.prepareShare(
+                    household: household
+                )
+                cloudShare = share
+            } catch {
+                sharingError =
+                    "My Home Keeper could not prepare this household "
+                    + "for family sharing. \(error.localizedDescription)"
+            }
+
+            isPreparingShare = false
+        }
     }
 
     private var currentUserCanManage: Bool {
-        guard let userIdentifier = accountSession.profile?.userIdentifier else { return false }
-        return household.members.contains { $0.userIdentifier == userIdentifier && $0.role == .owner }
+        guard let userIdentifier = accountSession.profile?.userIdentifier else {
+            return false
+        }
+
+        return household.members.contains {
+            $0.userIdentifier == userIdentifier && $0.role == .owner
+        }
     }
 }
 
-struct HouseholdInvitationFormView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    let household: Household
-
-    @State private var email = ""
-    @State private var role: HouseholdRole = .editor
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Family Member") {
-                    TextField("Email address", text: $email)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                    Picker("Role", selection: $role) {
-                        ForEach([HouseholdRole.editor, .viewer]) { role in
-                            Text(role.rawValue).tag(role)
-                        }
-                    }
-                }
-
-                Section("Role Access") {
-                    roleDescription
-                }
-
-                Section {
-                    Text("Prepared invitation codes are retained only as local placeholders during the CloudKit pivot. v0.47 will replace them with Apple's native CloudKit sharing invitation flow.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Prepare Invitation")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveInvitation() }
-                        .disabled(!looksLikeEmail)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var roleDescription: some View {
-        switch role {
-        case .owner:
-            Text("Owners can manage the household, members, and all home data.")
-        case .editor:
-            Text("Editors can add and update shared home records, tasks, projects, and history.")
-        case .viewer:
-            Text("Viewers can see shared household information but cannot change it.")
-        }
-    }
-
-    private var looksLikeEmail: Bool {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.contains("@") && trimmed.contains(".")
-    }
-
-    private func saveInvitation() {
-        let invitation = HouseholdInvitation(
-            email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-            role: role,
-            household: household
-        )
-        household.invitations.append(invitation)
-        modelContext.insert(invitation)
-        try? modelContext.save()
-        dismiss()
-    }
-}

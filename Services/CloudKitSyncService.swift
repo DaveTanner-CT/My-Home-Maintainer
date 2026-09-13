@@ -39,6 +39,50 @@ enum CloudKitSyncService {
     private static let assetField = "archiveAsset"
     private static let container = CKContainer.default()
 
+    static var cloudContainer: CKContainer {
+        container
+    }
+
+    static func prepareShare(household: Household) async throws -> CKShare {
+        try await requireAvailableAccount()
+
+        let database = container.privateCloudDatabase
+        let zoneID = CKRecordZone.ID(
+            zoneName: zoneName,
+            ownerName: CKCurrentUserDefaultName
+        )
+        try await ensureZone(zoneID: zoneID, database: database)
+
+        let recordID = CKRecord.ID(
+            recordName: household.cloudIdentifier,
+            zoneID: zoneID
+        )
+
+        let rootRecord = try await fetchRecord(recordID, database: database)
+
+        if let existingShareReference = rootRecord.share {
+            let existingRecord = try await fetchRecord(
+                existingShareReference.recordID,
+                database: database
+            )
+            if let existingShare = existingRecord as? CKShare {
+                return existingShare
+            }
+        }
+
+        let share = CKShare(rootRecord: rootRecord)
+        share[CKShare.SystemFieldKey.title] = household.name as CKRecordValue
+        share.publicPermission = .none
+
+        try await saveShare(
+            rootRecord: rootRecord,
+            share: share,
+            database: database
+        )
+
+        return share
+    }
+
     static func accountStatusText() async -> String {
         do {
             switch try await accountStatus() {
@@ -260,6 +304,30 @@ enum CloudKitSyncService {
             }
         } catch let error as CKError where error.code == .serverRejectedRequest || error.code == .partialFailure {
             // The zone may already exist. Fetching/querying below will confirm availability.
+        }
+    }
+
+    private static func saveShare(
+        rootRecord: CKRecord,
+        share: CKShare,
+        database: CKDatabase
+    ) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let operation = CKModifyRecordsOperation(
+                recordsToSave: [rootRecord, share],
+                recordIDsToDelete: nil
+            )
+            operation.savePolicy = .changedKeys
+            operation.isAtomic = true
+            operation.modifyRecordsResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume(returning: ())
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            database.add(operation)
         }
     }
 
