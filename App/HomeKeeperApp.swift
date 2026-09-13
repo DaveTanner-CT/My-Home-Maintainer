@@ -1,9 +1,30 @@
-import SwiftUI
+import CloudKit
 import SwiftData
+import SwiftUI
+import UIKit
+
+final class HomeKeeperAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata
+    ) {
+        Task { @MainActor in
+            do {
+                try await CloudKitSyncService.acceptShare(metadata: cloudKitShareMetadata)
+                UserDefaults.standard.set(Date(), forKey: "HomeKeeperLastAcceptedCloudShareDate")
+                UserDefaults.standard.removeObject(forKey: "HomeKeeperLastCloudShareError")
+            } catch {
+                UserDefaults.standard.set(error.localizedDescription, forKey: "HomeKeeperLastCloudShareError")
+            }
+        }
+    }
+}
 
 @main
 struct HomeKeeperApp: App {
+    @UIApplicationDelegateAdaptor(HomeKeeperAppDelegate.self) private var appDelegate
     @StateObject private var accountSession = AccountSessionStore()
+
     private var modelContainer: ModelContainer = {
         let schema = Schema([
             Home.self,
@@ -65,14 +86,12 @@ struct HomeKeeperApp: App {
                 .environmentObject(accountSession)
                 .task {
                     accountSession.refreshCredentialState()
-
                     await NotificationManager.shared.requestAuthorization()
                 }
         }
         .modelContainer(modelContainer)
     }
 }
-
 
 private struct StartupRootView: View {
     @State private var recoveryMessage: String? = UserDefaults.standard.string(forKey: "HomeKeeperStartupStoreError")

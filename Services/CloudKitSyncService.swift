@@ -6,6 +6,7 @@ enum CloudKitSyncError: LocalizedError {
     case iCloudUnavailable
     case noHousehold
     case noCloudSnapshot
+    case noSharedHousehold
     case localStoreNotEmpty
     case invalidArchive
 
@@ -17,6 +18,8 @@ enum CloudKitSyncError: LocalizedError {
             return "Create a household around this home before uploading it to iCloud."
         case .noCloudSnapshot:
             return "No My Home Keeper household snapshot was found in this iCloud account."
+        case .noSharedHousehold:
+            return "No shared My Home Keeper household was found. Accept the Apple sharing invitation first, then try again."
         case .localStoreNotEmpty:
             return "This device already contains home data. Use Replace Local Home from iCloud if you intentionally want to overwrite it."
         case .invalidArchive:
@@ -81,6 +84,89 @@ enum CloudKitSyncService {
         )
 
         return share
+    }
+
+    static func acceptShare(metadata: CKShare.Metadata) async throws {
+        try await requireAvailableAccount()
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let operation = CKAcceptSharesOperation(shareMetadatas: [metadata])
+            operation.qualityOfService = .userInitiated
+            operation.acceptSharesResultBlock = { result in
+                switch result {
+                case .success:
+                    UserDefaults.standard.set(Date(), forKey: "HomeKeeperLastAcceptedCloudShareDate")
+                    UserDefaults.standard.removeObject(forKey: "HomeKeeperLastCloudShareError")
+                    continuation.resume(returning: ())
+                case .failure(let error):
+                    UserDefaults.standard.set(error.localizedDescription, forKey: "HomeKeeperLastCloudShareError")
+                    continuation.resume(throwing: error)
+                }
+            }
+            container.add(operation)
+        }
+    }
+
+    static func latestSharedSnapshot() async throws -> CloudKitSnapshotSummary {
+        let record = try await latestSharedSnapshotRecord()
+        return summary(for: record)
+    }
+
+    static func downloadLatestSharedHouseholdIntoEmptyStore(
+        context: ModelContext,
+        accountSession: AccountSessionStore
+    ) async throws -> CloudKitSnapshotSummary {
+        guard try HomeTransferService.isStoreEmpty(context: context) else {
+            throw CloudKitSyncError.localStoreNotEmpty
+        }
+
+        let record = try await latestSharedSnapshotRecord()
+        let archive = try archive(from: record)
+        try HomeTransferService.importIntoEmptyStore(archive, context: context)
+        try attachSharedHousehold(record: record, context: context, accountSession: accountSession)
+        return summary(for: record)
+    }
+
+    static func replaceLocalHomeWithLatestSharedSnapshot(
+        context: ModelContext,
+        accountSession: AccountSessionStore
+    ) async throws -> CloudKitSnapshotSummary {
+        let record = try await latestSharedSnapshotRecord()
+        let archive = try archive(from: record)
+        try deleteLocalHomeData(context: context)
+        try HomeTransferService.importIntoEmptyStore(archive, context: context)
+        try attachSharedHousehold(record: record, context: context, accountSession: accountSession)
+        return summary(for: record)
+    }
+
+    static func uploadCurrentSharedHousehold(
+        household: Household,
+        context: ModelContext
+    ) async throws -> CloudKitSnapshotSummary {
+        try await requireAvailableAccount()
+        let database = container.sharedCloudDatabase
+        let record = try await sharedSnapshotRecord(recordName: household.cloudIdentifier)
+
+        let archiveData = try HomeTransferService.encodedArchive(
+            context: context,
+            packageType: "CloudKit Shared Household"
+        )
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mhk-shared-cloudkit-\(UUID().uuidString).json")
+        try archiveData.write(to: tempURL, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let homeName = household.home?.name ?? "Home"
+        record["householdName"] = household.name as CKRecordValue
+        record["homeName"] = homeName as CKRecordValue
+        record["updatedAt"] = Date() as CKRecordValue
+        record["formatVersion"] = 1 as CKRecordValue
+        record[assetField] = CKAsset(fileURL: tempURL)
+
+        let saved = try await saveRecord(record, database: database)
+        household.syncReady = true
+        try context.save()
+        return summary(for: saved)
     }
 
     static func accountStatusText() async -> String {
@@ -189,6 +275,60 @@ enum CloudKitSyncService {
         return record
     }
 
+    private static func latestSharedSnapshotRecord() async throws -> CKRecord {
+        try await requireAvailableAccount()
+        let database = container.sharedCloudDatabase
+        let zones = try await allRecordZones(database: database)
+
+        var matches: [CKRecord] = []
+        for zone in zones {
+            let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
+            query.sortDescriptors = [NSSortDescriptor(key: "updatedAt", ascending: false)]
+            do {
+                let records = try await performQuery(query, zoneID: zone.zoneID, database: database)
+                matches.append(contentsOf: records)
+            } catch let error as CKError where error.code == .unknownItem || error.code == .zoneNotFound {
+                continue
+            }
+        }
+
+        guard let record = matches.max(by: {
+            ($0["updatedAt"] as? Date ?? $0.modificationDate ?? .distantPast) <
+            ($1["updatedAt"] as? Date ?? $1.modificationDate ?? .distantPast)
+        }) else {
+            throw CloudKitSyncError.noSharedHousehold
+        }
+        return record
+    }
+
+    private static func sharedSnapshotRecord(recordName: String) async throws -> CKRecord {
+        try await requireAvailableAccount()
+        let database = container.sharedCloudDatabase
+        let zones = try await allRecordZones(database: database)
+
+        for zone in zones {
+            let recordID = CKRecord.ID(recordName: recordName, zoneID: zone.zoneID)
+            do {
+                return try await fetchRecord(recordID, database: database)
+            } catch let error as CKError where error.code == .unknownItem || error.code == .zoneNotFound {
+                continue
+            }
+        }
+        throw CloudKitSyncError.noSharedHousehold
+    }
+
+    private static func allRecordZones(database: CKDatabase) async throws -> [CKRecordZone] {
+        try await withCheckedThrowingContinuation { continuation in
+            database.fetchAllRecordZones { zones, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: zones ?? [])
+                }
+            }
+        }
+    }
+
     private static func archive(from record: CKRecord) throws -> HomeTransferArchive {
         guard let asset = record[assetField] as? CKAsset,
               let fileURL = asset.fileURL,
@@ -245,6 +385,53 @@ enum CloudKitSyncService {
                 displayName: profile?.displayName ?? "iCloud User",
                 email: profile?.email ?? "",
                 role: .owner,
+                household: household
+            )
+            household.members.append(member)
+            context.insert(member)
+        }
+
+        try context.save()
+    }
+
+    private static func attachSharedHousehold(
+        record: CKRecord,
+        context: ModelContext,
+        accountSession: AccountSessionStore
+    ) throws {
+        let homes = try context.fetch(FetchDescriptor<Home>())
+        let existingHouseholds = try context.fetch(FetchDescriptor<Household>())
+        let householdName = record["householdName"] as? String ?? "Shared Household"
+        let cloudIdentifier = record.recordID.recordName
+        let profile = accountSession.profile
+        let userIdentifier = profile?.userIdentifier ?? "icloud-shared-user"
+
+        let household: Household
+        if let existing = existingHouseholds.first {
+            household = existing
+            household.cloudIdentifier = cloudIdentifier
+            household.name = householdName
+            household.ownerUserIdentifier = "cloudkit-share-owner"
+            household.syncReady = true
+            household.home = homes.first
+        } else {
+            household = Household(
+                cloudIdentifier: cloudIdentifier,
+                name: householdName,
+                ownerUserIdentifier: "cloudkit-share-owner",
+                adoptedExistingHome: false,
+                syncReady: true,
+                home: homes.first
+            )
+            context.insert(household)
+        }
+
+        if !household.members.contains(where: { $0.userIdentifier == userIdentifier }) {
+            let member = HouseholdMember(
+                userIdentifier: userIdentifier,
+                displayName: profile?.displayName ?? "Shared Member",
+                email: profile?.email ?? "",
+                role: .editor,
                 household: household
             )
             household.members.append(member)

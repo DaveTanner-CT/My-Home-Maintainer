@@ -8,22 +8,48 @@ struct CloudKitSyncView: View {
 
     @State private var iCloudStatus = "Checking…"
     @State private var isWorking = false
-    @State private var lastSnapshot: CloudKitSnapshotSummary?
+    @State private var privateSnapshot: CloudKitSnapshotSummary?
+    @State private var sharedSnapshot: CloudKitSnapshotSummary?
     @State private var statusMessage: String?
-    @State private var showDownloadConfirmation = false
-    @State private var showReplaceConfirmation = false
+    @State private var showPrivateDownloadConfirmation = false
+    @State private var showPrivateReplaceConfirmation = false
+    @State private var showSharedDownloadConfirmation = false
+    @State private var showSharedReplaceConfirmation = false
+    @State private var lastAcceptedShareDate: Date? = UserDefaults.standard.object(forKey: "HomeKeeperLastAcceptedCloudShareDate") as? Date
+    @State private var lastShareError: String? = UserDefaults.standard.string(forKey: "HomeKeeperLastCloudShareError")
 
     var body: some View {
         List {
             Section("iCloud") {
                 LabeledContent("iCloud Account", value: iCloudStatus)
-                LabeledContent("Storage", value: "Your private iCloud database")
-                Text("Your household backup is stored in your own iCloud account through CloudKit. My Home Keeper does not store this household data in a developer-owned Supabase database.")
+                LabeledContent("Storage", value: "Private + Shared CloudKit")
+                Text("Your own household lives in your private iCloud database. Family households shared with you appear through Apple's shared CloudKit database.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
-            Section("This Device") {
+            if let accepted = lastAcceptedShareDate {
+                Section("Family Invitation") {
+                    Label("CloudKit invitation accepted", systemImage: "person.2.circle.fill")
+                        .foregroundStyle(.green)
+                    LabeledContent("Accepted", value: accepted.formatted(date: .abbreviated, time: .shortened))
+                    Text("Tap Check for Shared Household below to load the household that was shared with this Apple ID.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let lastShareError {
+                Section("Family Invitation") {
+                    Label("Invitation could not be accepted", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(lastShareError)
+                        .font(.footnote)
+                    Text("Open the Apple sharing invitation again after confirming this device is signed into iCloud.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("My Private Household") {
                 if let household = households.first {
                     LabeledContent("Household", value: household.name)
                     if let home = household.home {
@@ -32,42 +58,38 @@ struct CloudKitSyncView: View {
                     LabeledContent("iCloud Backup", value: household.syncReady ? "Uploaded" : "Not Uploaded Yet")
 
                     Button {
-                        upload(household)
+                        uploadPrivate(household)
                     } label: {
                         Label("Upload This Home to iCloud", systemImage: "icloud.and.arrow.up")
                     }
                     .disabled(iCloudStatus != "Available" || isWorking)
                 } else {
-                    ContentUnavailableView(
-                        "No Household Yet",
-                        systemImage: "person.2",
-                        description: Text("Create a household around the home already on this device before the first iCloud upload.")
-                    )
+                    Text("If this device owns a household, create it locally first and upload it here.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-            }
 
-            Section("Other Apple Device") {
                 Button {
-                    checkCloud()
+                    checkPrivateCloud()
                 } label: {
-                    Label("Check iCloud for My Household", systemImage: "icloud")
+                    Label("Check My Private iCloud Household", systemImage: "icloud")
                 }
                 .disabled(iCloudStatus != "Available" || isWorking)
 
-                if let lastSnapshot {
-                    LabeledContent("iCloud Household", value: lastSnapshot.householdName)
-                    LabeledContent("iCloud Home", value: lastSnapshot.homeName)
-                    LabeledContent("Last Uploaded", value: lastSnapshot.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                if let privateSnapshot {
+                    LabeledContent("iCloud Household", value: privateSnapshot.householdName)
+                    LabeledContent("iCloud Home", value: privateSnapshot.homeName)
+                    LabeledContent("Last Updated", value: privateSnapshot.updatedAt.formatted(date: .abbreviated, time: .shortened))
 
                     Button {
-                        showDownloadConfirmation = true
+                        showPrivateDownloadConfirmation = true
                     } label: {
                         Label("Download to This Empty Device", systemImage: "icloud.and.arrow.down")
                     }
                     .disabled(isWorking)
 
                     Button(role: .destructive) {
-                        showReplaceConfirmation = true
+                        showPrivateReplaceConfirmation = true
                     } label: {
                         Label("Replace Local Home from iCloud", systemImage: "arrow.triangle.2.circlepath")
                     }
@@ -75,11 +97,54 @@ struct CloudKitSyncView: View {
                 }
             }
 
-            Section("CloudKit Pivot") {
-                Label("Household data is stored in the user's private iCloud database", systemImage: "lock.icloud")
-                Label("This foundation uses a private CloudKit record zone", systemImage: "externaldrive.badge.icloud")
-                Label("Family sharing with CKShare is the next phase", systemImage: "person.2.badge.gearshape")
-                Text("v0.46 proves private iCloud storage and same-account iPhone/iPad transfer first. v0.47 will replace invitation codes with Apple's native CloudKit sharing flow so family members use their own Apple IDs.")
+            Section("Shared With Me") {
+                Button {
+                    checkSharedCloud()
+                } label: {
+                    Label("Check for Shared Household", systemImage: "person.2.badge.gearshape")
+                }
+                .disabled(iCloudStatus != "Available" || isWorking)
+
+                if let sharedSnapshot {
+                    LabeledContent("Shared Household", value: sharedSnapshot.householdName)
+                    LabeledContent("Shared Home", value: sharedSnapshot.homeName)
+                    LabeledContent("Last Updated", value: sharedSnapshot.updatedAt.formatted(date: .abbreviated, time: .shortened))
+
+                    Button {
+                        showSharedDownloadConfirmation = true
+                    } label: {
+                        Label("Download Shared Household", systemImage: "person.2.and.arrow.down")
+                    }
+                    .disabled(isWorking)
+
+                    Button(role: .destructive) {
+                        showSharedReplaceConfirmation = true
+                    } label: {
+                        Label("Replace Local Home with Shared Household", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(isWorking)
+
+                    if let household = households.first,
+                       household.cloudIdentifier == sharedSnapshot.householdID {
+                        Button {
+                            uploadShared(household)
+                        } label: {
+                            Label("Upload My Changes to Shared Household", systemImage: "person.2.badge.plus")
+                        }
+                        .disabled(isWorking)
+                    }
+                } else {
+                    Text("After accepting a My Home Keeper invitation from another Apple user, tap Check for Shared Household.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Family Sharing") {
+                Label("Owner invitations use Apple's native CKShare system", systemImage: "person.crop.circle.badge.checkmark")
+                Label("Recipients use their own Apple ID and iCloud account", systemImage: "person.2")
+                Label("Shared household records remain in the owner's iCloud container", systemImage: "lock.icloud")
+                Text("This version supports accepting a CKShare invitation, downloading the shared household, and manually uploading read/write changes back to the shared CloudKit record.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -96,7 +161,10 @@ struct CloudKitSyncView: View {
         }
         .navigationTitle("iCloud Sync")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await refreshStatus() }
+        .task {
+            await refreshStatus()
+            refreshShareAcceptanceState()
+        }
         .alert("iCloud Sync", isPresented: Binding(
             get: { statusMessage != nil },
             set: { if !$0 { statusMessage = nil } }
@@ -105,17 +173,29 @@ struct CloudKitSyncView: View {
         } message: {
             Text(statusMessage ?? "")
         }
-        .confirmationDialog("Download iCloud Household?", isPresented: $showDownloadConfirmation, titleVisibility: .visible) {
-            Button("Download to This Device") { download() }
+        .confirmationDialog("Download Private iCloud Household?", isPresented: $showPrivateDownloadConfirmation, titleVisibility: .visible) {
+            Button("Download to This Device") { downloadPrivate() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This only works when the device has no existing home data.")
         }
-        .confirmationDialog("Replace Local Home from iCloud?", isPresented: $showReplaceConfirmation, titleVisibility: .visible) {
-            Button("Replace Local Home", role: .destructive) { replaceFromCloud() }
+        .confirmationDialog("Replace Local Home from Private iCloud?", isPresented: $showPrivateReplaceConfirmation, titleVisibility: .visible) {
+            Button("Replace Local Home", role: .destructive) { replaceFromPrivateCloud() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This deletes the local home records on this device and replaces them with the latest iCloud copy. Any local changes that were not uploaded first will be lost.")
+            Text("This deletes the local home records on this device and replaces them with your latest private iCloud copy.")
+        }
+        .confirmationDialog("Download Shared Household?", isPresented: $showSharedDownloadConfirmation, titleVisibility: .visible) {
+            Button("Download Shared Household") { downloadShared() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This only works when the device has no existing home data.")
+        }
+        .confirmationDialog("Replace Local Home with Shared Household?", isPresented: $showSharedReplaceConfirmation, titleVisibility: .visible) {
+            Button("Replace Local Home", role: .destructive) { replaceFromSharedCloud() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This deletes the local home records on this device and replaces them with the latest shared household copy.")
         }
     }
 
@@ -123,12 +203,17 @@ struct CloudKitSyncView: View {
         iCloudStatus = await CloudKitSyncService.accountStatusText()
     }
 
-    private func upload(_ household: Household) {
+    private func refreshShareAcceptanceState() {
+        lastAcceptedShareDate = UserDefaults.standard.object(forKey: "HomeKeeperLastAcceptedCloudShareDate") as? Date
+        lastShareError = UserDefaults.standard.string(forKey: "HomeKeeperLastCloudShareError")
+    }
+
+    private func uploadPrivate(_ household: Household) {
         isWorking = true
         Task {
             do {
                 let summary = try await CloudKitSyncService.uploadCurrentHousehold(household: household, context: modelContext)
-                lastSnapshot = summary
+                privateSnapshot = summary
                 statusMessage = "Uploaded \(summary.homeName) to your private iCloud database."
             } catch {
                 statusMessage = error.localizedDescription
@@ -137,26 +222,26 @@ struct CloudKitSyncView: View {
         }
     }
 
-    private func checkCloud() {
+    private func checkPrivateCloud() {
         isWorking = true
         Task {
             do {
-                lastSnapshot = try await CloudKitSyncService.latestSnapshot()
+                privateSnapshot = try await CloudKitSyncService.latestSnapshot()
             } catch {
-                lastSnapshot = nil
+                privateSnapshot = nil
                 statusMessage = error.localizedDescription
             }
             isWorking = false
         }
     }
 
-    private func download() {
+    private func downloadPrivate() {
         isWorking = true
         Task {
             do {
                 let summary = try await CloudKitSyncService.downloadLatestHouseholdIntoEmptyStore(context: modelContext, accountSession: accountSession)
-                lastSnapshot = summary
-                statusMessage = "Downloaded \(summary.homeName) from iCloud."
+                privateSnapshot = summary
+                statusMessage = "Downloaded \(summary.homeName) from your private iCloud database."
             } catch {
                 statusMessage = error.localizedDescription
             }
@@ -164,13 +249,69 @@ struct CloudKitSyncView: View {
         }
     }
 
-    private func replaceFromCloud() {
+    private func replaceFromPrivateCloud() {
         isWorking = true
         Task {
             do {
                 let summary = try await CloudKitSyncService.replaceLocalHomeWithLatestSnapshot(context: modelContext, accountSession: accountSession)
-                lastSnapshot = summary
-                statusMessage = "Replaced this device's local home with the latest iCloud copy of \(summary.homeName)."
+                privateSnapshot = summary
+                statusMessage = "Replaced this device's local home with \(summary.homeName) from private iCloud."
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+            isWorking = false
+        }
+    }
+
+    private func checkSharedCloud() {
+        isWorking = true
+        Task {
+            do {
+                sharedSnapshot = try await CloudKitSyncService.latestSharedSnapshot()
+                refreshShareAcceptanceState()
+            } catch {
+                sharedSnapshot = nil
+                statusMessage = error.localizedDescription
+            }
+            isWorking = false
+        }
+    }
+
+    private func downloadShared() {
+        isWorking = true
+        Task {
+            do {
+                let summary = try await CloudKitSyncService.downloadLatestSharedHouseholdIntoEmptyStore(context: modelContext, accountSession: accountSession)
+                sharedSnapshot = summary
+                statusMessage = "Downloaded shared household \(summary.homeName)."
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+            isWorking = false
+        }
+    }
+
+    private func replaceFromSharedCloud() {
+        isWorking = true
+        Task {
+            do {
+                let summary = try await CloudKitSyncService.replaceLocalHomeWithLatestSharedSnapshot(context: modelContext, accountSession: accountSession)
+                sharedSnapshot = summary
+                statusMessage = "Replaced this device's local home with shared household \(summary.homeName)."
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+            isWorking = false
+        }
+    }
+
+    private func uploadShared(_ household: Household) {
+        isWorking = true
+        Task {
+            do {
+                let summary = try await CloudKitSyncService.uploadCurrentSharedHousehold(household: household, context: modelContext)
+                sharedSnapshot = summary
+                statusMessage = "Uploaded your changes to shared household \(summary.homeName)."
             } catch {
                 statusMessage = error.localizedDescription
             }
