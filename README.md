@@ -1,8 +1,8 @@
-# My Home Keeper v0.46.1
+# My Home Keeper v0.46.2
 
 ## CloudKit Foundation
 
-v0.46.1 pivots My Home Keeper away from a developer-managed Supabase database and into Apple CloudKit.
+v0.46.2 pivots My Home Keeper away from a developer-managed Supabase database and into Apple CloudKit.
 
 ### What stays the same
 - SwiftUI interface and adaptive iPhone/iPad layouts
@@ -30,7 +30,7 @@ The application backend no longer holds household records in a developer-owned d
 - shared database discovery
 
 ## Apple Developer setup required
-Before Codemagic can sign v0.46.1:
+Before Codemagic can sign v0.46.2:
 1. Open Apple Developer → Certificates, Identifiers & Profiles → Identifiers.
 2. Open `org.scriptingforschools.HomeMaintainer`.
 3. Enable **iCloud**.
@@ -44,7 +44,7 @@ Version: **0.46**
 Build: **460**
 
 
-## v0.46.1 build cleanup
+## v0.46.2 build cleanup
 
 This maintenance release hardens the CloudKit pivot for repositories that still contain legacy Supabase source files. `project.yml` explicitly excludes the obsolete Supabase sync files from the XcodeGen target, so stale files left in GitHub cannot be compiled accidentally.
 
