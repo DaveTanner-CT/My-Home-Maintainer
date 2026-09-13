@@ -1,78 +1,50 @@
-# My Home Keeper v0.43 — Supabase Setup
+# My Home Keeper v0.44 - Structured Sync Setup
 
-v0.43 is built so the populated iPhone can upload a household snapshot and another device signed into the same Apple account can download it. The app continues to use SwiftData locally/offline.
+v0.44 keeps SwiftData as the local/offline store, but changes the cloud transport from one large JSONB snapshot to smaller structured category chunks.
 
-## 1. Create a Supabase project
-Create a project at Supabase and wait for it to finish provisioning.
+## One-time Supabase database update
 
-From the project's **Connect** / API settings, copy:
-- Project URL
-- Publishable key (`sb_publishable_...`; a legacy anon key also works while Supabase still supports it)
+In the existing Supabase project, open **SQL Editor**, paste the complete contents of `SUPABASE_SETUP.sql`, and run it.
 
-Never place a Supabase secret/service-role key in the iOS app.
+The script adds:
+- `public.household_sync_manifests`
+- `public.household_sync_chunks`
+- indexes for owner/revision lookup
+- Row Level Security policies that restrict each row to its authenticated owner
 
-## 2. Enable Apple authentication in Supabase
-In the Supabase dashboard, open **Authentication → Providers → Apple** and enable Apple.
+It does not drop the older v0.43 snapshot table or delete its data.
 
-The native iOS app identifier used by My Home Keeper is:
+## Existing Supabase configuration
 
-`org.scriptingforschools.HomeMaintainer`
+Keep the current Project URL and publishable client key already configured in the app. Never place a Supabase secret/service-role key in the iOS app.
 
-Add that native App ID/bundle ID as an accepted Apple client ID. The app already has Apple's Sign in with Apple capability enabled.
+Keep Apple enabled under **Authentication -> Providers -> Apple**. The configured Client IDs should include the Services ID and native bundle ID already set up for My Home Keeper.
 
-## 3. Create the cloud table and RLS policies
-Open **SQL Editor** in Supabase and run the complete contents of:
+## Build
 
-`SUPABASE_SETUP.sql`
+- Marketing version: `0.44`
+- Build number: `440`
 
-This creates `public.household_snapshots` and Row Level Security policies that only allow the signed-in owner to access that owner's snapshot.
+Run the existing Codemagic TestFlight workflow after committing the v0.44 source and after the SQL update succeeds.
 
-## 4. Put the public Supabase settings into project.yml
-In the root `project.yml`, replace:
+## First structured sync test
 
-`YOUR_SUPABASE_PROJECT_URL`
-
-with a value like:
-
-`https://YOUR_PROJECT_REF.supabase.co`
-
-Replace:
-
-`YOUR_SUPABASE_PUBLISHABLE_KEY`
-
-with the project's publishable key.
-
-These are public client configuration values. Do not use the secret key.
-
-## 5. Build v0.43
-The build is configured as:
-- Marketing version: `0.43`
-- Build number: `430`
-
-Run the existing Codemagic TestFlight workflow.
-
-## 6. Re-establish Apple sign-in on both devices
-After installing the Supabase-configured build, sign out of My Home Keeper and sign back in with Apple once on each device. v0.43 uses the native Apple identity token to establish the matching Supabase Auth session.
-
-## 7. First household migration
-### On the populated iPhone
-1. Confirm the Household exists under Settings → Household Sharing.
-2. Open Settings → Cloud Sync.
-3. Confirm Supabase = Configured and Cloud Session = Connected.
+### Populated iPhone
+1. Update to v0.44.
+2. Open **Cloud Sync**.
+3. Confirm Supabase = Configured, Apple Account = Signed In, and Cloud Session = Connected.
 4. Tap **Upload This Home to Cloud**.
+5. Wait for the success confirmation.
 
-### On the iPad
-1. Do not recreate the iPhone's home records manually.
-2. Sign into My Home Keeper using the same Apple account.
-3. Open Settings → Cloud Sync.
+### iPad
+1. Update to the same v0.44 build.
+2. Sign in with the same Apple account.
+3. Open **Cloud Sync**.
 4. Tap **Check for My Cloud Household**.
-5. Tap **Download to This Empty Device**.
+5. Tap **Download to This Empty Device** only if the iPad does not already contain home records you need to preserve.
 
-## Current synchronization behavior
-v0.43 intentionally uses explicit snapshot push/pull rather than silent conflict merging:
-- Upload from the device whose data should become the latest cloud copy.
-- Other linked devices can explicitly replace their local structured home data from that cloud copy.
-- An initial download is blocked if a device already contains home records.
-- Photos and documents stay local until the shared storage phase.
+## What syncs in v0.44
 
-This conservative approach prevents the first cloud release from silently overwriting existing household data.
+Structured records sync in separate chunks: home profile, rooms, vendors, systems, appliances, fixtures, furniture, paint, projects, project items, measurements, tasks, history, detectors, and consumables.
+
+Photos, project images, attachments, and documents stay local in this release. They will use Supabase Storage in a later phase instead of being embedded in JSONB.

@@ -1,0 +1,14 @@
+My Home Keeper v0.44 - Structured Cloud Sync
+
+- Replaces the single large household JSONB upload with smaller category chunks.
+- Writes a manifest only after all chunks upload successfully.
+- Strips project cover/item photo binary data from structured cloud payloads.
+- Leaves photos/documents local for the future Supabase Storage phase.
+- Adds household_sync_manifests and household_sync_chunks tables with RLS.
+- Version 0.44, build 440.
+
+Before building:
+1. Run the updated SUPABASE_SETUP.sql in the existing Supabase project.
+2. Confirm Apple Account, Supabase, and Cloud Session are connected.
+3. Upload from the populated iPhone first.
+4. On the iPad, Check for My Cloud Household, then download into an empty local home store.

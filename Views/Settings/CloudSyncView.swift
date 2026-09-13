@@ -88,11 +88,11 @@ struct CloudSyncView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("v0.43 Sync Scope") {
+            Section("v0.44 Structured Sync") {
                 Label("Rooms, systems, devices, fixtures, furniture, paint, projects, tasks, vendors, detectors, consumables, and history", systemImage: "checkmark.circle")
                 Label("Photos and documents remain local in this release", systemImage: "photo.badge.exclamationmark")
                     .foregroundStyle(.secondary)
-                Text("Shared photo/document storage is the next phase. Keeping binary files out of the first cloud snapshot makes initial household sync safer and easier to test.")
+                Text("Home data now uploads in smaller structured chunks instead of one large snapshot. Project photos, attachments, and other binary files stay local until the Supabase Storage phase.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -135,7 +135,7 @@ struct CloudSyncView: View {
             Button("Replace Local Home", role: .destructive) { replaceFromCloud() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This deletes the local home records on this device and replaces them with the latest cloud snapshot. Any local changes that were not uploaded first will be lost. Photos and documents remain outside v0.43 cloud sync.")
+            Text("This deletes the local home records on this device and replaces them with the latest cloud snapshot. Any local changes that were not uploaded first will be lost. Photos and documents remain outside v0.44 structured sync.")
         }
     }
 
