@@ -38,6 +38,8 @@ targets:
         CFBundleDisplayName: "My Home Keeper"
         CFBundleName: "My Home Keeper"
         CFBundleIconName: AppIcon
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
 
         NSCameraUsageDescription: "My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects."
         NSContactsUsageDescription: "My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts."
