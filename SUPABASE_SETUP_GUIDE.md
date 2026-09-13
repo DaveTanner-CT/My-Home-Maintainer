@@ -1,50 +1,69 @@
-# My Home Keeper v0.44 - Structured Sync Setup
+# Supabase Setup — My Home Keeper v0.45
 
-v0.44 keeps SwiftData as the local/offline store, but changes the cloud transport from one large JSONB snapshot to smaller structured category chunks.
+v0.45 requires one additional database migration before family invitations work.
 
-## One-time Supabase database update
+## 1. Run the SQL migration
 
-In the existing Supabase project, open **SQL Editor**, paste the complete contents of `SUPABASE_SETUP.sql`, and run it.
+1. Open the **My Home Keeper** project in Supabase.
+2. Open **SQL Editor**.
+3. Choose **New query**.
+4. Open `SUPABASE_SETUP.sql` from this v0.45 package.
+5. Copy the entire file into Supabase.
+6. Click **Run**.
 
-The script adds:
-- `public.household_sync_manifests`
-- `public.household_sync_chunks`
-- indexes for owner/revision lookup
-- Row Level Security policies that restrict each row to its authenticated owner
+Supabase may warn that the query contains destructive operations because the script drops and recreates Row Level Security policies. It does **not** drop the home-data tables or delete your existing sync records.
 
-It does not drop the older v0.43 snapshot table or delete its data.
+## 2. Verify the new objects
 
-## Existing Supabase configuration
+In **Table Editor**, under the `public` schema, you should now see:
 
-Keep the current Project URL and publishable client key already configured in the app. Never place a Supabase secret/service-role key in the iOS app.
+- `household_snapshots` (older v0.43 compatibility table)
+- `household_sync_chunks`
+- `household_sync_manifests`
+- `households`
+- `household_members`
+- `household_invitations`
 
-Keep Apple enabled under **Authentication -> Providers -> Apple**. The configured Client IDs should include the Services ID and native bundle ID already set up for My Home Keeper.
+The SQL also creates the RPC function:
 
-## Build
+- `accept_household_invitation`
 
-- Marketing version: `0.44`
-- Build number: `440`
+## 3. Re-upload once from the owner device
 
-Run the existing Codemagic TestFlight workflow after committing the v0.44 source and after the SQL update succeeds.
+After v0.45 is installed, the owner can either create the first invitation or upload the home again. Both paths ensure that the existing local household is represented in the new `households` and `household_members` cloud tables.
 
-## First structured sync test
+## 4. Invite a family member
 
-### Populated iPhone
-1. Update to v0.44.
-2. Open **Cloud Sync**.
-3. Confirm Supabase = Configured, Apple Account = Signed In, and Cloud Session = Connected.
-4. Tap **Upload This Home to Cloud**.
-5. Wait for the success confirmation.
+On the owner's device:
 
-### iPad
-1. Update to the same v0.44 build.
-2. Sign in with the same Apple account.
-3. Open **Cloud Sync**.
-4. Tap **Check for My Cloud Household**.
-5. Tap **Download to This Empty Device** only if the iPad does not already contain home records you need to preserve.
+1. Open **Household**.
+2. Tap **Invite Family Member**.
+3. Enter an email address.
+4. Select **Editor** or **Viewer**.
+5. Tap **Invite**.
+6. Share the generated invitation code.
 
-## What syncs in v0.44
+The email is stored with the invitation for recognition and record-keeping. The invitation code is the reliable acceptance method, including when Apple uses a private relay email.
 
-Structured records sync in separate chunks: home profile, rooms, vendors, systems, appliances, fixtures, furniture, paint, projects, project items, measurements, tasks, history, detectors, and consumables.
+## 5. Join from another Apple account
 
-Photos, project images, attachments, and documents stay local in this release. They will use Supabase Storage in a later phase instead of being embedded in JSONB.
+On the family member's device:
+
+1. Sign in with their own Apple ID.
+2. Confirm **Cloud Session — Connected**.
+3. Open **Household**.
+4. Tap **Join Household**.
+5. Enter the 8-character invitation code.
+6. After acceptance, open **Cloud Sync**.
+7. Tap **Check for My Cloud Household**.
+8. Download the home to the empty device.
+
+## Roles in v0.45
+
+- **Owner** — manages household membership and remains the manual cloud publisher.
+- **Editor** — member role is established now; full multi-writer/incremental cloud publishing is planned for the next sync phase.
+- **Viewer** — can join and download/view the shared household without membership-management rights.
+
+## Existing data safety
+
+The migration preserves the v0.44 structured sync tables and existing cloud revisions. It adds membership-aware read access without deleting the owner's previously uploaded home.

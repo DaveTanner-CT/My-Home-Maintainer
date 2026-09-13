@@ -65,6 +65,7 @@ enum CloudSyncService {
         guard accountSession.isSignedIn else { throw CloudSyncError.notSignedIn }
         guard let cloudUserID = accountSession.cloudUserIdentifier else { throw CloudSyncError.notSignedIn }
 
+        try await CloudHouseholdService.ensureCloudHousehold(household: household, accountSession: accountSession)
         let token = try await accountSession.validCloudAccessToken()
         let archive = try cloudArchive(context: context)
         let revision = UUID().uuidString
@@ -196,11 +197,13 @@ enum CloudSyncService {
     ) async throws -> ManifestRow {
         guard SupabaseConfiguration.isConfigured else { throw CloudSyncError.notConfigured }
         guard accountSession.isSignedIn,
-              let cloudUserID = accountSession.cloudUserIdentifier else { throw CloudSyncError.notSignedIn }
+              accountSession.cloudUserIdentifier != nil else { throw CloudSyncError.notSignedIn }
 
         let token = try await accountSession.validCloudAccessToken()
-        let encodedUserID = queryValue(cloudUserID)
-        let path = "/rest/v1/household_sync_manifests?owner_user_id=eq.\(encodedUserID)&select=household_id,owner_user_id,household_name,home_name,revision,format_version,app_version,package_type,exported_at,updated_at&order=updated_at.desc&limit=1"
+        // Row-level security limits this result to households the current cloud user
+        // owns or has joined. This lets invited family members discover the same
+        // manifest without pretending to be the original owner.
+        let path = "/rest/v1/household_sync_manifests?select=household_id,owner_user_id,household_name,home_name,revision,format_version,app_version,package_type,exported_at,updated_at&order=updated_at.desc&limit=1"
         let request = try makeRequest(path: path, method: "GET", accessToken: token)
         let (data, response) = try await URLSession.shared.data(for: request)
         try validate(response: response, data: data)
@@ -423,8 +426,8 @@ enum CloudSyncService {
 
         return HomeTransferArchive(
             formatVersion: fullArchive.formatVersion,
-            appVersion: "0.44",
-            packageType: "Structured Cloud Sync",
+            appVersion: "0.45",
+            packageType: "Family Shared Structured Cloud Sync",
             exportedAt: .now,
             home: fullArchive.home,
             rooms: fullArchive.rooms,

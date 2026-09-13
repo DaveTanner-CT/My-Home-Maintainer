@@ -45,7 +45,7 @@ struct CloudSyncView: View {
                     } label: {
                         Label("Upload This Home to Cloud", systemImage: "icloud.and.arrow.up")
                     }
-                    .disabled(!canUseCloud || isWorking)
+                    .disabled(!canUseCloud || isWorking || !currentUserIsOwner)
                 } else {
                     ContentUnavailableView(
                         "No Household Yet",
@@ -88,11 +88,11 @@ struct CloudSyncView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("v0.44 Structured Sync") {
+            Section("v0.45 Family Cloud Sync") {
                 Label("Rooms, systems, devices, fixtures, furniture, paint, projects, tasks, vendors, detectors, consumables, and history", systemImage: "checkmark.circle")
                 Label("Photos and documents remain local in this release", systemImage: "photo.badge.exclamationmark")
                     .foregroundStyle(.secondary)
-                Text("Home data now uploads in smaller structured chunks instead of one large snapshot. Project photos, attachments, and other binary files stay local until the Supabase Storage phase.")
+                Text("Structured home data is shared with household members through Supabase. Owners publish the current cloud copy in this release; joined family members can discover and download that household with their own Apple account. Photos and documents remain local until the storage phase.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -137,6 +137,12 @@ struct CloudSyncView: View {
         } message: {
             Text("This deletes the local home records on this device and replaces them with the latest cloud snapshot. Any local changes that were not uploaded first will be lost. Photos and documents remain outside v0.44 structured sync.")
         }
+    }
+
+    private var currentUserIsOwner: Bool {
+        guard let household = households.first,
+              let userIdentifier = accountSession.profile?.userIdentifier else { return false }
+        return household.members.contains { $0.userIdentifier == userIdentifier && $0.role == .owner }
     }
 
     private var canUseCloud: Bool {
