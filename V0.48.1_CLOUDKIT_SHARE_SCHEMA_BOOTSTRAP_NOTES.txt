@@ -1,0 +1,8 @@
+My Home Keeper v0.48.1 (481)
+
+- Adds a one-time Codemagic Development workflow to initialize Apple's CloudKit `cloudkit.share` system record type.
+- Adds a separate development XcodeGen project specification and development-only iCloud entitlements.
+- Leaves the normal TestFlight/App Store workflow pointed at Production CloudKit.
+- No SwiftData model changes.
+- No user-data migration or deletion.
+- After a CKShare is successfully created in Development, deploy schema changes in CloudKit Console to Production.

@@ -39,12 +39,15 @@ targets:
         TARGETED_DEVICE_FAMILY: '1,2'
 
     entitlements:
-      path: HomeKeeper.entitlements
+      path: HomeKeeper-Development.entitlements
       properties:
         com.apple.developer.applesignin:
           - Default
         com.apple.developer.icloud-container-identifiers:
           - iCloud.org.scriptingforschools.HomeMaintainer
+        com.apple.developer.icloud-container-development-container-identifiers:
+          - iCloud.org.scriptingforschools.HomeMaintainer
+        com.apple.developer.icloud-container-environment: Development
         com.apple.developer.icloud-services:
           - CloudKit
         com.apple.developer.ubiquity-kvstore-identifier: "$(TeamIdentifierPrefix)org.scriptingforschools.HomeMaintainer"

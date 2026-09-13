@@ -1,3 +1,9 @@
+# My Home Keeper v0.48.1
+
+CloudKit family sharing plus a one-time Development bootstrap workflow for the `cloudkit.share` production schema.
+
+See `CLOUDKIT_SHARE_SCHEMA_BOOTSTRAP.md` before running the bootstrap workflow.
+
 # My Home Keeper v0.48 - CKShare Recipient + Shared Household Sync
 
 Version 0.48 / build 480 extends the v0.47 owner-side CKShare work into an end-to-end family sharing flow.
