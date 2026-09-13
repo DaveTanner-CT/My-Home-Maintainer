@@ -26,10 +26,15 @@ struct ProjectsView: View {
 
     private var compactProjects: some View {
         List {
-            projectSections { stageProjects in
-                ForEach(stageProjects) { project in
-                    NavigationLink { ProjectDetailView(project: project) } label: {
-                        ProjectCardRow(project: project)
+            ForEach(ProjectStage.allCases) { stage in
+                let stageProjects = projects.filter { $0.stage == stage }
+                if !stageProjects.isEmpty {
+                    Section(stage.rawValue) {
+                        ForEach(stageProjects) { project in
+                            NavigationLink { ProjectDetailView(project: project) } label: {
+                                ProjectCardRow(project: project)
+                            }
+                        }
                     }
                 }
             }
@@ -80,17 +85,6 @@ struct ProjectsView: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    @ViewBuilder
-    private func projectSections<Content: View>(@ViewBuilder content: ([Project]) -> Content) -> some View {
-        ForEach(ProjectStage.allCases) { stage in
-            let stageProjects = projects.filter { $0.stage == stage }
-            if !stageProjects.isEmpty {
-                Section(stage.rawValue) {
-                    content(stageProjects)
-                }
-            }
-        }
-    }
 }
 
 private struct ProjectCardRow: View {

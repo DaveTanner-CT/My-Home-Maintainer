@@ -1,0 +1,8 @@
+My Home Keeper v0.40.1
+
+Build fix for the v0.40 universal-layout release.
+
+- Fixed ProjectsView compiler error: escaping closure captured non-escaping content parameter.
+- Removed the projectSections ViewBuilder helper and render compact project sections directly inside the List/ForEach hierarchy.
+- No feature or data-model changes.
+- Retains universal iPhone/iPad targeting and adaptive layouts from v0.40.
