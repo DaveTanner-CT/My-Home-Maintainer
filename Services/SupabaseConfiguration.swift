@@ -1,8 +1,8 @@
 import Foundation
 
 enum SupabaseConfiguration {
-    private static let projectURLKey = "SupabaseProjectURL"
-    private static let publishableKeyKey = "SupabasePublishableKey"
+    private static let projectURLKey = "https://euhnbmtmcaclibomychc.supabase.co"
+    private static let publishableKeyKey = "sb_publishable_7e_hy5Qsovmn-qjX5HbOCw_N2QEbnoP"
 
     static var projectURL: URL? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: projectURLKey) as? String else { return nil }
