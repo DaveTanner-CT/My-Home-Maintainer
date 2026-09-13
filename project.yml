@@ -50,8 +50,8 @@ targets:
         NSCameraUsageDescription: "My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects."
         NSContactsUsageDescription: "My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts."
         NSPhotoLibraryUsageDescription: "My Home Keeper lets you attach photos to home records and project ideas."
-        SupabaseProjectURL: "YOUR_SUPABASE_PROJECT_URL"
-        SupabasePublishableKey: "YOUR_SUPABASE_PUBLISHABLE_KEY"
+        SupabaseProjectURL: "https://euhnbmtmcaclibomychc.supabase.co"
+        SupabasePublishableKey: "sb_publishable_7e_hy5Qsovmn-qjX5HbOCw_N2QEbnoP"
 
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
