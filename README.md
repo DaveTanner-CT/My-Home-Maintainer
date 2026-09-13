@@ -1,39 +1,57 @@
-# My Home Keeper v0.45 — Family Invitations & Memberships
+# My Home Keeper v0.46.1
 
-Version 0.45 adds real cloud household membership on top of the v0.44 structured Supabase sync.
+## CloudKit Foundation
 
-## What changed
+v0.46.1 pivots My Home Keeper away from a developer-managed Supabase database and into Apple CloudKit.
 
-- Owners can create cloud invitations for family members.
-- Invitations have Editor or Viewer roles.
-- Each invitation gets an 8-character code that can be shared with the family member.
-- Family members sign in with their own Apple ID and accept the invitation code.
-- Joined members become real Supabase household members.
-- Household member lists can be refreshed from the cloud.
-- Owners can change Editor/Viewer roles and remove members.
-- Joined members can discover and download the existing shared household through Cloud Sync.
-- Structured sync RLS now allows household members to read the shared cloud home.
-- Settings now displays the actual version and build number dynamically.
+### What stays the same
+- SwiftUI interface and adaptive iPhone/iPad layouts
+- SwiftData local/offline storage
+- existing rooms, systems, devices, fixtures, furniture, paint, detectors, consumables, vendors, tasks, projects, history, and attachments
+- Sign in with Apple account/profile support
+- household model
 
-## Important sync scope
+### What changes
+- Supabase is no longer used by this source tree.
+- Cloud household backup data is stored in the signed-in iCloud user's **private CloudKit database**.
+- A custom private record zone named `MyHomeKeeperHousehold` is used.
+- The app uploads the Home Transfer archive as a `CKAsset`.
+- Another iPhone/iPad using the same iCloud account can discover the latest private household backup and import it.
+- The app can explicitly replace local home data with the latest iCloud copy after confirmation.
 
-v0.45 keeps manual structured sync from v0.44. The Owner remains the cloud publisher in this release. Photos/documents are still local and are not part of cloud sync yet.
+### Privacy direction
+The application backend no longer holds household records in a developer-owned database. The private CloudKit database belongs to the user's iCloud account. Family sharing will be added with `CKShare`, allowing the owner to share selected CloudKit records/zone with invited participants.
 
-## Required Supabase step before testing
+### v0.47 next
+- Create a `CKShare` for the household record zone
+- Native Apple share sheet/invitation
+- Family member accepts using their own Apple ID/iCloud account
+- Read/write versus read-only participation
+- shared database discovery
 
-Run the complete `SUPABASE_SETUP.sql` file in the Supabase SQL Editor before using family invitations. It creates the household/member/invitation tables, the invitation acceptance RPC, and updated Row Level Security policies.
+## Apple Developer setup required
+Before Codemagic can sign v0.46.1:
+1. Open Apple Developer → Certificates, Identifiers & Profiles → Identifiers.
+2. Open `org.scriptingforschools.HomeMaintainer`.
+3. Enable **iCloud**.
+4. Enable **CloudKit** under the iCloud capability.
+5. Create or select the CloudKit container `iCloud.org.scriptingforschools.HomeMaintainer`.
+6. Save the App ID.
+7. Regenerate the App Store provisioning profile for My Home Keeper.
+8. Fetch/update that provisioning profile in Codemagic.
 
-## First family-member test
+Version: **0.46**  
+Build: **460**
 
-1. Owner updates to v0.45 and confirms Cloud Session is Connected.
-2. Owner opens Household and chooses Invite Family Member.
-3. Enter the family member's email, choose Editor or Viewer, and create the invitation.
-4. Share the generated 8-character code.
-5. Family member installs/updates My Home Keeper, signs in with their own Apple ID, and connects the Cloud Session.
-6. Family member opens Household > Join Household and enters the invitation code.
-7. After joining, family member opens Cloud Sync > Check for My Cloud Household > Download to This Empty Device.
 
-## Version
+## v0.46.1 build cleanup
 
-- Marketing version: 0.45
-- Build: 450
+This maintenance release hardens the CloudKit pivot for repositories that still contain legacy Supabase source files. `project.yml` explicitly excludes the obsolete Supabase sync files from the XcodeGen target, so stale files left in GitHub cannot be compiled accidentally.
+
+Excluded legacy files:
+- `Services/CloudSyncService.swift`
+- `Services/CloudHouseholdService.swift`
+- `Services/SupabaseConfiguration.swift`
+- `Views/Settings/CloudSyncView.swift`
+
+CloudKit remains the only active cloud-sync implementation.

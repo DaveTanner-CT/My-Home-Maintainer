@@ -1,0 +1,11 @@
+My Home Keeper v0.46.1 (Build 461)
+
+Fixes Codemagic compile failures caused by legacy Supabase files remaining in the GitHub repository after the CloudKit pivot.
+
+project.yml now explicitly excludes:
+- Services/CloudSyncService.swift
+- Services/CloudHouseholdService.swift
+- Services/SupabaseConfiguration.swift
+- Views/Settings/CloudSyncView.swift
+
+No user data migration is performed. CloudKit configuration and entitlements from v0.46 are preserved.
