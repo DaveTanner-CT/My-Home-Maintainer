@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 import UIKit
 import AVFoundation
 
@@ -15,7 +16,6 @@ struct PhotoSourceButton<Label: View>: View {
     @State private var showSourceOptions = false
     @State private var showCamera = false
     @State private var showPhotoLibrary = false
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var cameraAlertMessage: String?
 
     var body: some View {
@@ -30,9 +30,11 @@ struct PhotoSourceButton<Label: View>: View {
                     presentCameraAfterDialogDismisses()
                 }
             }
+
             Button("Choose from Photo Library") {
                 presentPhotoLibraryAfterDialogDismisses()
             }
+
             Button("Cancel", role: .cancel) { }
         }
         .fullScreenCover(isPresented: $showCamera) {
@@ -41,15 +43,11 @@ struct PhotoSourceButton<Label: View>: View {
             }
             .ignoresSafeArea()
         }
-        .photosPicker(isPresented: $showPhotoLibrary, selection: $selectedPhoto, matching: .images)
-        .onChange(of: selectedPhoto) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                if let data = try? await newValue.loadTransferable(type: Data.self) {
-                    await MainActor.run { onPhoto(data) }
-                }
-                await MainActor.run { selectedPhoto = nil }
+        .fullScreenCover(isPresented: $showPhotoLibrary) {
+            PhotoLibraryPicker(isPresented: $showPhotoLibrary) { data in
+                onPhoto(data)
             }
+            .ignoresSafeArea()
         }
         .alert("Camera Unavailable", isPresented: Binding(
             get: { cameraAlertMessage != nil },
@@ -63,16 +61,18 @@ struct PhotoSourceButton<Label: View>: View {
 
     private func presentCameraAfterDialogDismisses() {
         Task { @MainActor in
-            // Let the confirmation dialog finish dismissing before starting another presentation.
-            try? await Task.sleep(nanoseconds: 250_000_000)
+            // Let the confirmation dialog fully dismiss before presenting another controller.
+            try? await Task.sleep(nanoseconds: 300_000_000)
             await requestCameraAndPresentIfAllowed()
         }
     }
 
     private func presentPhotoLibraryAfterDialogDismisses() {
         Task { @MainActor in
-            // Avoid competing presentations between the confirmation dialog and Photos picker.
-            try? await Task.sleep(nanoseconds: 250_000_000)
+            // Present the library through its own UIKit controller instead of SwiftUI's
+            // .photosPicker modifier. This is substantially more reliable when this
+            // button lives inside an unsaved Form that is itself presented modally.
+            try? await Task.sleep(nanoseconds: 300_000_000)
             showPhotoLibrary = true
         }
     }
@@ -147,7 +147,6 @@ struct CameraPhotoPicker: UIViewControllerRepresentable {
 
             if let image = info[.originalImage] as? UIImage,
                let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() {
-                // Capture the image first, then close only the camera presentation.
                 onPhoto(data)
             }
 
@@ -159,6 +158,74 @@ struct CameraPhotoPicker: UIViewControllerRepresentable {
         private func finishPresentation() {
             guard !hasFinished else { return }
             hasFinished = true
+            DispatchQueue.main.async { [weak self] in
+                self?.isPresented.wrappedValue = false
+            }
+        }
+    }
+}
+
+struct PhotoLibraryPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let onPhoto: (Data) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isPresented: $isPresented, onPhoto: onPhoto)
+    }
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        configuration.preferredAssetRepresentationMode = .current
+
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) { }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        private var isPresented: Binding<Bool>
+        private let onPhoto: (Data) -> Void
+        private var hasFinished = false
+
+        init(isPresented: Binding<Bool>, onPhoto: @escaping (Data) -> Void) {
+            self.isPresented = isPresented
+            self.onPhoto = onPhoto
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            guard !hasFinished else { return }
+            hasFinished = true
+
+            guard let provider = results.first?.itemProvider else {
+                dismiss()
+                return
+            }
+
+            let imageType = UTType.image.identifier
+            guard provider.hasItemConformingToTypeIdentifier(imageType) else {
+                dismiss()
+                return
+            }
+
+            provider.loadDataRepresentation(forTypeIdentifier: imageType) { [weak self] data, _ in
+                guard let self else { return }
+
+                if let data {
+                    DispatchQueue.main.async {
+                        self.onPhoto(data)
+                        self.isPresented.wrappedValue = false
+                    }
+                } else {
+                    self.dismiss()
+                }
+            }
+        }
+
+        private func dismiss() {
             DispatchQueue.main.async { [weak self] in
                 self?.isPresented.wrappedValue = false
             }
