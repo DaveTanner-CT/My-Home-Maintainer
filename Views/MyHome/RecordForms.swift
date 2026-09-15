@@ -13,6 +13,7 @@ struct RoomFormView: View {
     @State private var dimensionLength: Double?
     @State private var dimensionWidth: Double?
     @State private var ceilingHeight: Double?
+    @State private var pendingPhotoData: Data?
     @State private var showDelete = false
 
     init(existing: Room? = nil, initialAreaType: HomeAreaType = .interior) {
@@ -59,6 +60,8 @@ struct RoomFormView: View {
                 }
             }
 
+            PendingRecordPhotoSection(photoData: $pendingPhotoData, title: "Photo", addLabel: existing == nil ? "Add Photo" : "Add Another Photo")
+
             if existing != nil { deleteSection(label: "Delete Room / Area") }
         }
         .navigationTitle(existing == nil ? "Add Room / Area" : "Edit Room / Area")
@@ -83,6 +86,7 @@ struct RoomFormView: View {
         record.dimensionWidth = dimensionWidth
         record.ceilingHeight = ceilingHeight
         if existing != nil && oldName != newName { syncLegacyLocationNames(for: record, newName: newName) }
+        savePendingRecordPhoto(pendingPhotoData, owner: .room(record), modelContext: modelContext)
         try? modelContext.save(); dismiss()
     }
 

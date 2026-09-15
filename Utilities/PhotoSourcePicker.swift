@@ -4,13 +4,16 @@ import UniformTypeIdentifiers
 import UIKit
 import AVFoundation
 
-private enum PhotoPickerDestination: String, Identifiable {
-    case camera
-    case library
-
-    var id: String { rawValue }
-}
-
+/// Shared photo-source control used throughout My Home Keeper.
+///
+/// Important: this intentionally uses ONE immediate full-screen presentation.
+/// Earlier versions used a confirmationDialog followed by a delayed sheet/fullScreenCover.
+/// On long unsaved Forms (Fixture, Furniture, Device/Equipment), dismissing the dialog could
+/// cause SwiftUI to rebuild/scroll the Form before the delayed picker presentation fired.
+/// The result was exactly what users saw: the source popup closed, the Form jumped to the top,
+/// and no camera/library UI appeared.
+///
+/// The source chooser, camera, and photo library now all live inside the same presentation.
 struct PhotoSourceButton<Label: View>: View {
     let onPhoto: (Data) -> Void
     private let label: () -> Label
@@ -20,52 +23,56 @@ struct PhotoSourceButton<Label: View>: View {
         self.label = label
     }
 
-    @State private var showSourceOptions = false
-    @State private var activePicker: PhotoPickerDestination?
-    @State private var cameraAlertMessage: String?
+    @State private var showPhotoFlow = false
 
     var body: some View {
         Button {
-            showSourceOptions = true
+            showPhotoFlow = true
         } label: {
             label()
         }
-        .confirmationDialog("Add Photo", isPresented: $showSourceOptions, titleVisibility: .visible) {
-            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                Button("Take Photo") {
-                    presentCameraAfterDialogDismisses()
+        .fullScreenCover(isPresented: $showPhotoFlow) {
+            PhotoSourceFlowView(
+                onPhoto: { data in
+                    onPhoto(data)
+                    showPhotoFlow = false
+                },
+                onCancel: {
+                    showPhotoFlow = false
                 }
-            }
-
-            Button("Choose from Photo Library") {
-                presentLibraryAfterDialogDismisses()
-            }
-
-            Button("Cancel", role: .cancel) { }
+            )
         }
-        .fullScreenCover(item: $activePicker) { destination in
-            switch destination {
+    }
+}
+
+private struct PhotoSourceFlowView: View {
+    private enum Stage {
+        case chooseSource
+        case camera
+        case library
+    }
+
+    let onPhoto: (Data) -> Void
+    let onCancel: () -> Void
+
+    @State private var stage: Stage = .chooseSource
+    @State private var cameraAlertMessage: String?
+
+    var body: some View {
+        Group {
+            switch stage {
+            case .chooseSource:
+                sourceChooser
             case .camera:
                 CameraPhotoPicker(
-                    onPhoto: { data in
-                        onPhoto(data)
-                        activePicker = nil
-                    },
-                    onCancel: {
-                        activePicker = nil
-                    }
+                    onPhoto: onPhoto,
+                    onCancel: { stage = .chooseSource }
                 )
                 .ignoresSafeArea()
-
             case .library:
                 PhotoLibraryPicker(
-                    onPhoto: { data in
-                        onPhoto(data)
-                        activePicker = nil
-                    },
-                    onCancel: {
-                        activePicker = nil
-                    }
+                    onPhoto: onPhoto,
+                    onCancel: { stage = .chooseSource }
                 )
                 .ignoresSafeArea()
             }
@@ -80,27 +87,42 @@ struct PhotoSourceButton<Label: View>: View {
         }
     }
 
-    private func presentCameraAfterDialogDismisses() {
-        Task { @MainActor in
-            // Allow the confirmation dialog to finish dismissing before requesting
-            // another presentation from a form that may itself already be in a sheet.
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            await requestCameraAndPresentIfAllowed()
+    private var sourceChooser: some View {
+        NavigationStack {
+            List {
+                Section {
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button {
+                            requestCameraAndPresentIfAllowed()
+                        } label: {
+                            Label("Take Photo", systemImage: "camera")
+                        }
+                    }
+
+                    Button {
+                        stage = .library
+                    } label: {
+                        Label("Choose from Photo Library", systemImage: "photo.on.rectangle")
+                    }
+                }
+
+                Section {
+                    Text("Choose how you want to add a photo. The image will return to the record you are currently creating or editing.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Add Photo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                }
+            }
         }
     }
 
-    private func presentLibraryAfterDialogDismisses() {
-        Task { @MainActor in
-            // Camera and library deliberately share ONE fullScreenCover. Two competing
-            // fullScreenCover modifiers on this row caused presentation failures in
-            // unsaved Add/Edit forms that are already displayed as sheets.
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            activePicker = .library
-        }
-    }
-
-    @MainActor
-    private func requestCameraAndPresentIfAllowed() async {
+    private func requestCameraAndPresentIfAllowed() {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
             cameraAlertMessage = "This device does not have an available camera."
             return
@@ -108,14 +130,18 @@ struct PhotoSourceButton<Label: View>: View {
 
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            activePicker = .camera
+            stage = .camera
 
         case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            if granted {
-                activePicker = .camera
-            } else {
-                cameraAlertMessage = "Camera access is off. Enable Camera access for My Home Keeper in Settings to take photos in the app."
+            Task {
+                let granted = await AVCaptureDevice.requestAccess(for: .video)
+                await MainActor.run {
+                    if granted {
+                        stage = .camera
+                    } else {
+                        cameraAlertMessage = "Camera access is off. Enable Camera access for My Home Keeper in Settings to take photos in the app."
+                    }
+                }
             }
 
         case .denied, .restricted:
