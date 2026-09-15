@@ -4,6 +4,13 @@ import UniformTypeIdentifiers
 import UIKit
 import AVFoundation
 
+private enum PhotoPickerDestination: String, Identifiable {
+    case camera
+    case library
+
+    var id: String { rawValue }
+}
+
 struct PhotoSourceButton<Label: View>: View {
     let onPhoto: (Data) -> Void
     private let label: () -> Label
@@ -14,8 +21,7 @@ struct PhotoSourceButton<Label: View>: View {
     }
 
     @State private var showSourceOptions = false
-    @State private var showCamera = false
-    @State private var showPhotoLibrary = false
+    @State private var activePicker: PhotoPickerDestination?
     @State private var cameraAlertMessage: String?
 
     var body: some View {
@@ -32,22 +38,37 @@ struct PhotoSourceButton<Label: View>: View {
             }
 
             Button("Choose from Photo Library") {
-                presentPhotoLibraryAfterDialogDismisses()
+                presentLibraryAfterDialogDismisses()
             }
 
             Button("Cancel", role: .cancel) { }
         }
-        .fullScreenCover(isPresented: $showCamera) {
-            CameraPhotoPicker(isPresented: $showCamera) { data in
-                onPhoto(data)
+        .fullScreenCover(item: $activePicker) { destination in
+            switch destination {
+            case .camera:
+                CameraPhotoPicker(
+                    onPhoto: { data in
+                        onPhoto(data)
+                        activePicker = nil
+                    },
+                    onCancel: {
+                        activePicker = nil
+                    }
+                )
+                .ignoresSafeArea()
+
+            case .library:
+                PhotoLibraryPicker(
+                    onPhoto: { data in
+                        onPhoto(data)
+                        activePicker = nil
+                    },
+                    onCancel: {
+                        activePicker = nil
+                    }
+                )
+                .ignoresSafeArea()
             }
-            .ignoresSafeArea()
-        }
-        .fullScreenCover(isPresented: $showPhotoLibrary) {
-            PhotoLibraryPicker(isPresented: $showPhotoLibrary) { data in
-                onPhoto(data)
-            }
-            .ignoresSafeArea()
         }
         .alert("Camera Unavailable", isPresented: Binding(
             get: { cameraAlertMessage != nil },
@@ -61,19 +82,20 @@ struct PhotoSourceButton<Label: View>: View {
 
     private func presentCameraAfterDialogDismisses() {
         Task { @MainActor in
-            // Let the confirmation dialog fully dismiss before presenting another controller.
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            // Allow the confirmation dialog to finish dismissing before requesting
+            // another presentation from a form that may itself already be in a sheet.
+            try? await Task.sleep(nanoseconds: 350_000_000)
             await requestCameraAndPresentIfAllowed()
         }
     }
 
-    private func presentPhotoLibraryAfterDialogDismisses() {
+    private func presentLibraryAfterDialogDismisses() {
         Task { @MainActor in
-            // Present the library through its own UIKit controller instead of SwiftUI's
-            // .photosPicker modifier. This is substantially more reliable when this
-            // button lives inside an unsaved Form that is itself presented modally.
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            showPhotoLibrary = true
+            // Camera and library deliberately share ONE fullScreenCover. Two competing
+            // fullScreenCover modifiers on this row caused presentation failures in
+            // unsaved Add/Edit forms that are already displayed as sheets.
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            activePicker = .library
         }
     }
 
@@ -86,12 +108,12 @@ struct PhotoSourceButton<Label: View>: View {
 
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            showCamera = true
+            activePicker = .camera
 
         case .notDetermined:
             let granted = await AVCaptureDevice.requestAccess(for: .video)
             if granted {
-                showCamera = true
+                activePicker = .camera
             } else {
                 cameraAlertMessage = "Camera access is off. Enable Camera access for My Home Keeper in Settings to take photos in the app."
             }
@@ -106,11 +128,11 @@ struct PhotoSourceButton<Label: View>: View {
 }
 
 struct CameraPhotoPicker: UIViewControllerRepresentable {
-    @Binding var isPresented: Bool
     let onPhoto: (Data) -> Void
+    let onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(isPresented: $isPresented, onPhoto: onPhoto)
+        Coordinator(onPhoto: onPhoto, onCancel: onCancel)
     }
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -125,17 +147,19 @@ struct CameraPhotoPicker: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) { }
 
     final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        private var isPresented: Binding<Bool>
         private let onPhoto: (Data) -> Void
+        private let onCancel: () -> Void
         private var hasFinished = false
 
-        init(isPresented: Binding<Bool>, onPhoto: @escaping (Data) -> Void) {
-            self.isPresented = isPresented
+        init(onPhoto: @escaping (Data) -> Void, onCancel: @escaping () -> Void) {
             self.onPhoto = onPhoto
+            self.onCancel = onCancel
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            finishPresentation()
+            guard !hasFinished else { return }
+            hasFinished = true
+            DispatchQueue.main.async { [onCancel] in onCancel() }
         }
 
         func imagePickerController(
@@ -145,32 +169,23 @@ struct CameraPhotoPicker: UIViewControllerRepresentable {
             guard !hasFinished else { return }
             hasFinished = true
 
-            if let image = info[.originalImage] as? UIImage,
-               let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() {
-                onPhoto(data)
+            guard let image = info[.originalImage] as? UIImage,
+                  let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() else {
+                DispatchQueue.main.async { [onCancel] in onCancel() }
+                return
             }
 
-            DispatchQueue.main.async { [weak self] in
-                self?.isPresented.wrappedValue = false
-            }
-        }
-
-        private func finishPresentation() {
-            guard !hasFinished else { return }
-            hasFinished = true
-            DispatchQueue.main.async { [weak self] in
-                self?.isPresented.wrappedValue = false
-            }
+            DispatchQueue.main.async { [onPhoto] in onPhoto(data) }
         }
     }
 }
 
 struct PhotoLibraryPicker: UIViewControllerRepresentable {
-    @Binding var isPresented: Bool
     let onPhoto: (Data) -> Void
+    let onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(isPresented: $isPresented, onPhoto: onPhoto)
+        Coordinator(onPhoto: onPhoto, onCancel: onCancel)
     }
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
@@ -187,13 +202,13 @@ struct PhotoLibraryPicker: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) { }
 
     final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        private var isPresented: Binding<Bool>
         private let onPhoto: (Data) -> Void
+        private let onCancel: () -> Void
         private var hasFinished = false
 
-        init(isPresented: Binding<Bool>, onPhoto: @escaping (Data) -> Void) {
-            self.isPresented = isPresented
+        init(onPhoto: @escaping (Data) -> Void, onCancel: @escaping () -> Void) {
             self.onPhoto = onPhoto
+            self.onCancel = onCancel
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
@@ -201,33 +216,24 @@ struct PhotoLibraryPicker: UIViewControllerRepresentable {
             hasFinished = true
 
             guard let provider = results.first?.itemProvider else {
-                dismiss()
+                DispatchQueue.main.async { [onCancel] in onCancel() }
                 return
             }
 
             let imageType = UTType.image.identifier
             guard provider.hasItemConformingToTypeIdentifier(imageType) else {
-                dismiss()
+                DispatchQueue.main.async { [onCancel] in onCancel() }
                 return
             }
 
-            provider.loadDataRepresentation(forTypeIdentifier: imageType) { [weak self] data, _ in
-                guard let self else { return }
-
-                if let data {
-                    DispatchQueue.main.async {
-                        self.onPhoto(data)
-                        self.isPresented.wrappedValue = false
+            provider.loadDataRepresentation(forTypeIdentifier: imageType) { [onPhoto, onCancel] data, _ in
+                DispatchQueue.main.async {
+                    if let data {
+                        onPhoto(data)
+                    } else {
+                        onCancel()
                     }
-                } else {
-                    self.dismiss()
                 }
-            }
-        }
-
-        private func dismiss() {
-            DispatchQueue.main.async { [weak self] in
-                self?.isPresented.wrappedValue = false
             }
         }
     }

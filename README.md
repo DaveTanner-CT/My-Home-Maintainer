@@ -1,3 +1,8 @@
+# My Home Keeper v0.49.1
+
+## Photo Library fix
+The shared photo-source control now presents Photo Library through a dedicated PHPicker controller, fixing library presentation failures from unsaved forms such as Add Fixture. The change applies to all forms and attachment flows that use the shared photo picker.
+
 # My Home Keeper v0.49
 
 This release continues the CloudKit family-sharing work with safer day-to-day sync visibility.
