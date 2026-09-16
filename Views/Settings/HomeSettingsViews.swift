@@ -160,7 +160,7 @@ struct AppSettingsView: View {
             }
             Section("About") {
                 LabeledContent("App", value: "My Home Keeper")
-                LabeledContent("Version", value: "0.46 (Build 460)")
+                LabeledContent("Version", value: appVersionDisplay)
                 Text("My Home Keeper keeps maintenance, home records, vendors, documents, and projects connected in one place.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -168,5 +168,15 @@ struct AppSettingsView: View {
         }
         .navigationTitle("Settings")
         .alert("Notifications Updated", isPresented: $didReschedule) { Button("OK", role: .cancel) {} } message: { Text("Pending task reminders were refreshed using your current settings.") }
+    }
+
+    private var appVersionDisplay: String {
+        let version = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleShortVersionString"
+        ) as? String ?? "—"
+        let build = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleVersion"
+        ) as? String ?? "—"
+        return "\(version) (Build \(build))"
     }
 }

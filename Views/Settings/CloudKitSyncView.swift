@@ -1,3 +1,4 @@
+import Combine
 import SwiftData
 import SwiftUI
 
@@ -245,6 +246,19 @@ struct CloudKitSyncView: View {
         .refreshable {
             await refreshStatus()
             await refreshCloudOverviewAsync(showErrors: false)
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .homeKeeperCloudShareAcceptanceChanged
+            )
+        ) { _ in
+            refreshShareAcceptanceState()
+            if let lastShareError {
+                statusMessage = "Family sharing invitation could not be accepted: \(lastShareError)"
+            } else if lastAcceptedShareDate != nil {
+                statusMessage = "Family sharing invitation accepted. Checking iCloud for the shared household…"
+                refreshCloudOverview(showErrors: false)
+            }
         }
         .alert("iCloud Sync", isPresented: Binding(
             get: { statusMessage != nil },

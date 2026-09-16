@@ -1,0 +1,14 @@
+My Home Keeper v0.49.4 (Build 494)
+
+CKShare invitation handoff fix
+
+- Adds CKSharingSupported = true to the generated Info.plist configuration.
+- Adds a UIWindowSceneDelegate for CloudKit share acceptance in this SwiftUI app.
+- Handles invitations when the app is already running via windowScene(_:userDidAcceptCloudKitShareWith:).
+- Handles cold-launch invitations via UIScene.ConnectionOptions.cloudKitShareMetadata.
+- Routes all accepted share metadata through the existing CloudKitSyncService.acceptShare implementation.
+- Notifies the iCloud Sync screen when share acceptance completes so status refreshes.
+- Fixes Settings > About to read the actual installed marketing version and build from Bundle metadata instead of the stale hard-coded 0.46 value.
+- Removes stale v0.46/v0.47 labels from the Household setup roadmap section.
+
+After installing 0.49.4 on both devices, create and send a fresh Household share invitation.

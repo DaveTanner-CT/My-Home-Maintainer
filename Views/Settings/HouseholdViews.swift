@@ -87,14 +87,14 @@ struct HouseholdSetupView: View {
                 }
             }
 
-            Section("CloudKit Roadmap") {
-                Label("v0.46", systemImage: "lock.icloud")
-                Text("Stores the household backup in the owner’s private iCloud database and supports same-iCloud-account iPhone/iPad transfer.")
+            Section("CloudKit Sharing") {
+                Label("Private iCloud storage", systemImage: "lock.icloud")
+                Text("Your household backup stays in the owner’s private iCloud database.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
-                Label("v0.47", systemImage: "person.2.badge.gearshape")
-                Text("Adds Apple CloudKit sharing so invited family members can use their own Apple IDs.")
+                Label("Family sharing enabled", systemImage: "person.2.badge.gearshape")
+                Text("Apple CloudKit sharing lets invited family members use their own Apple IDs to access the shared household.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

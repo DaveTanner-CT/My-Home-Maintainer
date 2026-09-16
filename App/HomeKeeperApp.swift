@@ -3,19 +3,79 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+extension Notification.Name {
+    static let homeKeeperCloudShareAcceptanceChanged = Notification.Name(
+        "HomeKeeperCloudShareAcceptanceChanged"
+    )
+}
+
+@MainActor
+private enum CloudKitShareAcceptanceCoordinator {
+    static func accept(_ metadata: CKShare.Metadata) {
+        Task {
+            do {
+                try await CloudKitSyncService.acceptShare(metadata: metadata)
+                UserDefaults.standard.set(Date(), forKey: "HomeKeeperLastAcceptedCloudShareDate")
+                UserDefaults.standard.removeObject(forKey: "HomeKeeperLastCloudShareError")
+            } catch {
+                UserDefaults.standard.set(
+                    error.localizedDescription,
+                    forKey: "HomeKeeperLastCloudShareError"
+                )
+            }
+
+            NotificationCenter.default.post(
+                name: .homeKeeperCloudShareAcceptanceChanged,
+                object: nil
+            )
+        }
+    }
+}
+
+final class HomeKeeperSceneDelegate: UIResponder, UIWindowSceneDelegate {
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        if let metadata = connectionOptions.cloudKitShareMetadata {
+            Task { @MainActor in
+                CloudKitShareAcceptanceCoordinator.accept(metadata)
+            }
+        }
+    }
+
+    func windowScene(
+        _ windowScene: UIWindowScene,
+        userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata
+    ) {
+        Task { @MainActor in
+            CloudKitShareAcceptanceCoordinator.accept(cloudKitShareMetadata)
+        }
+    }
+}
+
 final class HomeKeeperAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(
+            name: nil,
+            sessionRole: connectingSceneSession.role
+        )
+        configuration.delegateClass = HomeKeeperSceneDelegate.self
+        return configuration
+    }
+
+    // Fallback for any non-scene delivery path.
     func application(
         _ application: UIApplication,
         userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata
     ) {
         Task { @MainActor in
-            do {
-                try await CloudKitSyncService.acceptShare(metadata: cloudKitShareMetadata)
-                UserDefaults.standard.set(Date(), forKey: "HomeKeeperLastAcceptedCloudShareDate")
-                UserDefaults.standard.removeObject(forKey: "HomeKeeperLastCloudShareError")
-            } catch {
-                UserDefaults.standard.set(error.localizedDescription, forKey: "HomeKeeperLastCloudShareError")
-            }
+            CloudKitShareAcceptanceCoordinator.accept(cloudKitShareMetadata)
         }
     }
 }

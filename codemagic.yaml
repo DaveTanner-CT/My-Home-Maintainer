@@ -87,6 +87,7 @@ workflows:
           cd "$CM_BUILD_DIR"
           grep -q "ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon" project.yml
           grep -q "CFBundleIconName: AppIcon" project.yml
+          grep -q "CKSharingSupported: true" project.yml
           test -f Resources/Assets.xcassets/AppIcon.appiconset/icon-60x60@2x.png
 
       - name: Set up code signing
