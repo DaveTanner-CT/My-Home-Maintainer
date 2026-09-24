@@ -61,7 +61,7 @@ workflows:
 
       ios_signing:
         provisioning_profiles:
-          - profile: my_home_keeper_app_store_cloudkit
+          - profile: my_home_keeper_app_store_cloudkit_v2
             environment_variable: MY_HOME_KEEPER_PROFILE
         certificates:
           - My Home Maintainer Distribution
@@ -94,9 +94,32 @@ workflows:
           grep -q "CFBundleIconName: AppIcon" project.yml
           test -f Resources/Assets.xcassets/AppIcon.appiconset/icon-60x60@2x.png
 
+      - name: Inspect selected provisioning profile
+        script: |
+          echo "Provisioning profile path:"
+          echo "$MY_HOME_KEEPER_PROFILE"
+
+          security cms -D -i "$MY_HOME_KEEPER_PROFILE" > /tmp/profile.plist
+
+          echo "Provisioning profile name:"
+          /usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist
+
+          echo "Provisioning profile UUID:"
+          /usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist
+
+          echo "Provisioning profile application identifier:"
+          /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist
+
+          echo "Provisioning profile iCloud containers:"
+          /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.icloud-container-identifiers" /tmp/profile.plist || true
+
+          echo "Provisioning profile Sign in with Apple:"
+          /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.applesignin" /tmp/profile.plist || true
+
       - name: Set up code signing
         script: |
           cd "$CM_BUILD_DIR"
+
           echo "Using provisioning profile:"
           echo "$MY_HOME_KEEPER_PROFILE"
 
@@ -104,9 +127,20 @@ workflows:
             --project "$XCODE_PROJECT" \
             --profile "$MY_HOME_KEEPER_PROFILE"
 
+      - name: Verify applied build settings
+        script: |
+          cd "$CM_BUILD_DIR"
+
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -showBuildSettings \
+            | grep -E "PROVISIONING_PROFILE_SPECIFIER|CODE_SIGN_IDENTITY|PRODUCT_BUNDLE_IDENTIFIER"
+
       - name: Build signed IPA
         script: |
           cd "$CM_BUILD_DIR"
+
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
