@@ -61,7 +61,7 @@ workflows:
 
       ios_signing:
         provisioning_profiles:
-          - profile: my_home_keeper_app_store_cloudkit_v2
+          - profile: my_home_keeper_app_store_cloudkit_v3
             environment_variable: MY_HOME_KEEPER_PROFILE
         certificates:
           - My Home Maintainer Distribution
