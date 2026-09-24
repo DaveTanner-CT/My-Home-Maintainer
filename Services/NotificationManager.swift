@@ -40,6 +40,35 @@ actor NotificationManager {
         }
     }
 
+
+    func scheduleBatteryReminder(for detector: Detector) async {
+        let center = UNUserNotificationCenter.current()
+        let identifier = "detector-battery-\(detector.persistentModelID)"
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+
+        guard let replacementDate = detector.batteryReplacementDate,
+              let reminderDate = Calendar.current.date(byAdding: .day, value: -14, to: replacementDate) else { return }
+
+        let defaults = UserDefaults.standard
+        let leadEnabled = defaults.object(forKey: "notificationLeadEnabled") as? Bool ?? true
+        guard leadEnabled else { return }
+        let hourValue = defaults.object(forKey: "notificationHour") as? Int ?? 9
+        let hour = min(max(hourValue, 0), 23)
+        let roomName = detector.room?.name ?? detector.location
+        await add(
+            identifier: identifier,
+            title: "Replace detector batteries soon",
+            body: "The \(detector.type.lowercased()) detector in \(roomName) is scheduled for a battery change on \(replacementDate.formatted(date: .abbreviated, time: .omitted)).",
+            date: reminderDate,
+            hour: hour
+        )
+    }
+
+    func cancelBatteryReminder(for detector: Detector) async {
+        let identifier = "detector-battery-\(detector.persistentModelID)"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+    }
+
     func cancel(forTaskIdentifier taskIdentifier: String) {
         let center = UNUserNotificationCenter.current()
         let base = "task-\(taskIdentifier)"

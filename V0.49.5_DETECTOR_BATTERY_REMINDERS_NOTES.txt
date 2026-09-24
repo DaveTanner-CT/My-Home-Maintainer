@@ -1,0 +1,15 @@
+My Home Keeper v0.49.5 (Build 495)
+
+Smoke & CO detector battery reminders
+- Added optional "Batteries last changed" date.
+- Added editable "Replace batteries by" date.
+- When battery tracking is enabled, the replacement date defaults to six months after the last battery change.
+- Changing the last battery date automatically recalculates the six-month date until the user manually edits the replacement date.
+- Added concise battery guidance under the Battery field with a tappable * for manufacturer/NFPA/FEMA context.
+- Added detector battery reminders to the Home dashboard Coming Soon section beginning 14 days before the replacement date.
+- Added a local iOS notification 14 days before the replacement date when lead notifications are enabled.
+- Battery reminder notifications are refreshed on app startup and when a detector is saved, and removed when a detector is deleted.
+- Added battery dates to detector detail, export, transfer, and iCloud household archive data.
+
+Safety note
+- Six months is used as the app default for replaceable batteries, but individual alarm manuals remain authoritative. Sealed 10-year batteries are not intended for six-month replacement.

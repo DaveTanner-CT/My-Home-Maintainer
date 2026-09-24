@@ -36,6 +36,11 @@ struct RootTabView: View {
                     await NotificationManager.shared.schedule(for: task)
                 }
             }
+            if let detectors = try? modelContext.fetch(FetchDescriptor<Detector>()) {
+                for detector in detectors {
+                    await NotificationManager.shared.scheduleBatteryReminder(for: detector)
+                }
+            }
         }
     }
 }

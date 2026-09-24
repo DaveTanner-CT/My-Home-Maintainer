@@ -10,12 +10,14 @@ final class Detector {
     var manufactureDate: Date?
     var installationDate: Date?
     var batteryType: String
+    var batteryLastReplacedDate: Date?
+    var batteryReplacementDate: Date?
     var isHardwired: Bool
     var replacementDate: Date?
     var notes: String
     var room: Room?
 
-    init(location: String, type: String = "Combination", manufacturer: String = "", model: String = "", manufactureDate: Date? = nil, installationDate: Date? = nil, batteryType: String = "", isHardwired: Bool = false, replacementDate: Date? = nil, notes: String = "", room: Room? = nil) {
+    init(location: String, type: String = "Combination", manufacturer: String = "", model: String = "", manufactureDate: Date? = nil, installationDate: Date? = nil, batteryType: String = "", batteryLastReplacedDate: Date? = nil, batteryReplacementDate: Date? = nil, isHardwired: Bool = false, replacementDate: Date? = nil, notes: String = "", room: Room? = nil) {
         self.location = location
         self.type = type
         self.manufacturer = manufacturer
@@ -23,10 +25,17 @@ final class Detector {
         self.manufactureDate = manufactureDate
         self.installationDate = installationDate
         self.batteryType = batteryType
+        self.batteryLastReplacedDate = batteryLastReplacedDate
+        self.batteryReplacementDate = batteryReplacementDate ?? Self.calculateBatteryReplacementDate(lastReplacedDate: batteryLastReplacedDate)
         self.isHardwired = isHardwired
         self.replacementDate = replacementDate ?? Self.calculateReplacementDate(manufactureDate: manufactureDate, installationDate: installationDate)
         self.notes = notes
         self.room = room
+    }
+
+    static func calculateBatteryReplacementDate(lastReplacedDate: Date?) -> Date? {
+        guard let lastReplacedDate else { return nil }
+        return Calendar.current.date(byAdding: .month, value: 6, to: lastReplacedDate)
     }
 
     static func calculateReplacementDate(manufactureDate: Date?, installationDate: Date?) -> Date? {

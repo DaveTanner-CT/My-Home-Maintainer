@@ -4,6 +4,7 @@ import SwiftData
 struct HomeDashboardView: View {
     @Query private var homes: [Home]
     @Query(sort: \MaintenanceTask.dueDate) private var tasks: [MaintenanceTask]
+    @Query(sort: \Detector.location) private var detectors: [Detector]
     @State private var showSearch = false
     @State private var showAddTask = false
     @State private var completionTask: MaintenanceTask?
@@ -13,6 +14,19 @@ struct HomeDashboardView: View {
     private var current: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .current } }
     private var upcoming: [MaintenanceTask] { activeTasks.filter { TaskEngine.status(for: $0) == .upcoming } }
     private var attention: [MaintenanceTask] { overdue + current }
+    private var upcomingBatteryReminders: [Detector] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let end = calendar.date(byAdding: .day, value: 14, to: today) ?? today
+        return detectors
+            .filter { detector in
+                guard let date = detector.batteryReplacementDate else { return false }
+                let day = calendar.startOfDay(for: date)
+                return day >= today && day <= end
+            }
+            .sorted { ($0.batteryReplacementDate ?? .distantFuture) < ($1.batteryReplacementDate ?? .distantFuture) }
+    }
+    private var upcomingTaskSlots: Int { max(0, 4 - upcomingBatteryReminders.prefix(4).count) }
 
     var body: some View {
         ScrollView {
@@ -83,7 +97,16 @@ struct HomeDashboardView: View {
                         .font(.caption.weight(.semibold))
                 }
                 VStack(spacing: 0) {
-                    ForEach(upcoming.prefix(4)) { task in
+                    ForEach(Array(upcomingBatteryReminders.prefix(4))) { detector in
+                        NavigationLink {
+                            DetectorDetailView(detector: detector)
+                        } label: {
+                            DetectorBatteryReminderRow(detector: detector)
+                        }
+                        .buttonStyle(.plain)
+                        Divider()
+                    }
+                    ForEach(upcoming.prefix(upcomingTaskSlots)) { task in
                         NavigationLink {
                             TaskDetailView(task: task)
                         } label: {
@@ -246,5 +269,35 @@ private struct DashboardTaskListView: View {
             }
         }
         .navigationTitle(title)
+    }
+}
+
+private struct DetectorBatteryReminderRow: View {
+    let detector: Detector
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "battery.50percent")
+                .font(.title3)
+                .foregroundStyle(.orange)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Replace detector batteries")
+                    .font(.subheadline.weight(.semibold))
+                Text(detector.room?.name ?? detector.location)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let date = detector.batteryReplacementDate {
+                    Text("Recommended by \(date.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 10)
     }
 }

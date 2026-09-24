@@ -523,6 +523,12 @@ struct DetectorFormView: View {
     @State private var manufacturer: String
     @State private var model: String
     @State private var batteryType: String
+    @State private var hasBatteryLastReplacedDate: Bool
+    @State private var batteryLastReplacedDate: Date
+    @State private var hasBatteryReplacementDate: Bool
+    @State private var batteryReplacementDate: Date
+    @State private var batteryReplacementDateWasEdited = false
+    @State private var showBatteryGuidance = false
     @State private var isHardwired: Bool
     @State private var hasManufactureDate: Bool
     @State private var manufactureDate: Date
@@ -540,6 +546,14 @@ struct DetectorFormView: View {
         _manufacturer = State(initialValue: existing?.manufacturer ?? "")
         _model = State(initialValue: existing?.model ?? "")
         _batteryType = State(initialValue: existing?.batteryType ?? "")
+        let savedBatteryChange = existing?.batteryLastReplacedDate
+        let savedBatteryDue = existing?.batteryReplacementDate
+        let defaultBatteryChange = savedBatteryChange ?? .now
+        let defaultBatteryDue = savedBatteryDue ?? Detector.calculateBatteryReplacementDate(lastReplacedDate: defaultBatteryChange) ?? .now
+        _hasBatteryLastReplacedDate = State(initialValue: savedBatteryChange != nil)
+        _batteryLastReplacedDate = State(initialValue: defaultBatteryChange)
+        _hasBatteryReplacementDate = State(initialValue: savedBatteryDue != nil || savedBatteryChange != nil)
+        _batteryReplacementDate = State(initialValue: defaultBatteryDue)
         _isHardwired = State(initialValue: existing?.isHardwired ?? false)
         _hasManufactureDate = State(initialValue: existing?.manufactureDate != nil)
         _manufactureDate = State(initialValue: existing?.manufactureDate ?? .now)
@@ -567,6 +581,47 @@ struct DetectorFormView: View {
                 TextField("Model", text: $model)
                 Toggle("Hardwired", isOn: $isHardwired)
                 TextField("Battery type", text: $batteryType)
+
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text("For replaceable batteries, My Home Keeper suggests a 6-month replacement cycle. You can change the next date.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("*") { showBatteryGuidance = true }
+                        .font(.caption.bold())
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Battery replacement guidance")
+                }
+
+                Toggle("Track battery replacement", isOn: $hasBatteryLastReplacedDate)
+                    .onChange(of: hasBatteryLastReplacedDate) { _, enabled in
+                        if enabled {
+                            if let suggested = Detector.calculateBatteryReplacementDate(lastReplacedDate: batteryLastReplacedDate) {
+                                batteryReplacementDate = suggested
+                                hasBatteryReplacementDate = true
+                                batteryReplacementDateWasEdited = false
+                            }
+                        } else {
+                            hasBatteryReplacementDate = false
+                        }
+                    }
+                if hasBatteryLastReplacedDate {
+                    DatePicker("Batteries last changed", selection: $batteryLastReplacedDate, displayedComponents: .date)
+                        .onChange(of: batteryLastReplacedDate) { _, newValue in
+                            guard !batteryReplacementDateWasEdited else { return }
+                            if let suggested = Detector.calculateBatteryReplacementDate(lastReplacedDate: newValue) {
+                                batteryReplacementDate = suggested
+                                hasBatteryReplacementDate = true
+                            }
+                        }
+
+                    Toggle("Set next battery replacement", isOn: $hasBatteryReplacementDate)
+                    if hasBatteryReplacementDate {
+                        DatePicker("Replace batteries by", selection: $batteryReplacementDate, displayedComponents: .date)
+                            .onChange(of: batteryReplacementDate) { _, _ in
+                                batteryReplacementDateWasEdited = true
+                            }
+                    }
+                }
             }
             Section("Dates") {
                 Toggle("Manufacture date", isOn: $hasManufactureDate)
@@ -589,8 +644,20 @@ struct DetectorFormView: View {
             }
         }
         .confirmationDialog("Delete this detector?", isPresented: $showDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) { if let existing { modelContext.delete(existing); try? modelContext.save(); dismiss() } }
+            Button("Delete", role: .destructive) {
+                if let existing {
+                    Task { await NotificationManager.shared.cancelBatteryReminder(for: existing) }
+                    modelContext.delete(existing)
+                    try? modelContext.save()
+                    dismiss()
+                }
+            }
             Button("Cancel", role: .cancel) { }
+        }
+        .alert("Battery replacement guidance", isPresented: $showBatteryGuidance) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("First Alert recommends changing replaceable alarm batteries every 6 months. Kidde recommends 6 months for many CO, combination, and current AA-battery models; some Kidde smoke alarms specify at least once a year. NFPA and FEMA/USFA recommend replacing replaceable batteries at least once a year. Always follow your detector's manual, and do not use this schedule for sealed 10-year batteries.")
         }
     }
 
@@ -606,11 +673,14 @@ struct DetectorFormView: View {
         r.manufactureDate = hasManufactureDate ? manufactureDate : nil
         r.installationDate = hasInstallDate ? installDate : nil
         r.batteryType = batteryType
+        r.batteryLastReplacedDate = hasBatteryLastReplacedDate ? batteryLastReplacedDate : nil
+        r.batteryReplacementDate = (hasBatteryLastReplacedDate && hasBatteryReplacementDate) ? batteryReplacementDate : nil
         r.isHardwired = isHardwired
         r.replacementDate = Detector.calculateReplacementDate(manufactureDate: r.manufactureDate, installationDate: r.installationDate)
         r.notes = notes
         savePendingRecordPhoto(pendingPhotoData, owner: .detector(r), modelContext: modelContext)
         try? modelContext.save()
+        Task { await NotificationManager.shared.scheduleBatteryReminder(for: r) }
         dismiss()
     }
 }

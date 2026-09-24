@@ -1284,6 +1284,12 @@ struct DetectorDetailView: View {
                 if !detector.model.isEmpty { LabeledContent("Model", value: detector.model) }
                 LabeledContent("Hardwired", value: detector.isHardwired ? "Yes" : "No")
                 if !detector.batteryType.isEmpty { LabeledContent("Battery", value: detector.batteryType) }
+                if let d = detector.batteryLastReplacedDate {
+                    LabeledContent("Batteries last changed", value: d.formatted(date: .abbreviated, time: .omitted))
+                }
+                if let d = detector.batteryReplacementDate {
+                    LabeledContent("Replace batteries by", value: d.formatted(date: .long, time: .omitted))
+                }
             }
             Section("Dates") {
                 if let d = detector.manufactureDate { LabeledContent("Manufactured", value: d.formatted(date: .abbreviated, time: .omitted)) }
