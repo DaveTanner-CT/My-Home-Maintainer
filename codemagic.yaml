@@ -59,8 +59,10 @@ workflows:
     environment:
       xcode: latest
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: org.scriptingforschools.HomeMaintainer
+  provisioning_profiles:
+    - my_home_keeper_app_store_cloudkit
+  certificates:
+    - My Home Maintainer Distribution
       vars:
         XCODE_PROJECT: "HomeKeeper.xcodeproj"
         XCODE_SCHEME: "HomeKeeper"
