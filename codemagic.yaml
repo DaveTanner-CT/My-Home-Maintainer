@@ -58,11 +58,14 @@ workflows:
 
     environment:
       xcode: latest
+
       ios_signing:
         provisioning_profiles:
-          - my_home_keeper_app_store_cloudkit
+          - profile: my_home_keeper_app_store_cloudkit
+            environment_variable: MY_HOME_KEEPER_PROFILE
         certificates:
           - My Home Maintainer Distribution
+
       vars:
         XCODE_PROJECT: "HomeKeeper.xcodeproj"
         XCODE_SCHEME: "HomeKeeper"
@@ -94,7 +97,12 @@ workflows:
       - name: Set up code signing
         script: |
           cd "$CM_BUILD_DIR"
-          xcode-project use-profiles --project "$XCODE_PROJECT"
+          echo "Using provisioning profile:"
+          echo "$MY_HOME_KEEPER_PROFILE"
+
+          xcode-project use-profiles \
+            --project "$XCODE_PROJECT" \
+            --profile "$MY_HOME_KEEPER_PROFILE"
 
       - name: Build signed IPA
         script: |
