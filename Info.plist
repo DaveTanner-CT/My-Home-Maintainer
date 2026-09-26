@@ -6,12 +6,18 @@
     <string>My Home Keeper</string>
     <key>CFBundleName</key>
     <string>My Home Keeper</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.50.0</string>
+    <key>CFBundleVersion</key>
+    <string>500</string>
     <key>CKSharingSupported</key>
     <true/>
     <key>NSCameraUsageDescription</key>
     <string>My Home Keeper lets you take photos of rooms, equipment, labels, receipts, vendors, and projects.</string>
     <key>NSContactsUsageDescription</key>
     <string>My Home Keeper lets you import vendor details from Contacts and add or update vendors in Contacts.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>My Home Keeper uses Face ID to unlock the app and protect saved home passwords and codes.</string>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 </dict>

@@ -1,0 +1,28 @@
+MY HOME KEEPER v0.50.0 — SECURITY & PASSWORDS/CODES
+
+Version: 0.50.0
+Build: 500
+Bundle ID: org.scriptingforschools.HomeMaintainer
+
+NEW
+- Optional 4-digit App Lock.
+- App code digest and salt stored in iOS Keychain; the raw app code is not stored.
+- Lock delay options: immediately, 1 minute, 5 minutes, 15 minutes.
+- Face ID / Touch ID unlock when available.
+- Device-owner authentication can unlock a session if the app code is forgotten; the user can then change the app code in Settings.
+- New Settings > Passwords & Codes.
+- Categories: Access, Wi-Fi & Network, Security, Equipment, Other.
+- Optional username/email, notes, and related home item.
+- Secrets stored in iOS Keychain and masked by default.
+- Reveal/copy/edit/delete protected by device authentication when available.
+- Clipboard copies expire after about 60 seconds and are local-only.
+
+PRIVACY
+- Passwords & Codes metadata stays in local app preferences.
+- Password/code secret values stay in the device Keychain.
+- v0.50 intentionally does NOT include Passwords & Codes in household CloudKit sync, family sharing, Home Transfer, or data exports.
+
+BUILD / SIGNING
+- project.yml updated to 0.50.0 / build 500.
+- NSFaceIDUsageDescription added.
+- Codemagic TestFlight workflow uses my_home_keeper_app_store_cloudkit_v3 and My Home Maintainer Distribution, preserving the signing setup that successfully built v0.49.5.

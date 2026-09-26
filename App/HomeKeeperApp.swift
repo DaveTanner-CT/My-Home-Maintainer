@@ -84,6 +84,7 @@ final class HomeKeeperAppDelegate: NSObject, UIApplicationDelegate {
 struct HomeKeeperApp: App {
     @UIApplicationDelegateAdaptor(HomeKeeperAppDelegate.self) private var appDelegate
     @StateObject private var accountSession = AccountSessionStore()
+    @StateObject private var securityStore = SecurityStore()
 
     private var modelContainer: ModelContainer = {
         let schema = Schema([
@@ -144,6 +145,7 @@ struct HomeKeeperApp: App {
         WindowGroup {
             StartupRootView()
                 .environmentObject(accountSession)
+                .environmentObject(securityStore)
                 .task {
                     accountSession.refreshCredentialState()
                     await NotificationManager.shared.requestAuthorization()
@@ -154,10 +156,29 @@ struct HomeKeeperApp: App {
 }
 
 private struct StartupRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var securityStore: SecurityStore
     @State private var recoveryMessage: String? = UserDefaults.standard.string(forKey: "HomeKeeperStartupStoreError")
 
     var body: some View {
-        RootTabView()
+        Group {
+            if securityStore.isAppLockEnabled && !securityStore.isUnlocked {
+                AppLockView()
+                    .environmentObject(securityStore)
+            } else {
+                RootTabView()
+            }
+        }
+            .onChange(of: scenePhase) { _, newPhase in
+                switch newPhase {
+                case .background:
+                    securityStore.applicationDidEnterBackground()
+                case .active:
+                    securityStore.applicationDidBecomeActive()
+                default:
+                    break
+                }
+            }
             .alert(
                 "Local Data Recovery Mode",
                 isPresented: Binding(

@@ -25,3 +25,24 @@
 - [ ] No local home is overwritten automatically.
 - [ ] Shared upload action is not shown as an owner-only private upload action.
 - [ ] Pull-to-refresh updates cloud timestamps/status.
+
+
+## v0.50 Security & Passwords/Codes
+
+- [ ] Settings > Security opens without affecting existing household data.
+- [ ] Set Up App Lock requires and confirms exactly four digits.
+- [ ] Lock Now replaces the app UI with the app-code screen.
+- [ ] Correct 4-digit code unlocks; incorrect code does not.
+- [ ] Face ID / Touch ID unlock works when enabled and available.
+- [ ] Backgrounding longer than the chosen delay locks the app; returning sooner does not.
+- [ ] Forgot App Code uses device-owner authentication and unlocks the current session without deleting data.
+- [ ] Change App Code works after device-owner authentication.
+- [ ] Turning off App Lock requires device-owner authentication.
+- [ ] Settings > Passwords & Codes can add Access, Wi-Fi & Network, Security, Equipment, and Other entries.
+- [ ] A saved entry can optionally link to a room, system, device/equipment item, or detector.
+- [ ] Secret value is masked by default.
+- [ ] Reveal requires authentication and hides again after about 30 seconds.
+- [ ] Copy requires authentication and clipboard content expires after about one minute.
+- [ ] Edit and Delete require authentication.
+- [ ] Passwords & Codes do not appear in Home Transfer/export files or household iCloud sync.
+- [ ] Existing CloudKit sharing, detector battery reminders, photo flows, and Account features still work.

@@ -142,6 +142,23 @@ struct AppSettingsView: View {
                 NavigationLink { HomeTransferView() } label: { Label("Home Transfer", systemImage: "house.and.flag") }
                 NavigationLink { DataExportView() } label: { Label("Backup / Export Data", systemImage: "externaldrive.badge.plus") }
             }
+            Section("Security & Privacy") {
+                NavigationLink {
+                    AppLockSettingsView()
+                } label: {
+                    Label("Security", systemImage: "lock.shield")
+                }
+
+                NavigationLink {
+                    PasswordsAndCodesView()
+                } label: {
+                    Label("Passwords & Codes", systemImage: "key.horizontal")
+                }
+
+                Text("App Lock protects access to My Home Keeper. Passwords and codes are stored on this device and are not included in household iCloud sharing or exports.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             Section("Notifications") {
                 Toggle("Lead-time reminders", isOn: $leadEnabled)
                 Toggle("Due-date reminders", isOn: $dueEnabled)
