@@ -8,6 +8,9 @@ import Security
 final class SecurityStore: ObservableObject {
     @Published private(set) var isUnlocked: Bool
     @Published private(set) var lastErrorMessage: String?
+    @Published private(set) var isAuthenticationInProgress = false
+
+    private var automaticBiometricAttemptedForCurrentLock = false
 
     private enum Keys {
         static let keychainService = "org.scriptingforschools.HomeMaintainer.security"
@@ -105,9 +108,7 @@ final class SecurityStore: ObservableObject {
             lastErrorMessage = "That code did not match."
             return false
         }
-        isUnlocked = true
-        clearBackgroundTimestamp()
-        lastErrorMessage = nil
+        completeUnlock()
         return true
     }
 
@@ -123,21 +124,24 @@ final class SecurityStore: ObservableObject {
     }
 
     func lockNow() {
-        guard isAppLockEnabled else { return }
-        isUnlocked = false
+        engageLock()
     }
 
     func unlockAfterDeviceOwnerAuthentication() {
-        isUnlocked = true
-        clearBackgroundTimestamp()
-        lastErrorMessage = nil
+        completeUnlock()
     }
 
     func applicationDidEnterBackground() {
         guard isAppLockEnabled else { return }
+
+        // Face ID / Touch ID can briefly move the app through lifecycle changes.
+        // Do not interpret the system authentication UI itself as the user leaving
+        // My Home Keeper, or the app can immediately lock again.
+        guard !isAuthenticationInProgress else { return }
+
         UserDefaults.standard.set(Date(), forKey: Keys.backgroundedAt)
         if lockDelaySeconds == 0 {
-            isUnlocked = false
+            engageLock(clearTimestamp: false)
         }
     }
 
@@ -147,30 +151,44 @@ final class SecurityStore: ObservableObject {
             clearBackgroundTimestamp()
             return
         }
+
+        // Ignore activation transitions created by the system authentication sheet.
+        // They are not a new app session and must not start another lock cycle.
+        guard !isAuthenticationInProgress else { return }
+
         guard let backgroundedAt = UserDefaults.standard.object(forKey: Keys.backgroundedAt) as? Date else {
             return
         }
 
-        // Consume the background timestamp once. Authentication prompts can move the
-        // app between inactive and active states; retaining an old timestamp causes
-        // the app to immediately lock again after a successful Face ID / Touch ID check.
         clearBackgroundTimestamp()
 
         if Date().timeIntervalSince(backgroundedAt) >= TimeInterval(lockDelaySeconds) {
-            isUnlocked = false
+            engageLock(clearTimestamp: false)
         }
     }
 
+    func attemptAutomaticBiometricUnlockIfNeeded() async {
+        guard isAppLockEnabled,
+              !isUnlocked,
+              biometricsEnabled,
+              biometricsAvailable,
+              !automaticBiometricAttemptedForCurrentLock,
+              !isAuthenticationInProgress else { return }
+
+        // This flag lives in the store rather than AppLockView so rebuilding the
+        // SwiftUI lock screen cannot repeatedly trigger Face ID.
+        automaticBiometricAttemptedForCurrentLock = true
+        _ = await unlockWithBiometrics()
+    }
+
     func unlockWithBiometrics() async -> Bool {
-        guard biometricsEnabled else { return false }
+        guard biometricsEnabled, !isAuthenticationInProgress else { return false }
         let success = await authenticate(
             policy: .deviceOwnerAuthenticationWithBiometrics,
             reason: "Unlock My Home Keeper"
         )
         if success {
-            isUnlocked = true
-            clearBackgroundTimestamp()
-            lastErrorMessage = nil
+            completeUnlock()
         }
         return success
     }
@@ -185,6 +203,10 @@ final class SecurityStore: ObservableObject {
     }
 
     private func authenticate(policy: LAPolicy, reason: String) async -> Bool {
+        guard !isAuthenticationInProgress else { return false }
+        isAuthenticationInProgress = true
+        defer { isAuthenticationInProgress = false }
+
         let context = LAContext()
         context.localizedCancelTitle = "Cancel"
 
@@ -209,6 +231,21 @@ final class SecurityStore: ObservableObject {
         }
     }
 
+
+    private func completeUnlock() {
+        isUnlocked = true
+        clearBackgroundTimestamp()
+        lastErrorMessage = nil
+    }
+
+    private func engageLock(clearTimestamp: Bool = true) {
+        guard isAppLockEnabled else { return }
+        if clearTimestamp {
+            clearBackgroundTimestamp()
+        }
+        automaticBiometricAttemptedForCurrentLock = false
+        isUnlocked = false
+    }
 
     private func clearBackgroundTimestamp() {
         UserDefaults.standard.removeObject(forKey: Keys.backgroundedAt)

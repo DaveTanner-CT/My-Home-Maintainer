@@ -100,7 +100,10 @@ struct AppSettingsView: View {
                     AccountView()
                 } label: {
                     HStack {
-                        Label("My Home Keeper Account", systemImage: "person.crop.circle")
+                        Label(
+                            accountSession.isSignedIn ? "My Home Keeper Account" : "Sign In with Apple",
+                            systemImage: "person.crop.circle"
+                        )
                         Spacer()
                         Text(accountSession.isSignedIn ? "Connected" : "Not Signed In")
                             .font(.caption)

@@ -200,7 +200,6 @@ struct AppLockView: View {
     @EnvironmentObject private var securityStore: SecurityStore
     @State private var code = ""
     @State private var errorMessage: String?
-    @State private var attemptedBiometrics = false
 
     var body: some View {
         ZStack {
@@ -262,11 +261,7 @@ struct AppLockView: View {
             .padding(.horizontal, 28)
         }
         .task {
-            guard !attemptedBiometrics,
-                  securityStore.biometricsEnabled,
-                  securityStore.biometricsAvailable else { return }
-            attemptedBiometrics = true
-            _ = await securityStore.unlockWithBiometrics()
+            await securityStore.attemptAutomaticBiometricUnlockIfNeeded()
         }
     }
 }
