@@ -17,6 +17,7 @@ struct ProjectDetailView: View {
     @State private var showAddTask = false
     @State private var showLinkTask = false
     @State private var showAddHistory = false
+    @State private var showQuickFinish = false
 
     private var items: [ProjectItem] {
         allItems.filter { $0.project?.persistentModelID == project.persistentModelID }
@@ -49,6 +50,13 @@ struct ProjectDetailView: View {
         }.sorted { $0.date > $1.date }
     }
 
+    private var completionRecord: MaintenanceRecord? {
+        linkedHistory.first {
+            $0.eventType == .project &&
+            $0.title.caseInsensitiveCompare("Completed \(project.title)") == .orderedSame
+        }
+    }
+
     var body: some View {
         List {
             if let data = project.coverPhotoData, let image = UIImage(data: data) {
@@ -76,6 +84,30 @@ struct ProjectDetailView: View {
                     LabeledContent("Target", value: target.formatted(date: .abbreviated, time: .omitted))
                 }
                 if !project.projectDescription.isEmpty { Text(project.projectDescription) }
+            }
+
+            if let completionRecord {
+                Section("Outcome") {
+                    LabeledContent("Completed", value: completionRecord.date.formatted(date: .abbreviated, time: .omitted))
+                    if let cost = completionRecord.cost {
+                        LabeledContent("Cost", value: cost.formatted(AppFormatting.currency))
+                    }
+                    if !completionRecord.notes.isEmpty {
+                        Text(completionRecord.notes)
+                    }
+                    Button { showQuickFinish = true } label: {
+                        Label("Update Outcome Record", systemImage: "square.and.pencil")
+                    }
+                }
+            } else {
+                Section("Small Project?") {
+                    Button { showQuickFinish = true } label: {
+                        Label("Record Outcome & Finish", systemImage: "checkmark.circle")
+                    }
+                    Text("Skip the full planning and shopping workflow. Record what you did, the material or product used, brand, cost, and notes in one step.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Project Lifecycle") {
@@ -220,6 +252,9 @@ struct ProjectDetailView: View {
         }
         .sheet(isPresented: $showAddHistory) {
             NavigationStack { MaintenanceRecordFormView(initialRoom: project.room, initialProject: project, initialTitle: "Project update: \(project.title)", initialEventType: .project) }
+        }
+        .sheet(isPresented: $showQuickFinish) {
+            NavigationStack { ProjectQuickRecordView(existingProject: project) }
         }
     }
 

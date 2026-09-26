@@ -5,6 +5,7 @@ struct ProjectsView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query(sort: \Project.title) private var projects: [Project]
     @State private var showNewProject = false
+    @State private var showQuickProject = false
 
     var body: some View {
         Group {
@@ -17,11 +18,21 @@ struct ProjectsView: View {
         .navigationTitle("Projects")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showNewProject = true } label: { Image(systemName: "plus") }
-                    .accessibilityLabel("Add Project")
+                Menu {
+                    Button { showNewProject = true } label: {
+                        Label("Plan a Project", systemImage: "hammer")
+                    }
+                    Button { showQuickProject = true } label: {
+                        Label("Quick Project Record", systemImage: "checkmark.circle")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add Project")
             }
         }
         .sheet(isPresented: $showNewProject) { NavigationStack { ProjectFormView() } }
+        .sheet(isPresented: $showQuickProject) { NavigationStack { ProjectQuickRecordView() } }
     }
 
     private var compactProjects: some View {

@@ -106,6 +106,7 @@ final class SecurityStore: ObservableObject {
             return false
         }
         isUnlocked = true
+        clearBackgroundTimestamp()
         lastErrorMessage = nil
         return true
     }
@@ -128,6 +129,7 @@ final class SecurityStore: ObservableObject {
 
     func unlockAfterDeviceOwnerAuthentication() {
         isUnlocked = true
+        clearBackgroundTimestamp()
         lastErrorMessage = nil
     }
 
@@ -142,12 +144,18 @@ final class SecurityStore: ObservableObject {
     func applicationDidBecomeActive() {
         guard isAppLockEnabled else {
             isUnlocked = true
+            clearBackgroundTimestamp()
             return
         }
         guard let backgroundedAt = UserDefaults.standard.object(forKey: Keys.backgroundedAt) as? Date else {
-            if !isUnlocked { return }
             return
         }
+
+        // Consume the background timestamp once. Authentication prompts can move the
+        // app between inactive and active states; retaining an old timestamp causes
+        // the app to immediately lock again after a successful Face ID / Touch ID check.
+        clearBackgroundTimestamp()
+
         if Date().timeIntervalSince(backgroundedAt) >= TimeInterval(lockDelaySeconds) {
             isUnlocked = false
         }
@@ -161,6 +169,7 @@ final class SecurityStore: ObservableObject {
         )
         if success {
             isUnlocked = true
+            clearBackgroundTimestamp()
             lastErrorMessage = nil
         }
         return success
@@ -198,6 +207,11 @@ final class SecurityStore: ObservableObject {
             lastErrorMessage = error.localizedDescription
             return false
         }
+    }
+
+
+    private func clearBackgroundTimestamp() {
+        UserDefaults.standard.removeObject(forKey: Keys.backgroundedAt)
     }
 
     private func isValidCode(_ code: String) -> Bool {
