@@ -566,7 +566,7 @@ private struct SecureCodeFormView: View {
     @Query(sort: \Room.name) private var rooms: [Room]
     @Query(sort: \HomeSystem.name) private var systems: [HomeSystem]
     @Query(sort: \Appliance.name) private var appliances: [Appliance]
-    @Query(sort: \Detector.name) private var detectors: [Detector]
+    @Query(sort: \Detector.location) private var detectors: [Detector]
 
     @ObservedObject var store: SecureCodeStore
     let entry: SecureCodeEntry?
@@ -654,7 +654,7 @@ private struct SecureCodeFormView: View {
                     if !detectors.isEmpty {
                         Section("Detectors") {
                             ForEach(detectors) { detector in
-                                Text(detector.name).tag("Detector: \(detector.name)")
+                                Text(detector.location).tag("Detector: \(detector.location)")
                             }
                         }
                     }
