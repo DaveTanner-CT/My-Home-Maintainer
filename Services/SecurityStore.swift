@@ -11,6 +11,7 @@ final class SecurityStore: ObservableObject {
     @Published private(set) var isAuthenticationInProgress = false
 
     private var automaticBiometricAttemptedForCurrentLock = false
+    private var suppressLifecycleLockingUntil: Date?
 
     private enum Keys {
         static let keychainService = "org.scriptingforschools.HomeMaintainer.security"
@@ -134,12 +135,13 @@ final class SecurityStore: ObservableObject {
     func applicationDidEnterBackground() {
         guard isAppLockEnabled else { return }
 
-        // Face ID / Touch ID can briefly move the app through lifecycle changes.
-        // Do not interpret the system authentication UI itself as the user leaving
-        // My Home Keeper, or the app can immediately lock again.
-        guard !isAuthenticationInProgress else { return }
+        // LocalAuthentication can generate lifecycle transitions while Face ID / Touch ID
+        // is being presented or dismissed. Ignore those transitions so the biometric
+        // sheet cannot create a fresh lock cycle.
+        guard !isAuthenticationInProgress, !isLifecycleLockingSuppressed else { return }
 
-        UserDefaults.standard.set(Date(), forKey: Keys.backgroundedAt)
+        let now = Date()
+        UserDefaults.standard.set(now, forKey: Keys.backgroundedAt)
         if lockDelaySeconds == 0 {
             engageLock(clearTimestamp: false)
         }
@@ -152,9 +154,13 @@ final class SecurityStore: ObservableObject {
             return
         }
 
-        // Ignore activation transitions created by the system authentication sheet.
-        // They are not a new app session and must not start another lock cycle.
-        guard !isAuthenticationInProgress else { return }
+        // Ignore activation transitions created by LocalAuthentication. A successful
+        // biometric unlock sets a short suppression window so any delayed scene event
+        // cannot immediately lock the app again.
+        guard !isAuthenticationInProgress, !isLifecycleLockingSuppressed else {
+            clearBackgroundTimestamp()
+            return
+        }
 
         guard let backgroundedAt = UserDefaults.standard.object(forKey: Keys.backgroundedAt) as? Date else {
             return
@@ -204,8 +210,16 @@ final class SecurityStore: ObservableObject {
 
     private func authenticate(policy: LAPolicy, reason: String) async -> Bool {
         guard !isAuthenticationInProgress else { return false }
+
+        // Clear any pending background timestamp before presenting system authentication
+        // and suppress lifecycle-based relocking while that UI is on screen.
+        clearBackgroundTimestamp()
+        suppressLifecycleLocking(for: 3)
         isAuthenticationInProgress = true
-        defer { isAuthenticationInProgress = false }
+        defer {
+            isAuthenticationInProgress = false
+            suppressLifecycleLocking(for: 3)
+        }
 
         let context = LAContext()
         context.localizedCancelTitle = "Cancel"
@@ -235,6 +249,7 @@ final class SecurityStore: ObservableObject {
     private func completeUnlock() {
         isUnlocked = true
         clearBackgroundTimestamp()
+        suppressLifecycleLocking(for: 3)
         lastErrorMessage = nil
     }
 
@@ -243,8 +258,27 @@ final class SecurityStore: ObservableObject {
         if clearTimestamp {
             clearBackgroundTimestamp()
         }
+
+        // Do not create another lock session while the lock screen is already showing.
+        // Re-engaging an existing lock used to reset the one-time biometric flag, which
+        // could cause Face ID to launch again every time a lifecycle event arrived.
+        guard isUnlocked else { return }
+
         automaticBiometricAttemptedForCurrentLock = false
         isUnlocked = false
+    }
+
+    private var isLifecycleLockingSuppressed: Bool {
+        guard let until = suppressLifecycleLockingUntil else { return false }
+        if Date() < until {
+            return true
+        }
+        suppressLifecycleLockingUntil = nil
+        return false
+    }
+
+    private func suppressLifecycleLocking(for seconds: TimeInterval) {
+        suppressLifecycleLockingUntil = Date().addingTimeInterval(seconds)
     }
 
     private func clearBackgroundTimestamp() {
